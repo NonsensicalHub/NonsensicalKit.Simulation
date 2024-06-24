@@ -4649,7 +4649,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1392675c9d781fc4093f1f90b7ab2f17, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_sceneName: Assets/Sample Training/Play A Ball/Scenes/GamePlay.unity
+  m_sceneName: Play A Ball
   m_logicNodeName: InteractSubScene
 --- !u!4 &1572268963
 Transform:

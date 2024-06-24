@@ -2,11 +2,14 @@ using NonsensicalKit.Core;
 using NonsensicalKit.Core.Service;
 using NonsensicalKit.DigitalTwin.LogicNodeTreeSystem;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class OpenInteractSubScene : NonsensicalMono
 {
     [SerializeField] private string m_sceneName;
     [SerializeField] private string m_logicNodeName;
+
+    private GameObject _go;
 
     private string _logicNodeBuffer;
     private string _missionIDBuffer;
@@ -15,7 +18,7 @@ public class OpenInteractSubScene : NonsensicalMono
     {
         IOCC.Set<string>("interactSubSceneMissionID", missionID);
 
-        ServiceCore.Get<AddressableManager>().LoadAddressableScene(m_sceneName, UnityEngine.SceneManagement.LoadSceneMode.Additive);
+        _go = Instantiate( Resources.Load<GameObject>("Play A Ball"));
 
         _logicNodeBuffer = ServiceCore.Get<LogicNodeManager>().CrtSelectNode.NodeID;
         ServiceCore.Get<LogicNodeManager>().SwitchNode(m_logicNodeName);
@@ -25,7 +28,7 @@ public class OpenInteractSubScene : NonsensicalMono
 
     private void OnSubSceneCompleted(bool playerWin)
     {
-        ServiceCore.Get<AddressableManager>().UnLoadAddressableScene(m_sceneName);
+        Destroy(_go);
         ServiceCore.Get<LogicNodeManager>().SwitchNode(_logicNodeBuffer);
         Unsubscribe<bool>("InteractCompleted", _missionIDBuffer, OnSubSceneCompleted);
     }

@@ -15,7 +15,6 @@ MonoBehaviour:
   ID: RedCube
   Priority: -1
   ItemName: "\u7EA2\u8272\u65B9\u5757"
-  Sprite: Assets/NonsensicalKit/InventorySystem/Sample/RedCube.png
-  IsStackable: 0
+  Sprite: RedCube
   MaxStackNumber: 1
   Description: 

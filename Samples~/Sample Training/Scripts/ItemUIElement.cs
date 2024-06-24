@@ -2,7 +2,6 @@ using NonsensicalKit.Core;
 using NonsensicalKit.Core.Service;
 using NonsensicalKit.Temp.InventorySystem;
 using NonsensicalKit.UGUI.Table;
-using NonsensicalKit.Tools.ResourcesTool;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -68,11 +67,8 @@ public class ItemUIElement : ListTableElement<ItemEntity>, IPointerDownHandler, 
             m_txt_count.text = elementData.StackNum.ToString();
 
             m_img_icon.gameObject.SetActive(true);
-
-            ResourcesHub.Instance.Get<Sprite>(elementData.Data.Sprite, (sp) =>
-            {
-                m_img_icon.sprite = sp;
-            });
+            Debug.Log(elementData.Data.Sprite);
+            m_img_icon.sprite =Resources.Load<Sprite>(elementData.Data.Sprite);
         }
         else
         {

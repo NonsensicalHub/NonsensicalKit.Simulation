@@ -15,7 +15,6 @@ MonoBehaviour:
   ID: BlueCube
   Priority: -1
   ItemName: "\u84DD\u8272\u65B9\u5757"
-  Sprite: Assets/NonsensicalKit/InventorySystem/Sample/BlueCube.png
-  IsStackable: 1
+  Sprite: BlueCube
   MaxStackNumber: 5
   Description: 

@@ -1,7 +1,6 @@
 using NonsensicalKit.Core;
 using NonsensicalKit.Core.Service;
 using NonsensicalKit.UGUI;
-using NonsensicalKit.Tools.ResourcesTool;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -37,10 +36,7 @@ public class DragIcon : NonsensicalUI
     }
     public void ChangeSprite(string iconPath)
     {
-        ResourcesHub.Instance.Get<Sprite>(iconPath, (sp) =>
-        {
-            m_img_icon.sprite = sp;
-        });
+        m_img_icon.sprite = Resources.Load<Sprite>(iconPath);
     }
 
     public void OnBeginDrag(PointerEventData eventData)
