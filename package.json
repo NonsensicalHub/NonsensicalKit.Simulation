@@ -1,6 +1,7 @@
 {
   "name": "com.tony_bean_is_alive.nonsensicalkit.simulation",
   "displayName": "NonsensicalKit.Simulation",
+  "author": { "name": "TonyBean" },
   "version": "0.0.1",
   "unity": "2021.3",
   "license": "MIT",
