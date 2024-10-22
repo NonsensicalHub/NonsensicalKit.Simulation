@@ -3,7 +3,7 @@ using NonsensicalKit.Core.Service;
 using System;
 using System.Collections.Generic;
 
-namespace NonsensicalKit.Temp.InventorySystem
+namespace NonsensicalKit.Simulation.Inventory
 {
     /// <summary>
     /// 库存系统

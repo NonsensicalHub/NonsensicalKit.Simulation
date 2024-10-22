@@ -1,7 +1,7 @@
 using NonsensicalKit.Core.Service;
 using UnityEngine;
 
-namespace NonsensicalKit.Temp.InventorySystem
+namespace NonsensicalKit.Simulation.Inventory
 {
     public class InventoryConfigurator : MonoBehaviour
     {

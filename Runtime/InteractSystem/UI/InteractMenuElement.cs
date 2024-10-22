@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace NonsensicalKit.Temp.InteractQueueSystem
+namespace NonsensicalKit.Simulation.InteractQueueSystem
 {
     public class InteractMenuElement : ListTableElement<InteractMenuInfo>
     {

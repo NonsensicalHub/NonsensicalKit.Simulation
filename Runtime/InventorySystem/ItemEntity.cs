@@ -1,6 +1,6 @@
 using System;
 
-namespace NonsensicalKit.Temp.InventorySystem
+namespace NonsensicalKit.Simulation.Inventory
 {
     /// <summary>
     /// 捡起的物品实体

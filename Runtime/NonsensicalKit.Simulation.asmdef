@@ -4,7 +4,8 @@
     "references": [
         "NonsensicalKit.Core",
         "NonsensicalKit.UGUI",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "NaughtyAttributes.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

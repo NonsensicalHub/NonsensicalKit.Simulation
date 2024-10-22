@@ -3,7 +3,7 @@ using NonsensicalKit.Core.Service;
 using System;
 using System.Collections.Generic;
 
-namespace NonsensicalKit.Temp.InteractQueueSystem
+namespace NonsensicalKit.Simulation.InteractQueueSystem
 {
     /// <summary>
     /// 交互队列系统

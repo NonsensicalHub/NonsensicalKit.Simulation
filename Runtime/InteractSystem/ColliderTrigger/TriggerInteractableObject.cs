@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace NonsensicalKit.Temp.InteractQueueSystem
+namespace NonsensicalKit.Simulation.InteractQueueSystem
 {
     /// <summary>
     /// 可以执行碰撞交互的对象

@@ -3,196 +3,198 @@ using NonsensicalKit.Core.Log;
 using NonsensicalKit.Core.Service;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
-/// <summary>
-/// 拾取 - 监听背包变动事件
-/// 人物移动 - 监听Player碰撞事件
-/// 物体移动 - 监听可移动物体碰撞事件
-/// 互动 - 监听可互动对象完成事件
-/// </summary>
-public class MissionSystem : IClassService
+namespace NonsensicalKit.Simulation.Mission
 {
-    public bool IsReady { get; set; }
-
-    public Action InitCompleted { get; set; }
-    public Action OnMissionStatusChanged { get; set; }
-
-    private Dictionary<string, MissionObject> _missions;
-
-    private HashSet<string> _completedMissions;
-
-    private bool _autoAccept;
-
-    public MissionSystem()
-    {
-        _missions = new Dictionary<string, MissionObject>();
-        _completedMissions = new HashSet<string>();
-        IsReady = true;
-        InitCompleted?.Invoke();
-    }
-
     /// <summary>
-    /// 清空之前的任务，并配置新任务
+    /// 拾取 - 监听背包变动事件
+    /// 人物移动 - 监听Player碰撞事件
+    /// 物体移动 - 监听可移动物体碰撞事件
+    /// 互动 - 监听可互动对象完成事件
     /// </summary>
-    /// <param name="missions"></param>
-    public void InitMission(MissionData[] missions)
+    public class MissionSystem : IClassService
     {
-        ClearMission();
-        foreach (var item in missions)
+        public bool IsReady { get; set; }
+
+        public Action InitCompleted { get; set; }
+        public Action OnMissionStatusChanged { get; set; }
+
+        private Dictionary<string, MissionObject> _missions;
+
+        private HashSet<string> _completedMissions;
+
+        private bool _autoAccept;
+
+        public MissionSystem()
         {
-            if (_missions.ContainsKey(item.ID))
+            _missions = new Dictionary<string, MissionObject>();
+            _completedMissions = new HashSet<string>();
+            IsReady = true;
+            InitCompleted?.Invoke();
+        }
+
+        /// <summary>
+        /// 清空之前的任务，并配置新任务
+        /// </summary>
+        /// <param name="missions"></param>
+        public void InitMission(MissionData[] missions)
+        {
+            ClearMission();
+            foreach (var item in missions)
             {
-                LogCore.Warning($"任务ID重复：{item.ID}");
+                if (_missions.ContainsKey(item.ID))
+                {
+                    LogCore.Warning($"任务ID重复：{item.ID}");
+                }
+                else
+                {
+                    _missions.Add(item.ID, new MissionObject(item));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 开始执行所有任务
+        /// </summary>
+        /// <param name="_quest"></param>
+        public void AutoAccept()
+        {
+            _autoAccept = true;
+            foreach (var item in _missions)
+            {
+                if (item.Value.Status != MissionStatus.Unaccepted)
+                {
+                    continue;
+                }
+                bool flag = true;
+                foreach (var item2 in item.Value.Data.PremiseMissionIDs)
+                {
+                    if (_completedMissions.Contains(item2) == false)
+                    {
+                        flag = false;
+                        break;
+                    }
+                }
+                if (!flag)
+                {
+                    continue;
+                }
+                StartMission(item.Key);
+            }
+        }
+
+        public void MissionCompleted(string missionID)
+        {
+            if (_missions[missionID].Status != MissionStatus.Accepted)
+            {
+                LogCore.Warning($"任务{_missions[missionID].Data.Name}未接受，无法完成");
             }
             else
             {
-                _missions.Add(item.ID, new MissionObject(item));
-            }
-        }
-    }
-
-    /// <summary>
-    /// 开始执行所有任务
-    /// </summary>
-    /// <param name="_quest"></param>
-    public void AutoAccept()
-    {
-        _autoAccept = true;
-        foreach (var item in _missions)
-        {
-            if (item.Value.Status!=MissionStatus.Unaccepted)
-            {
-                continue;
-            }
-            bool flag = true;
-            foreach (var item2 in item.Value.Data.PremiseMissionIDs)
-            {
-                if (_completedMissions.Contains(item2)==false)
+                IOCC.PublishWithID<string>("StopMission", _missions[missionID].Data.Type, missionID);
+                _missions[missionID].Status = MissionStatus.Completed;
+                OnMissionStatusChanged?.Invoke();
+                _completedMissions.Add(missionID);
+                if (_autoAccept)
                 {
-                    flag = false;
-                    break;
+                    AutoAccept();
                 }
             }
-            if (!flag)
-            {
-                continue;
-            }
-            StartMission(item.Key);
         }
-    }
 
-    public void MissionCompleted(string missionID)
-    {
-        if (_missions[missionID].Status != MissionStatus.Accepted)
+        public void MissionFailed(string missionID)
         {
-            LogCore.Warning($"任务{_missions[missionID].Data.Name}未接受，无法完成");
-        }
-        else
-        {
-            IOCC.PublishWithID<string>("StopMission", _missions[missionID].Data.Type, missionID);
-            _missions[missionID].Status = MissionStatus.Completed;
-            OnMissionStatusChanged?.Invoke();
-            _completedMissions.Add(missionID);
-            if (_autoAccept)
+            if (_missions[missionID].Status != MissionStatus.Accepted)
             {
-                AutoAccept();
+                LogCore.Warning($"任务{_missions[missionID].Data.Name}未接受，无法失败");
+            }
+            else
+            {
+                IOCC.PublishWithID<string>("StopMission", _missions[missionID].Data.Type, missionID);
+                _missions[missionID].Status = MissionStatus.Failed;
+                OnMissionStatusChanged?.Invoke();
             }
         }
-    }
 
-    public void MissionFailed(string missionID)
-    {
-        if (_missions[missionID].Status != MissionStatus.Accepted)
+        public string GetMissionName(string missionID)
         {
-            LogCore.Warning($"任务{_missions[missionID].Data.Name}未接受，无法失败");
-        }
-        else
-        {
-            IOCC.PublishWithID<string>("StopMission", _missions[missionID].Data.Type, missionID);
-            _missions[missionID].Status = MissionStatus.Failed;
-            OnMissionStatusChanged?.Invoke();
-        }
-    }
-
-    public string GetMissionName(string missionID)
-    {
-        if (_missions.ContainsKey(missionID))
-        {
-            return _missions[missionID].Data.Name;
-        }
-        else
-        {
-            return string.Empty;
-        }
-    }
-
-    public List<MissionData> GetRunningMissions()
-    {
-        List<MissionData> missions = new List<MissionData>();
-
-        foreach (var item in _missions)
-        {
-            if (item.Value.Status == MissionStatus.Accepted)
+            if (_missions.ContainsKey(missionID))
             {
-                missions.Add(item.Value.Data);
+                return _missions[missionID].Data.Name;
+            }
+            else
+            {
+                return string.Empty;
             }
         }
-        return missions;
-    }
 
-    /// <summary>
-    /// 开始执行任务
-    /// </summary>
-    /// <param name="_quest"></param>
-    private void StartMission(string missionID)
-    {
-        if (_missions[missionID].Status != MissionStatus.Unaccepted && _missions[missionID].Status != MissionStatus.Failed)
+        public List<MissionData> GetRunningMissions()
         {
-            LogCore.Warning($"任务{_missions[missionID].Data.Name}重复接受");
+            List<MissionData> missions = new List<MissionData>();
+
+            foreach (var item in _missions)
+            {
+                if (item.Value.Status == MissionStatus.Accepted)
+                {
+                    missions.Add(item.Value.Data);
+                }
+            }
+            return missions;
         }
-        else
+
+        /// <summary>
+        /// 开始执行任务
+        /// </summary>
+        /// <param name="_quest"></param>
+        private void StartMission(string missionID)
         {
-            _missions[missionID].Status = MissionStatus.Accepted;
-            IOCC.PublishWithID<string>("StartMission", _missions[missionID].Data.Type, _missions[missionID].Data.ID);
+            if (_missions[missionID].Status != MissionStatus.Unaccepted && _missions[missionID].Status != MissionStatus.Failed)
+            {
+                LogCore.Warning($"任务{_missions[missionID].Data.Name}重复接受");
+            }
+            else
+            {
+                _missions[missionID].Status = MissionStatus.Accepted;
+                IOCC.PublishWithID<string>("StartMission", _missions[missionID].Data.Type, _missions[missionID].Data.ID);
+                OnMissionStatusChanged?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 清空所有任务
+        /// </summary>
+        /// <param name="missionID"></param>
+        private void ClearMission()
+        {
+            foreach (var item in _missions)
+            {
+                IOCC.PublishWithID<string>("StopMission", item.Value.Data.Type, item.Value.Data.ID);
+            }
+            _missions.Clear();
             OnMissionStatusChanged?.Invoke();
         }
     }
 
     /// <summary>
-    /// 清空所有任务
+    /// 没有提交步骤，如果有提交任务的需求，则应将最后一个步骤做成提交任务 
     /// </summary>
-    /// <param name="missionID"></param>
-    private void ClearMission()
+    public enum MissionStatus
     {
-        foreach (var item in _missions)
-        {
-            IOCC.PublishWithID<string>("StopMission", item.Value.Data.Type, item.Value.Data.ID);
-        }
-        _missions.Clear();
-        OnMissionStatusChanged?.Invoke();
+        Unaccepted, //未被接受
+        Accepted,   //已接受
+        Completed,  //已完成
+        Failed      //已失败
     }
-}
 
-/// <summary>
-/// 没有提交步骤，如果有提交任务的需求，则应将最后一个步骤做成提交任务 
-/// </summary>
-public enum MissionStatus
-{
-    Unaccepted, //未被接受
-    Accepted,   //已接受
-    Completed,  //已完成
-    Failed      //已失败
-}
-
-public class MissionObject
-{
-    public MissionData Data;
-    public MissionStatus Status;
-
-    public MissionObject(MissionData data)
+    public class MissionObject
     {
-        Data = data;
-        Status = MissionStatus.Unaccepted;
+        public MissionData Data;
+        public MissionStatus Status;
+
+        public MissionObject(MissionData data)
+        {
+            Data = data;
+            Status = MissionStatus.Unaccepted;
+        }
     }
 }

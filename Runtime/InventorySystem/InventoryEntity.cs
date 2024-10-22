@@ -2,7 +2,7 @@ using NonsensicalKit.Core.Log;
 using NonsensicalKit.Core.Service;
 using System;
 
-namespace NonsensicalKit.Temp.InventorySystem
+namespace NonsensicalKit.Simulation.Inventory
 {
     public class InventoryEntity
     {

@@ -1,7 +1,7 @@
 using NonsensicalKit.UGUI.Table;
 using System.Collections.Generic;
 
-namespace NonsensicalKit.Temp.InteractQueueSystem
+namespace NonsensicalKit.Simulation.InteractQueueSystem
 {
     public class InteractMenu : ListTableManager<InteractMenuElement, InteractMenuInfo>
     {

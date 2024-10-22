@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace NonsensicalKit.Temp.InteractQueueSystem
+namespace NonsensicalKit.Simulation.InteractQueueSystem
 {
     /// <summary>
     /// 用于表示可以执行碰撞交互的对象

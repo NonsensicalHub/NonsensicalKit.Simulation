@@ -1,7 +1,7 @@
 using NonsensicalKit.Core.Service;
 using UnityEngine;
 
-namespace NonsensicalKit.Temp.InteractQueueSystem
+namespace NonsensicalKit.Simulation.InteractQueueSystem
 {
     public class InputManagerForInteractQueueSystem : MonoBehaviour
     {

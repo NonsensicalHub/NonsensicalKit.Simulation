@@ -11,6 +11,11 @@
       "displayName": "Sample Training",
       "description": "示例训练",
       "path": "Samples~/Sample Training"
+    },
+    {
+      "displayName": "ParametricModelingShelves",
+      "description": "参数化货架",
+      "path": "Samples~/ParametricModelingShelves"
     }
   ]
 }

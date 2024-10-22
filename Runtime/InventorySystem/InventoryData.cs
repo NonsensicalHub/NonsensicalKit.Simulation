@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace NonsensicalKit.Temp.InventorySystem
+namespace NonsensicalKit.Simulation.Inventory
 {
     [CreateAssetMenu(fileName = "InventoryData", menuName = "ScriptableObjects/InventoryData")]
     public class InventoryData : ScriptableObject

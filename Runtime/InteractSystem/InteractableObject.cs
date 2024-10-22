@@ -4,7 +4,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace NonsensicalKit.Temp.InteractQueueSystem
+namespace NonsensicalKit.Simulation.InteractQueueSystem
 {
     /// <summary>
     /// 可交互对象基类
@@ -51,11 +51,11 @@ namespace NonsensicalKit.Temp.InteractQueueSystem
 
         private Func<bool> _validate;
 
-        public bool CanInteract { get { return _canInteract; }set { _canInteract = value; } }
+        public bool CanInteract { get { return _canInteract; } set { _canInteract = value; } }
         /// <summary>
         /// 可由外界控制的是否可交互变量
         /// </summary>
-        private bool _canInteract=true;
+        private bool _canInteract = true;
         /// <summary>
         /// 是否正在等待交互，用于判断此时是否能通过使用的交互方式进行交互，比如碰撞交互此值代表就代表是否碰到玩家，鼠标交互此值就代表鼠标是否悬停在可交互区域
         /// </summary>
@@ -65,7 +65,7 @@ namespace NonsensicalKit.Temp.InteractQueueSystem
         {
             get
             {
-                if (_system==null)
+                if (_system == null)
                 {
 
                     _system = ServiceCore.Get<InteractQueueSystem>();
