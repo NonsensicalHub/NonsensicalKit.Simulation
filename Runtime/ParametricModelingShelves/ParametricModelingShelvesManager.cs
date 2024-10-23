@@ -49,7 +49,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             }
             foreach (var item in m_loadPrefabConfig)
             {
-                item.InitBuffer(m_cellCount, m_simpleExclude);
+                item.InitBuffer(m_cellCount, m_simpleExclude    );
             }
 
             for (int x = 0; x < m_cellCount.x; x++)
@@ -79,6 +79,15 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         public void Clean()
         {
             m_loadsConfigs = null;
+
+            if (m_layersParent != null)
+            {
+                foreach (var item in m_layersParent)
+                {
+                    item.gameObject.Destroy();
+                }
+                m_layersParent = null;
+            }
         }
 
         public void SetLayers(GameObject[] layers)
@@ -97,6 +106,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             m_layersParent = layers;
         }
     }
+
     [System.Serializable]
     public class LoadsConfig
     {
@@ -117,7 +127,10 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         {
             for (int i = 0; i < Parts.Count; i++)
             {
-                Graphics.RenderMeshInstanced(Parts[i].RenderParams, Parts[i].Mesh, Parts[i].SubMeshCount, Parts[i].Trans);
+                foreach (var item in Parts[i].Trans)
+                {
+                    Graphics.RenderMeshInstanced(Parts[i].RenderParams, Parts[i].Mesh, Parts[i].SubMeshCount, item);
+                }
             }
         }
 
@@ -169,7 +182,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         public int SubMeshCount;
         public Matrix4x4 Offset;
 
-        public List<Matrix4x4> Trans;
+        public Matrix4x4[][] Trans;
 
         public LoadsPartInfo(RenderParams renderParams, Mesh mesh, int subMeshCount, Matrix4x4 offset)
         {
@@ -181,11 +194,33 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 
         public void UpdateTrans(List<Matrix4x4> trans)
         {
-            Trans = new List<Matrix4x4>();
-
+            int less = trans.Count;
+            int patch = (less-1) / 1023 + 1;
+            Trans = new Matrix4x4[patch][];
+            int index = 0;
+            int patchIndex = 0;
             foreach (var item in trans)
             {
-                Trans.Add(item * Offset);
+                if (index==0)
+                {
+                    if (less>=1023)
+                    {
+                        Trans[patchIndex] = new Matrix4x4[1023];
+                        less -= 1023;
+                    }
+                    else
+                    {
+                        Trans[patchIndex] = new Matrix4x4[less];
+                        less = 0;
+                    }
+                }
+                Trans[patchIndex][index]=(item * Offset);
+                index++;
+                if (index == 1023)
+                {
+                    index = 0;
+                    patchIndex++;
+                }
             }
         }
     }
