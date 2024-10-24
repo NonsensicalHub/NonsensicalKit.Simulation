@@ -4,15 +4,14 @@ using NonsensicalKit.Tools.MeshTool;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Serialization;
 using UnityEngine.UIElements;
 
 namespace NonsensicalKit.Simulation.ParametricModelingShelves
 {
     public class ParametricModelingShelvesBuilder : ShelvesBase
     {
-        [SerializeField] private ShelvesBuildPrefabConfig[] m_prefabConfigs;
-        [SerializeField][FormerlySerializedAs("m_buffer")] private ParametricModelingShelvesManager m_manager;
+        public ShelvesBuildPrefabConfig[] m_prefabConfigs;
+        public ParametricModelingShelvesManager m_manager;
 
         private Dictionary<ShelvesPrefabType, List<ShelvesBuildPrefabConfig>> _configs;
         private List<GameObject>[] _layerObjs;

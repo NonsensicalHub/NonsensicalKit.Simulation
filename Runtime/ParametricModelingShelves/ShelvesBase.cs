@@ -7,15 +7,15 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 {
     public class ShelvesBase : MonoBehaviour
     {
-        [SerializeField] protected Vector3Int m_cellCount;
-        [SerializeField] protected bool m_useCommonSize;
-        [SerializeField][ShowIf("m_useCommonSize")] protected Vector3 m_commonCellSize;
-        [SerializeField][HideIf("m_useCommonSize")] protected float[] m_cellXSize;
-        [SerializeField][HideIf("m_useCommonSize")] protected float[] m_cellYSize;
-        [SerializeField][HideIf("m_useCommonSize")] protected float[] m_cellZSize;
-        [SerializeField] protected float m_bottomHeight;
+        public Vector3Int m_cellCount;
+        public bool m_useCommonSize;
+        [ShowIf("m_useCommonSize")] public Vector3 m_commonCellSize;
+        [HideIf("m_useCommonSize")] public float[] m_cellXSize;
+        [HideIf("m_useCommonSize")] public float[] m_cellYSize;
+        [HideIf("m_useCommonSize")] public float[] m_cellZSize;
+        public float m_bottomHeight;
 
-        [SerializeField] protected Vector3Int[] m_simpleExclude;
+        public Vector3Int[] m_simpleExclude;
 
         protected Array3<Vector3> _cellsPos;
         protected Array3<Vector3> _pillarsPos;
@@ -26,6 +26,8 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         protected float[] _cellYSize;
         protected float[] _cellZSize;
         protected Vector3 _bottomOffset;
+
+
 
         protected virtual void Init()
         {
@@ -87,7 +89,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                 shelvesZSize -= buffer;
             }
 
-            Vector3 basePos = new Vector3(-shelvesXSize * 0.5f, 0, -shelvesZSize * 0.5f)- _bottomOffset;
+            Vector3 basePos = new Vector3(-shelvesXSize * 0.5f, 0, -shelvesZSize * 0.5f) - _bottomOffset;
             Vector3 cellBasePos = basePos;
 
             for (int x = 0; x <= m_cellCount.x; x++)

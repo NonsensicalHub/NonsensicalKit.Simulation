@@ -7,10 +7,10 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 {
     public class ParametricModelingShelvesManager : ShelvesBase
     {
-        [SerializeField] private GameObject[] m_layersParent;
-        [SerializeField] private LoadsConfig[] m_loadsConfigs;
-        [SerializeField] private ShelvesLoadPrefabConfig[] m_loadPrefabConfig;
-        [SerializeField] private bool m_autoInit;
+        public GameObject[] m_layersParent;
+        public LoadsConfig[] m_loadsConfigs;
+        public ShelvesLoadPrefabConfig[] m_loadPrefabConfig;
+        public bool m_autoInit;
 
         private Array3<Vector3> _loadsPos;
 
@@ -49,7 +49,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             }
             foreach (var item in m_loadPrefabConfig)
             {
-                item.InitBuffer(m_cellCount, m_simpleExclude    );
+                item.InitBuffer(m_cellCount, m_simpleExclude);
             }
 
             for (int x = 0; x < m_cellCount.x; x++)
@@ -195,15 +195,15 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         public void UpdateTrans(List<Matrix4x4> trans)
         {
             int less = trans.Count;
-            int patch = (less-1) / 1023 + 1;
+            int patch = (less - 1) / 1023 + 1;
             Trans = new Matrix4x4[patch][];
             int index = 0;
             int patchIndex = 0;
             foreach (var item in trans)
             {
-                if (index==0)
+                if (index == 0)
                 {
-                    if (less>=1023)
+                    if (less >= 1023)
                     {
                         Trans[patchIndex] = new Matrix4x4[1023];
                         less -= 1023;
@@ -214,7 +214,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                         less = 0;
                     }
                 }
-                Trans[patchIndex][index]=(item * Offset);
+                Trans[patchIndex][index] = (item * Offset);
                 index++;
                 if (index == 1023)
                 {
