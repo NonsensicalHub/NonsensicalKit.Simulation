@@ -40,6 +40,8 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             float shelvesXSize = 0;
             float shelvesZSize = 0;
 
+            _bottomOffset = new Vector3(0, -m_bottomHeight, 0);
+
             if (m_useCommonSize)
             {
                 _cellXSize.Fill(m_commonCellSize.x);
@@ -85,7 +87,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                 shelvesZSize -= buffer;
             }
 
-            Vector3 basePos = new Vector3(-shelvesXSize * 0.5f, 0, -shelvesZSize * 0.5f);
+            Vector3 basePos = new Vector3(-shelvesXSize * 0.5f, 0, -shelvesZSize * 0.5f)- _bottomOffset;
             Vector3 cellBasePos = basePos;
 
             for (int x = 0; x <= m_cellCount.x; x++)
@@ -107,9 +109,6 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                 }
                 cellBasePos.x += _cellXSize[x];
             }
-
-            _bottomOffset = new Vector3(0, -m_bottomHeight, 0);
-
         }
 
         protected void CopyAndInit(ShelvesBase copyTarget)
