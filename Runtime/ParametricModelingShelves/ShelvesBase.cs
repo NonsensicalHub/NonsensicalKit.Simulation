@@ -7,16 +7,27 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 {
     public class ShelvesBase : MonoBehaviour
     {
-        public Vector3Int m_cellCount;
-        public bool m_useCommonSize;
-        [ShowIf("m_useCommonSize")] public Vector3 m_commonCellSize;
-        [HideIf("m_useCommonSize")] public float[] m_cellXSize;
-        [HideIf("m_useCommonSize")] public float[] m_cellYSize;
-        [HideIf("m_useCommonSize")] public float[] m_cellZSize;
-        public float m_bottomHeight;
+        [SerializeField] protected Vector3Int m_cellCount;
+        [SerializeField] protected bool m_useCommonSize;
 
-        public Vector3Int[] m_simpleExclude;
+        [SerializeField] [ShowIf("m_useCommonSize")]
+        protected Vector3 m_commonCellSize;
 
+        [SerializeField] [HideIf("m_useCommonSize")]
+        protected float[] m_cellXSize;
+
+        [SerializeField] [HideIf("m_useCommonSize")]
+        protected float[] m_cellYSize;
+
+        [SerializeField] [HideIf("m_useCommonSize")]
+        protected float[] m_cellZSize;
+
+        [SerializeField] protected float m_bottomHeight;
+
+        [SerializeField] protected Vector3Int[] m_simpleExclude;
+
+        public Vector3Int Size => m_cellCount;
+        
         protected Array3<Vector3> _cellsPos;
         protected Array3<Vector3> _pillarsPos;
         protected Array3<Vector3> _horizontalCorssbarPos;
@@ -26,7 +37,6 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         protected float[] _cellYSize;
         protected float[] _cellZSize;
         protected Vector3 _bottomOffset;
-
 
 
         protected virtual void Init()
@@ -61,9 +71,11 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     {
                         buffer = m_cellXSize[i];
                     }
+
                     _cellXSize[i] = buffer;
                     shelvesXSize += buffer;
                 }
+
                 shelvesXSize -= buffer;
 
                 buffer = 1;
@@ -73,6 +85,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     {
                         buffer = m_cellYSize[i];
                     }
+
                     _cellYSize[i] = buffer;
                 }
 
@@ -83,9 +96,11 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     {
                         buffer = m_cellZSize[i];
                     }
+
                     _cellZSize[i] = buffer;
                     shelvesZSize += buffer;
                 }
+
                 shelvesZSize -= buffer;
             }
 
@@ -107,8 +122,10 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 
                         cellBasePos.z += _cellZSize[z];
                     }
+
                     cellBasePos.y += _cellYSize[y];
                 }
+
                 cellBasePos.x += _cellXSize[x];
             }
         }

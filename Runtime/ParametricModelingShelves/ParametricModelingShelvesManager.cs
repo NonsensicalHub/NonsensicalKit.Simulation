@@ -1,18 +1,37 @@
+using System;
+using System.Collections.Generic;
+using NaughtyAttributes;
 using NonsensicalKit.Core;
 using NonsensicalKit.Tools;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace NonsensicalKit.Simulation.ParametricModelingShelves
 {
     public class ParametricModelingShelvesManager : ShelvesBase
     {
-        public GameObject[] m_layersParent;
-        public LoadsConfig[] m_loadsConfigs;
-        public ShelvesLoadPrefabConfig[] m_loadPrefabConfig;
-        public bool m_autoInit;
+        [SerializeField] private GameObject[] m_layersParent;
+        [SerializeField] private LoadsConfig[] m_loadsConfigs;
+        [SerializeField] private ShelvesLoadPrefabConfig[] m_loadPrefabConfig;
+        [SerializeField] private bool m_autoInit;
+        [SerializeField] private float[] m_layerIntervals;
 
+        public float[] LayerIntervals
+        {
+            get { return m_layerIntervals; }
+            set
+            {
+                m_layerIntervals = value;
+                UpdateLayerIntervals();
+            }
+        }
+
+        private Array3<GameObject> _loadTargets;
+        private Array3<bool> _loadsVisible;
+
+        private float[] _layerAddingHeight;
         private Array3<Vector3> _loadsPos;
+
+        private Matrix4x4 _ltwMatrix;
 
         private void Awake()
         {
@@ -26,8 +45,20 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         {
             if (m_loadsConfigs != null)
             {
+                bool flag = false;
+                if (transform.localToWorldMatrix != _ltwMatrix)
+                {
+                    _ltwMatrix = transform.localToWorldMatrix;
+                    flag = true;
+                }
+
                 foreach (var config in m_loadsConfigs)
                 {
+                    if (flag)
+                    {
+                        config.SetLTW(_ltwMatrix);
+                    }
+
                     config.RenderLoads();
                 }
             }
@@ -38,38 +69,159 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             CopyAndInit(builder);
         }
 
-        protected override void Init()
+        public void SetLoadVisible(int x, int y, int z, bool show)
         {
-            base.Init();
-            m_loadsConfigs = new LoadsConfig[m_loadPrefabConfig.Length];
-            for (int i = 0; i < m_loadPrefabConfig.Length; i++)
+            _loadsVisible.SafeSet(x, y, z, show);
+            UpdateLoads();
+        }
+
+        public void SetLoasdVisible(Array3<bool> show)
+        {
+            if (show.Length0 == _loadsVisible.Length0
+                && show.Length1 == _loadsVisible.Length1
+                && show.Length2 == _loadsVisible.Length2)
             {
-                m_loadsConfigs[i] = new LoadsConfig();
-                m_loadsConfigs[i].Init(m_cellCount, m_loadPrefabConfig[i].Prefab);
+                _loadsVisible = show;
+                UpdateLoads();
             }
-            foreach (var item in m_loadPrefabConfig)
+        }
+
+        private void UpdateLayerIntervals(bool update = true)
+        {
+            if (m_layerIntervals is null || m_layerIntervals.Length != m_cellCount.y)
             {
-                item.InitBuffer(m_cellCount, m_simpleExclude);
+                m_layerIntervals = new float[m_cellCount.y];
+            }
+
+            _layerAddingHeight = new float[m_layerIntervals.Length];
+            float sum = 0;
+            for (int i = 0; i < m_layerIntervals.Length; i++)
+            {
+                sum += m_layerIntervals[i];
+                _layerAddingHeight[i] = sum;
+            }
+
+            if (update)
+            {
+                UpdateLoads();
+            }
+        }
+
+        [Button("UpdateLoads")]
+        private void UpdateLoads()
+        {
+            if (m_loadsConfigs == null)
+            {
+                return;
             }
 
             for (int x = 0; x < m_cellCount.x; x++)
             {
                 for (int y = 0; y < m_cellCount.y; y++)
                 {
+                    var addHeight = new Vector3(0, _layerAddingHeight[y], 0);
                     for (int z = 0; z < m_cellCount.z; z++)
                     {
                         Matrix4x4 m4x4 = new Matrix4x4();
-                        m4x4.SetTRS(transform.position + _cellsPos[x, y, z], transform.rotation, Vector3.one);
+                        m4x4.SetTRS(_cellsPos[x, y, z] + addHeight, transform.rotation, Vector3.one);
+                        Matrix4x4 m4x4_2 = new Matrix4x4();
+                        m4x4_2.SetTRS(_cellsPos[x, y, z] + addHeight, transform.rotation, Vector3.zero);
                         for (int i = 0; i < m_loadPrefabConfig.Length; i++)
                         {
                             if (m_loadPrefabConfig[i].Check(x, y, z))
                             {
-                                m_loadsConfigs[i].AddNewLoad(x, y, z, m4x4, false);
+                                m_loadsConfigs[i].SetNewLoadNewTrans(x, y, z, _loadsVisible[x, y, z] ? m4x4 : m4x4_2, false);
+                                var loadTarget = _loadTargets[x, y, z];
+                                loadTarget.transform.SetPositionAndRotation(transform.position + _cellsPos[x, y, z] + addHeight, transform.rotation);
+                                loadTarget.transform.localScale = _loadsVisible[x, y, z] ? Vector3.one : Vector3.zero;
                             }
                         }
                     }
                 }
             }
+
+            foreach (var item in m_loadsConfigs)
+            {
+                item.UpdateParts();
+            }
+
+            for (int i = 0; i < m_layersParent.Length; i++)
+            {
+                m_layersParent[i].transform.localPosition = new Vector3(0, _layerAddingHeight[i], 0);
+            }
+        }
+
+        protected override void Init()
+        {
+            base.Init();
+            m_loadsConfigs = new LoadsConfig[m_loadPrefabConfig.Length];
+            if (_layerAddingHeight == null || _layerAddingHeight.Length < m_cellCount.y)
+            {
+                _layerAddingHeight = new float[m_cellCount.y];
+            }
+
+            UpdateLayerIntervals(false);
+
+            _loadsVisible = new Array3<bool>(m_cellCount.x, m_cellCount.y, m_cellCount.z);
+            _loadsVisible.Reset(true);
+
+            for (int i = 0; i < m_loadPrefabConfig.Length; i++)
+            {
+                m_loadsConfigs[i] = new LoadsConfig();
+                m_loadsConfigs[i].Init(m_cellCount, m_loadPrefabConfig[i].Prefab);
+                m_loadsConfigs[i].SetLTW(transform.localToWorldMatrix);
+            }
+
+            foreach (var item in m_loadPrefabConfig)
+            {
+                item.InitBuffer(m_cellCount, m_simpleExclude);
+            }
+
+            if (_loadTargets.TArray != null)
+            {
+                foreach (var item in _loadTargets.TArray)
+                {
+                    if (item != null)
+                    {
+                        item.Destroy();
+                    }
+                }
+            }
+
+            _loadTargets = new Array3<GameObject>(m_cellCount.x, m_cellCount.y, m_cellCount.z);
+
+            for (int x = 0; x < m_cellCount.x; x++)
+            {
+                for (int y = 0; y < m_cellCount.y; y++)
+                {
+                    var addHeight = new Vector3(0, _layerAddingHeight[y], 0);
+                    for (int z = 0; z < m_cellCount.z; z++)
+                    {
+                        Matrix4x4 m4x4 = new Matrix4x4();
+                        m4x4.SetTRS(_cellsPos[x, y, z] + addHeight, transform.rotation, Vector3.one);
+                        Matrix4x4 m4x4_2 = new Matrix4x4();
+                        m4x4_2.SetTRS(_cellsPos[x, y, z] + addHeight, transform.rotation, Vector3.zero);
+                        for (int i = 0; i < m_loadPrefabConfig.Length; i++)
+                        {
+                            if (m_loadPrefabConfig[i].Check(x, y, z))
+                            {
+                                m_loadsConfigs[i].AddNewLoad(x, y, z, _loadsVisible[x, y, z] ? m4x4 : m4x4_2, false);
+                                var newTarget = new GameObject();
+                                newTarget.transform.SetPositionAndRotation(transform.position + _cellsPos[x, y, z] + addHeight, transform.rotation);
+                                newTarget.transform.localScale = _loadsVisible[x, y, z] ? Vector3.one : Vector3.zero;
+                                var newBox = newTarget.AddComponent<BoxCollider>();
+                                newBox.center = m_loadPrefabConfig[i].Bounds.center;
+                                newBox.size = m_loadPrefabConfig[i].Bounds.size;
+                                var newLoadTarget = newTarget.AddComponent<LoadTarget>();
+                                newLoadTarget.Pos = new Vector3Int(x, y, z);
+                                newTarget.transform.SetParent(transform, true);
+                                _loadTargets[x, y, z] = (newTarget);
+                            }
+                        }
+                    }
+                }
+            }
+
             foreach (var item in m_loadsConfigs)
             {
                 item.UpdateParts();
@@ -86,50 +238,65 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                 {
                     item.gameObject.Destroy();
                 }
+
                 m_layersParent = null;
             }
         }
 
         public void SetLayers(GameObject[] layers)
         {
+            if (layers.Length != _layerAddingHeight.Length)
+            {
+                return;
+            }
+
             if (m_layersParent != null)
             {
                 foreach (var item in m_layersParent)
                 {
-                    item.gameObject.Destroy();
+                    item.Destroy();
                 }
             }
-            foreach (var item in layers)
+
+            GameObject[] trueLayers = new GameObject[layers.Length];
+
+            for (int i = 0; i < layers.Length; i++)
             {
-                item.transform.SetParent(transform);
+                trueLayers[i] = new GameObject();
+                trueLayers[i].transform.SetParent(transform);
+                trueLayers[i].transform.localPosition = new Vector3(0, 0, 0);
+                layers[i].transform.SetParent(trueLayers[i].transform, true);
+                trueLayers[i].transform.localPosition = new Vector3(0, _layerAddingHeight[i], 0);
             }
-            m_layersParent = layers;
+
+            m_layersParent = trueLayers;
         }
     }
 
-    [System.Serializable]
+    [Serializable]
     public class LoadsConfig
     {
         public GameObject Prefab;
-
         public List<LoadsPartInfo> Parts;
         public Array3<int> Index;
         public List<Matrix4x4> LoadTrans;
+        public Matrix4x4 LTW;
 
         public void Init(Vector3Int cellCount, GameObject prefab)
         {
             Index = new Array3<int>(cellCount.x, cellCount.y, cellCount.z);
             LoadTrans = new List<Matrix4x4>();
+            Prefab = prefab;
             InitMeshs(prefab);
         }
 
         public void RenderLoads()
         {
-            for (int i = 0; i < Parts.Count; i++)
+            foreach (var t in Parts)
             {
-                foreach (var item in Parts[i].Trans)
+                foreach (var item in t.Trans)
                 {
-                    Graphics.RenderMeshInstanced(Parts[i].RenderParams, Parts[i].Mesh, Parts[i].SubMeshCount, item);
+                    Graphics.RenderMeshInstanced(t.RenderParams, t.Mesh, t.SubMeshCount, item);
                 }
             }
         }
@@ -144,11 +311,32 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             }
         }
 
+        public void SetNewLoadNewTrans(int column, int layer, int row, Matrix4x4 trans, bool autoUpdate = true)
+        {
+            LoadTrans[Index[column, layer, row]] = trans;
+            if (autoUpdate)
+            {
+                UpdateParts();
+            }
+        }
+
+        public void SetLTW(Matrix4x4 ltw)
+        {
+            LTW = ltw;
+            UpdateParts();
+        }
+
         public void UpdateParts()
         {
+            List<Matrix4x4> trans = new List<Matrix4x4>();
+            foreach (var t in LoadTrans)
+            {
+                trans.Add(LTW * t);
+            }
+
             foreach (var item in Parts)
             {
-                item.UpdateTrans(LoadTrans);
+                item.UpdateTrans(trans);
             }
         }
 
@@ -166,9 +354,11 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     {
                         return;
                     }
+
                     for (int i = 0; i < renderer.sharedMaterials.Length; i++)
                     {
-                        Parts.Add(new LoadsPartInfo(new RenderParams(renderer.sharedMaterials[i]), item.sharedMesh, i, prefab.transform.worldToLocalMatrix * item.transform.localToWorldMatrix));
+                        Parts.Add(new LoadsPartInfo(new RenderParams(renderer.sharedMaterials[i]), item.sharedMesh, i,
+                            prefab.transform.worldToLocalMatrix * item.transform.localToWorldMatrix));
                     }
                 }
             }
@@ -214,6 +404,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                         less = 0;
                     }
                 }
+
                 Trans[patchIndex][index] = (item * Offset);
                 index++;
                 if (index == 1023)

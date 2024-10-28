@@ -2,6 +2,7 @@ using NonsensicalKit.Core;
 using NonsensicalKit.Tools;
 using NonsensicalKit.Tools.ObjectPool;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace NonsensicalKit.Simulation.ParametricModelingShelves
 {
@@ -21,7 +22,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         public Vector3 DefaultScale = Vector3.one;
         public bool DefaultState;
 
-        public bool  UseMinMax=true;
+        public bool UseMinMax=true;
         public Vector3Int Min;
         public Vector3Int Max;
         public Vector3Int[] Include;
@@ -246,7 +247,14 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
     public class ShelvesLoadPrefabConfig : ShelvesPrefabConfig
     {
         public GameObject Prefab;
+        public Bounds Bounds;
 
+        public override void InitBuffer(Vector3Int cellCount, Vector3Int[] simpleExclude)
+        {
+            base.InitBuffer(cellCount, simpleExclude);
+            Bounds = Prefab.transform.BoundingBox();
+        }
+        
         protected override void AnalyzeSimpleExclude(Vector3Int cellCount, Vector3Int[] simpleExclude)
         {
             foreach (var item in simpleExclude)

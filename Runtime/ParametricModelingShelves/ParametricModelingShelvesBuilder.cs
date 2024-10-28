@@ -10,8 +10,8 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 {
     public class ParametricModelingShelvesBuilder : ShelvesBase
     {
-        public ShelvesBuildPrefabConfig[] m_prefabConfigs;
-        public ParametricModelingShelvesManager m_manager;
+        [SerializeField] private ShelvesBuildPrefabConfig[] m_prefabConfigs;
+        [SerializeField] private  ParametricModelingShelvesManager m_manager;
 
         private Dictionary<ShelvesPrefabType, List<ShelvesBuildPrefabConfig>> _configs;
         private List<GameObject>[] _layerObjs;
