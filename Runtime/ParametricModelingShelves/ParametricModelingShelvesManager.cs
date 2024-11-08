@@ -25,7 +25,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             }
         }
 
-        private Array3<GameObject> _loadTargets;
+        private Array4<GameObject> _loadTargets;
         private Array3<bool> _loadsVisible;
 
         private float[] _layerAddingHeight;
@@ -75,15 +75,10 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             UpdateLoads();
         }
 
-        public void SetLoasdVisible(Array3<bool> show)
+        public void SetLoadsVisible(Array3<bool> show)
         {
-            if (show.Length0 == _loadsVisible.Length0
-                && show.Length1 == _loadsVisible.Length1
-                && show.Length2 == _loadsVisible.Length2)
-            {
-                _loadsVisible = show;
-                UpdateLoads();
-            }
+            _loadsVisible = show;
+            UpdateLoads();
         }
 
         private void UpdateLayerIntervals(bool update = true)
@@ -130,10 +125,10 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                         {
                             if (m_loadPrefabConfig[i].Check(x, y, z))
                             {
-                                m_loadsConfigs[i].SetNewLoadNewTrans(x, y, z, _loadsVisible[x, y, z] ? m4x4 : m4x4_2, false);
-                                var loadTarget = _loadTargets[x, y, z];
+                                m_loadsConfigs[i].SetNewLoadNewTrans(x, y, z, _loadsVisible.SafeGet(x, y, z) ? m4x4 : m4x4_2, false);
+                                var loadTarget = _loadTargets[i, x, y, z];
                                 loadTarget.transform.SetPositionAndRotation(transform.position + _cellsPos[x, y, z] + addHeight, transform.rotation);
-                                loadTarget.transform.localScale = _loadsVisible[x, y, z] ? Vector3.one : Vector3.zero;
+                                loadTarget.transform.localScale = _loadsVisible.SafeGet(x, y, z) ? Vector3.one : Vector3.zero;
                             }
                         }
                     }
@@ -188,7 +183,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                 }
             }
 
-            _loadTargets = new Array3<GameObject>(m_cellCount.x, m_cellCount.y, m_cellCount.z);
+            _loadTargets = new Array4<GameObject>(m_loadPrefabConfig.Length, m_cellCount.x, m_cellCount.y, m_cellCount.z);
 
             for (int x = 0; x < m_cellCount.x; x++)
             {
@@ -215,7 +210,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                                 var newLoadTarget = newTarget.AddComponent<LoadTarget>();
                                 newLoadTarget.Pos = new Vector3Int(x, y, z);
                                 newTarget.transform.SetParent(transform, true);
-                                _loadTargets[x, y, z] = (newTarget);
+                                _loadTargets[i, x, y, z] = (newTarget);
                             }
                         }
                     }
@@ -230,6 +225,13 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 
         public void Clean()
         {
+            if (_loadTargets.TArray!=null)
+            {
+                foreach (var item in _loadTargets.TArray)
+                {
+                    item.Destroy();
+                }
+            }
             m_loadsConfigs = null;
 
             if (m_layersParent != null)
