@@ -8,10 +8,10 @@ using UnityEngine.UIElements;
 
 namespace NonsensicalKit.Simulation.ParametricModelingShelves
 {
-    public class ParametricModelingShelvesBuilder : ShelvesBase
+    public class ShelvesBuilder : ShelvesBase
     {
         [SerializeField] private ShelvesBuildPrefabConfig[] m_prefabConfigs;
-        [SerializeField] private  ParametricModelingShelvesManager m_manager;
+        [SerializeField] private  ShelvesManager m_manager;
 
         private Dictionary<ShelvesPrefabType, List<ShelvesBuildPrefabConfig>> _configs;
         private List<GameObject>[] _layerObjs;

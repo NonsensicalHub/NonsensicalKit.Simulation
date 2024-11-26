@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace NonsensicalKit.Simulation.ParametricModelingShelves
 {
-    public class ParametricModelingShelvesManager : ShelvesBase
+    public class ShelvesManager : ShelvesBase
     {
         [SerializeField] private GameObject[] m_layersParent;
         [SerializeField] private LoadsConfig[] m_loadsConfigs;
@@ -172,9 +172,9 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                 item.InitBuffer(m_cellCount, m_simpleExclude);
             }
 
-            if (_loadTargets.TArray != null)
+            if (_loadTargets.m_Array != null)
             {
-                foreach (var item in _loadTargets.TArray)
+                foreach (var item in _loadTargets.m_Array)
                 {
                     if (item != null)
                     {
@@ -225,9 +225,9 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 
         public void Clean()
         {
-            if (_loadTargets.TArray!=null)
+            if (_loadTargets.m_Array!=null)
             {
-                foreach (var item in _loadTargets.TArray)
+                foreach (var item in _loadTargets.m_Array)
                 {
                     item.Destroy();
                 }

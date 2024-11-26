@@ -18,7 +18,6 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
     [System.Serializable]
     public abstract class ShelvesPrefabConfig
     {
-        public bool AutoSize;
         public Vector3 DefaultScale = Vector3.one;
         public bool DefaultState;
 
@@ -352,6 +351,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
     [System.Serializable]
     public class ShelvesBuildPrefabConfig : ShelvesPrefabConfig
     {
+        public bool AutoSize;
         public ShelvesPrefabType PrefabType;
         public SerializableGameobjectPool Pool;
         public Vector3 OriginSize = Vector3.one;
