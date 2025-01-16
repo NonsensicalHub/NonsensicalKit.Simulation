@@ -10,8 +10,8 @@ namespace  NonsensicalKit.Simulation.ParametricModelingShelves.Samples
 {
     public class ParametricModelingShelvesSample : MonoBehaviour
     {
-        [SerializeField] private ParametricModelingShelvesBuilder m_builder;
-        [SerializeField] private ParametricModelingShelvesManager m_manager;
+        [SerializeField] private ShelvesBuilder m_builder;
+        [SerializeField] private ShelvesManager m_manager;
         [SerializeField] private Button m_btn_rebuild;
         [SerializeField] private Button m_btn_invertals;
         [SerializeField] private Button m_btn_changeVisible;
@@ -54,12 +54,12 @@ namespace  NonsensicalKit.Simulation.ParametricModelingShelves.Samples
         {
             Array3<bool> vs = new Array3<bool>(m_builder.Size.x, m_builder.Size.y, m_builder.Size.z);
 
-            for (int i = 0; i < vs.TArray.Length; i++)
+            for (int i = 0; i < vs.m_Array.Length; i++)
             {
-                vs.TArray[i] = Random.Range(0, 2) == 1;
+                vs.m_Array[i] = Random.Range(0, 2) == 1;
             }
 
-            m_manager.SetLoasdVisible(vs);
+            m_manager.SetLoadsVisible(vs);
         }
     }
 }
