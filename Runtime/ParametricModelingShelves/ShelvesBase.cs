@@ -27,38 +27,37 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         [SerializeField] protected Vector3Int[] m_simpleExclude;
 
         public Vector3Int Size => m_cellCount;
-        
-        protected Array3<Vector3> _cellsPos;
-        protected Array3<Vector3> _pillarsPos;
-        protected Array3<Vector3> _horizontalCorssbarPos;
-        protected Array3<Vector3> _verticalCorssbarPos;
 
-        protected float[] _cellXSize;
-        protected float[] _cellYSize;
-        protected float[] _cellZSize;
-        protected Vector3 _bottomOffset;
+        protected Array3<Vector3> CellsPos;
+        protected Array3<Vector3> PillarsPos;
+        protected Array3<Vector3> HorizontalCrossbarPos;
+        protected Array3<Vector3> VerticalCrossbarPos;
 
+        protected float[] CellXSize;
+        protected float[] CellYSize;
+        protected float[] CellZSize;
+        protected Vector3 BottomOffset;
 
         protected virtual void Init()
         {
-            _cellsPos = new Array3<Vector3>(m_cellCount.x + 1, m_cellCount.y, m_cellCount.z + 1);
-            _pillarsPos = new Array3<Vector3>(m_cellCount.x + 1, m_cellCount.y, m_cellCount.z + 1);
-            _horizontalCorssbarPos = new Array3<Vector3>(m_cellCount.x + 1, m_cellCount.y, m_cellCount.z + 1);
-            _verticalCorssbarPos = new Array3<Vector3>(m_cellCount.x + 1, m_cellCount.y, m_cellCount.z + 1);
+            CellsPos = new Array3<Vector3>(m_cellCount.x + 1, m_cellCount.y, m_cellCount.z + 1);
+            PillarsPos = new Array3<Vector3>(m_cellCount.x + 1, m_cellCount.y, m_cellCount.z + 1);
+            HorizontalCrossbarPos = new Array3<Vector3>(m_cellCount.x + 1, m_cellCount.y, m_cellCount.z + 1);
+            VerticalCrossbarPos = new Array3<Vector3>(m_cellCount.x + 1, m_cellCount.y, m_cellCount.z + 1);
 
-            _cellXSize = new float[m_cellCount.x + 1];
-            _cellYSize = new float[m_cellCount.y];
-            _cellZSize = new float[m_cellCount.z + 1];
+            CellXSize = new float[m_cellCount.x + 1];
+            CellYSize = new float[m_cellCount.y];
+            CellZSize = new float[m_cellCount.z + 1];
             float shelvesXSize = 0;
             float shelvesZSize = 0;
 
-            _bottomOffset = new Vector3(0, -m_bottomHeight, 0);
+            BottomOffset = new Vector3(0, -m_bottomHeight, 0);
 
             if (m_useCommonSize)
             {
-                _cellXSize.Fill(m_commonCellSize.x);
-                _cellYSize.Fill(m_commonCellSize.y);
-                _cellZSize.Fill(m_commonCellSize.z);
+                CellXSize.Fill(m_commonCellSize.x);
+                CellYSize.Fill(m_commonCellSize.y);
+                CellZSize.Fill(m_commonCellSize.z);
                 shelvesXSize = m_commonCellSize.x * m_cellCount.x;
                 shelvesZSize = m_commonCellSize.z * m_cellCount.z;
             }
@@ -72,7 +71,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                         buffer = m_cellXSize[i];
                     }
 
-                    _cellXSize[i] = buffer;
+                    CellXSize[i] = buffer;
                     shelvesXSize += buffer;
                 }
 
@@ -86,7 +85,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                         buffer = m_cellYSize[i];
                     }
 
-                    _cellYSize[i] = buffer;
+                    CellYSize[i] = buffer;
                 }
 
                 buffer = 1;
@@ -97,14 +96,14 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                         buffer = m_cellZSize[i];
                     }
 
-                    _cellZSize[i] = buffer;
+                    CellZSize[i] = buffer;
                     shelvesZSize += buffer;
                 }
 
                 shelvesZSize -= buffer;
             }
 
-            Vector3 basePos = new Vector3(-shelvesXSize * 0.5f, 0, -shelvesZSize * 0.5f) - _bottomOffset;
+            Vector3 basePos = new Vector3(-shelvesXSize * 0.5f, 0, -shelvesZSize * 0.5f) - BottomOffset;
             Vector3 cellBasePos = basePos;
 
             for (int x = 0; x <= m_cellCount.x; x++)
@@ -115,18 +114,18 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     cellBasePos.z = basePos.z;
                     for (int z = 0; z <= m_cellCount.z; z++)
                     {
-                        _pillarsPos[x, y, z] = cellBasePos;
-                        _horizontalCorssbarPos[x, y, z] = cellBasePos + new Vector3(_cellXSize[x], 0, 0) * 0.5f;
-                        _verticalCorssbarPos[x, y, z] = cellBasePos + new Vector3(0, 0, _cellZSize[z]) * 0.5f;
-                        _cellsPos[x, y, z] = cellBasePos + new Vector3(_cellXSize[x], 0, _cellZSize[z]) * 0.5f;
+                        PillarsPos[x, y, z] = cellBasePos;
+                        HorizontalCrossbarPos[x, y, z] = cellBasePos + new Vector3(CellXSize[x], 0, 0) * 0.5f;
+                        VerticalCrossbarPos[x, y, z] = cellBasePos + new Vector3(0, 0, CellZSize[z]) * 0.5f;
+                        CellsPos[x, y, z] = cellBasePos + new Vector3(CellXSize[x], 0, CellZSize[z]) * 0.5f;
 
-                        cellBasePos.z += _cellZSize[z];
+                        cellBasePos.z += CellZSize[z];
                     }
 
-                    cellBasePos.y += _cellYSize[y];
+                    cellBasePos.y += CellYSize[y];
                 }
 
-                cellBasePos.x += _cellXSize[x];
+                cellBasePos.x += CellXSize[x];
             }
         }
 

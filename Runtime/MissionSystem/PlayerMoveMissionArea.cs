@@ -2,6 +2,7 @@ using NonsensicalKit.Core;
 using NonsensicalKit.Core.Service;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 
 namespace NonsensicalKit.Simulation.Mission
 {
@@ -9,11 +10,12 @@ namespace NonsensicalKit.Simulation.Mission
     {
         [SerializeField] private string m_missionID;
 
-        [SerializeField] private UnityEvent m_Enter;
+        [FormerlySerializedAs("m_Enter")] [SerializeField]
+        private UnityEvent m_enter;
 
         private MissionSystem _missionSystem;
         private Collider _collider;
-        private bool Running;
+        private bool _running;
 
         private void Awake()
         {
@@ -29,7 +31,7 @@ namespace NonsensicalKit.Simulation.Mission
             if (missionID == m_missionID)
             {
                 _collider.enabled = true;
-                Running = true;
+                _running = true;
             }
         }
 
@@ -38,17 +40,17 @@ namespace NonsensicalKit.Simulation.Mission
             if (missionID == m_missionID)
             {
                 _collider.enabled = false;
-                Running = false;
+                _running = false;
             }
         }
 
         private void OnTriggerEnter(Collider other)
         {
-            if (Running)
+            if (_running)
             {
-                if (other.tag == "Player")
+                if (other.CompareTag("Player"))
                 {
-                    m_Enter?.Invoke();
+                    m_enter?.Invoke();
                     _missionSystem.MissionCompleted(m_missionID);
                 }
             }

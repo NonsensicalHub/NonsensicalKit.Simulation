@@ -7,8 +7,8 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
     /// </summary>
     public class TriggerInteractableObject : InteractableObject
     {
-        [SerializeField]private LayerMask m_layers;
-        [SerializeField]private bool m_oneShot;
+        [SerializeField] private LayerMask m_layers;
+        [SerializeField] private bool m_oneShot;
 
         private void OnTriggerEnter(Collider other)
         {

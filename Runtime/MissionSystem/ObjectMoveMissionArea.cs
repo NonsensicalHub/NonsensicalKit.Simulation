@@ -60,6 +60,7 @@ namespace NonsensicalKit.Simulation.Mission
                 }
             }
         }
+
         private void OnTriggerExit(Collider other)
         {
             if (_isRunning)

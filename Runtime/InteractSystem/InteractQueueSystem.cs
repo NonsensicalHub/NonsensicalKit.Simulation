@@ -1,7 +1,7 @@
-using NonsensicalKit.Core;
-using NonsensicalKit.Core.Service;
 using System;
 using System.Collections.Generic;
+using NonsensicalKit.Core;
+using NonsensicalKit.Core.Service;
 
 namespace NonsensicalKit.Simulation.InteractQueueSystem
 {
@@ -19,7 +19,7 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
         /// <summary>
         /// 当前等待交互的对象
         /// </summary>
-        private List<InteractableObject> _interactableObjects = new List<InteractableObject>();
+        private readonly List<InteractableObject> _interactableObjects = new();
 
         /// <summary>
         /// 当前选中的InteractableObject在_interactableObjects中的索引
@@ -54,6 +54,7 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
                 {
                     _selectIndex = 0;
                 }
+
                 UpdateMenu();
             }
         }
@@ -68,32 +69,35 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
                 {
                     _selectIndex = 0;
                 }
+
                 UpdateMenu();
             }
         }
 
         public void ExitQueue(InteractableObject obj)
         {
-            if (_interactableObjects.Contains(obj) == true)
+            if (_interactableObjects.Contains(obj))
             {
                 int index = _interactableObjects.IndexOf(obj);
                 if (index < _selectIndex)
                 {
                     _selectIndex--;
                 }
+
                 _interactableObjects.Remove(obj);
 
-                if (_selectIndex>= _interactableObjects.Count)
+                if (_selectIndex >= _interactableObjects.Count)
                 {
                     _selectIndex = _interactableObjects.Count - 1;
                 }
+
                 UpdateMenu();
             }
         }
 
         private void OnMenuClick(int menuIndex)
         {
-            if (menuIndex>=0&& menuIndex< _interactableObjects.Count)
+            if (menuIndex >= 0 && menuIndex < _interactableObjects.Count)
             {
                 _selectIndex = menuIndex;
                 _interactableObjects[menuIndex].Interact();
@@ -107,7 +111,8 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
             {
                 menuNames.Add(item.InteractName);
             }
-            Publish<List<string>,int>("updateInteractMenu", menuNames,_selectIndex);
+
+            Publish("updateInteractMenu", menuNames, _selectIndex);
         }
     }
 }

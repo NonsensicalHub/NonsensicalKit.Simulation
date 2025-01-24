@@ -1,5 +1,3 @@
-using System;
-
 namespace NonsensicalKit.Simulation.Inventory
 {
     /// <summary>
@@ -12,7 +10,7 @@ namespace NonsensicalKit.Simulation.Inventory
         public string InventoryID;
         public int InventoryIndex;
 
-        public ItemEntity(ItemData data, int count,string inventoryID,int inventoryIndex)
+        public ItemEntity(ItemData data, int count, string inventoryID, int inventoryIndex)
         {
             Data = data;
             StackNum = count;

@@ -10,7 +10,7 @@ namespace NonsensicalKit.Simulation.Inventory
 
         private void Awake()
         {
-            ServiceCore.Get<InventorySystem>().Init( m_inventorys, m_items);
+            ServiceCore.Get<InventorySystem>().Init(m_inventorys, m_items);
         }
     }
 }

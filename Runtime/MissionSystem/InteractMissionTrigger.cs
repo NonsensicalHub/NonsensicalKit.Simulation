@@ -9,7 +9,7 @@ namespace NonsensicalKit.Simulation.Mission
         [SerializeField] private string m_missionID;
 
         private MissionSystem _missionSystem;
-        private bool Running;
+        private bool _running;
 
         private void Awake()
         {
@@ -23,7 +23,7 @@ namespace NonsensicalKit.Simulation.Mission
         {
             if (missionID == m_missionID)
             {
-                Running = true;
+                _running = true;
             }
         }
 
@@ -31,13 +31,13 @@ namespace NonsensicalKit.Simulation.Mission
         {
             if (missionID == m_missionID)
             {
-                Running = false;
+                _running = false;
             }
         }
 
         public void InteractCompleted(bool playerWin)
         {
-            if (playerWin && Running)
+            if (playerWin && _running)
             {
                 _missionSystem.MissionCompleted(m_missionID);
             }

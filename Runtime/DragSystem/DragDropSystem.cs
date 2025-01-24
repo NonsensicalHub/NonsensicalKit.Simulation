@@ -1,16 +1,16 @@
-using NonsensicalKit.Core.Service;
 using System;
+using NonsensicalKit.Core.Service;
 using UnityEngine.EventSystems;
 
 namespace NonsensicalKit.Simulation.DragSystem
 {
-    public delegate void DragDropEventHander(PointerEventData pointerEventData);
+    public delegate void DragDropEventHandle(PointerEventData pointerEventData);
 
     public class DragDropSystem : IClassService
     {
-        public event DragDropEventHander BeginDrag;
-        public event DragDropEventHander Drag;
-        public event DragDropEventHander Drop;
+        public event DragDropEventHandle BeginDrag;
+        public event DragDropEventHandle Drag;
+        public event DragDropEventHandle Drop;
 
         public object[] DragObjects
         {
@@ -18,16 +18,11 @@ namespace NonsensicalKit.Simulation.DragSystem
             private set;
         }
 
-        public bool InProgress
-        {
-            get { return DragObjects != null && DragObjects.Length > 0; }
-        }
+        public bool InProgress => DragObjects is { Length: > 0 };
 
-        private object m_source;
-        public object Source
-        {
-            get { return m_source; }
-        }
+        private object _source;
+
+        public object Source => _source;
 
         public object DragObject
         {
@@ -52,7 +47,6 @@ namespace NonsensicalKit.Simulation.DragSystem
             InitCompleted?.Invoke();
         }
 
-
         public void Reset()
         {
             DragObjects = null;
@@ -65,7 +59,7 @@ namespace NonsensicalKit.Simulation.DragSystem
                 return;
             }
 
-            m_source = source;
+            _source = source;
             DragObjects = dragItems;
             if (BeginDrag != null)
             {
@@ -94,7 +88,7 @@ namespace NonsensicalKit.Simulation.DragSystem
                 }
 
                 DragObjects = null;
-                m_source = null;
+                _source = null;
             }
         }
     }

@@ -1,8 +1,8 @@
+using System;
+using System.Collections.Generic;
 using NonsensicalKit.Core;
 using NonsensicalKit.Core.Log;
 using NonsensicalKit.Core.Service;
-using System;
-using System.Collections.Generic;
 
 namespace NonsensicalKit.Simulation.Mission
 {
@@ -19,9 +19,9 @@ namespace NonsensicalKit.Simulation.Mission
         public Action InitCompleted { get; set; }
         public Action OnMissionStatusChanged { get; set; }
 
-        private Dictionary<string, MissionObject> _missions;
+        private readonly Dictionary<string, MissionObject> _missions;
 
-        private HashSet<string> _completedMissions;
+        private readonly HashSet<string> _completedMissions;
 
         private bool _autoAccept;
 
@@ -30,7 +30,6 @@ namespace NonsensicalKit.Simulation.Mission
             _missions = new Dictionary<string, MissionObject>();
             _completedMissions = new HashSet<string>();
             IsReady = true;
-            InitCompleted?.Invoke();
         }
 
         /// <summary>
@@ -56,7 +55,6 @@ namespace NonsensicalKit.Simulation.Mission
         /// <summary>
         /// 开始执行所有任务
         /// </summary>
-        /// <param name="_quest"></param>
         public void AutoAccept()
         {
             _autoAccept = true;
@@ -66,6 +64,7 @@ namespace NonsensicalKit.Simulation.Mission
                 {
                     continue;
                 }
+
                 bool flag = true;
                 foreach (var item2 in item.Value.Data.PremiseMissionIDs)
                 {
@@ -75,10 +74,12 @@ namespace NonsensicalKit.Simulation.Mission
                         break;
                     }
                 }
+
                 if (!flag)
                 {
                     continue;
                 }
+
                 StartMission(item.Key);
             }
         }
@@ -91,7 +92,7 @@ namespace NonsensicalKit.Simulation.Mission
             }
             else
             {
-                IOCC.PublishWithID<string>("StopMission", _missions[missionID].Data.Type, missionID);
+                IOCC.PublishWithID("StopMission", _missions[missionID].Data.Type, missionID);
                 _missions[missionID].Status = MissionStatus.Completed;
                 OnMissionStatusChanged?.Invoke();
                 _completedMissions.Add(missionID);
@@ -110,7 +111,7 @@ namespace NonsensicalKit.Simulation.Mission
             }
             else
             {
-                IOCC.PublishWithID<string>("StopMission", _missions[missionID].Data.Type, missionID);
+                IOCC.PublishWithID("StopMission", _missions[missionID].Data.Type, missionID);
                 _missions[missionID].Status = MissionStatus.Failed;
                 OnMissionStatusChanged?.Invoke();
             }
@@ -118,9 +119,9 @@ namespace NonsensicalKit.Simulation.Mission
 
         public string GetMissionName(string missionID)
         {
-            if (_missions.ContainsKey(missionID))
+            if (_missions.TryGetValue(missionID, out var mission))
             {
-                return _missions[missionID].Data.Name;
+                return mission.Data.Name;
             }
             else
             {
@@ -139,13 +140,14 @@ namespace NonsensicalKit.Simulation.Mission
                     missions.Add(item.Value.Data);
                 }
             }
+
             return missions;
         }
 
         /// <summary>
         /// 开始执行任务
         /// </summary>
-        /// <param name="_quest"></param>
+        /// <param name="missionID"></param>
         private void StartMission(string missionID)
         {
             if (_missions[missionID].Status != MissionStatus.Unaccepted && _missions[missionID].Status != MissionStatus.Failed)
@@ -155,7 +157,7 @@ namespace NonsensicalKit.Simulation.Mission
             else
             {
                 _missions[missionID].Status = MissionStatus.Accepted;
-                IOCC.PublishWithID<string>("StartMission", _missions[missionID].Data.Type, _missions[missionID].Data.ID);
+                IOCC.PublishWithID("StartMission", _missions[missionID].Data.Type, _missions[missionID].Data.ID);
                 OnMissionStatusChanged?.Invoke();
             }
         }
@@ -163,13 +165,13 @@ namespace NonsensicalKit.Simulation.Mission
         /// <summary>
         /// 清空所有任务
         /// </summary>
-        /// <param name="missionID"></param>
         private void ClearMission()
         {
             foreach (var item in _missions)
             {
-                IOCC.PublishWithID<string>("StopMission", item.Value.Data.Type, item.Value.Data.ID);
+                IOCC.PublishWithID("StopMission", item.Value.Data.Type, item.Value.Data.ID);
             }
+
             _missions.Clear();
             OnMissionStatusChanged?.Invoke();
         }
@@ -181,9 +183,9 @@ namespace NonsensicalKit.Simulation.Mission
     public enum MissionStatus
     {
         Unaccepted, //未被接受
-        Accepted,   //已接受
-        Completed,  //已完成
-        Failed      //已失败
+        Accepted, //已接受
+        Completed, //已完成
+        Failed //已失败
     }
 
     public class MissionObject

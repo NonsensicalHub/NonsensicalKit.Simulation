@@ -11,16 +11,16 @@ namespace NonsensicalKit.Simulation.DragSystem
     {
         public object[] DragItems { get; set; }
 
-        protected DragDropSystem dds;
+        protected DragDropSystem DDS;
 
         protected virtual void Awake()
         {
-            dds = IOCC.Get<DragDropSystem>();
+            DDS = IOCC.Get<DragDropSystem>();
         }
 
         public virtual void OnPointerDown(PointerEventData eventData)
         {
-            dds.RaiseBeginDrag(this, DragItems, eventData);
+            DDS.RaiseBeginDrag(this, DragItems, eventData);
         }
 
         public virtual void OnBeginDrag(PointerEventData eventData)
@@ -29,12 +29,12 @@ namespace NonsensicalKit.Simulation.DragSystem
 
         public virtual void OnDrag(PointerEventData eventData)
         {
-            dds.RaiseDrag(eventData);
+            DDS.RaiseDrag(eventData);
         }
 
         public virtual void OnPointerUp(PointerEventData eventData)
         {
-            dds.RaiseDrop(eventData);
+            DDS.RaiseDrop(eventData);
         }
     }
 }

@@ -1,7 +1,9 @@
-using NonsensicalKit.Core.Service;
+using System;
 using System.Linq;
+using NonsensicalKit.Core.Service;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 
 namespace NonsensicalKit.Simulation.DragSystem
 {
@@ -17,65 +19,62 @@ namespace NonsensicalKit.Simulation.DragSystem
     [DefaultExecutionOrder(-50)]
     public class DropTarget : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IDropTarget
     {
-        public event DragDropEventHander BeginDragEvent;
-        public event DragDropEventHander DragEnterEvent;
-        public event DragDropEventHander DragLeaveEvent;
-        public event DragDropEventHander DragEvent;
-        public event DragDropEventHander DropEvent;
+        public event DragDropEventHandle BeginDragEvent;
+        public event DragDropEventHandle DragEnterEvent;
+        public event DragDropEventHandle DragLeaveEvent;
+        public event DragDropEventHandle DragEvent;
+        public event DragDropEventHandle DropEvent;
 
-        [SerializeField]
-        public GameObject m_dragDropTargetGO;
+        [FormerlySerializedAs("m_dragDropTargetGO")] [SerializeField]
+        public GameObject m_DragDropTargetGo;
 
-        private IDropTarget[] m_dragDropTargets = new IDropTarget[0];
-        private DragDropSystem dragDrop;
+        private IDropTarget[] _dragDropTargets = Array.Empty<IDropTarget>();
+        private DragDropSystem _dragDrop;
 
-        public virtual bool IsPointerOver
-        {
-            get;
-            set;
-        }
+        public virtual bool IsPointerOver { get; set; }
 
         protected virtual void Awake()
         {
-            dragDrop = ServiceCore.Get<DragDropSystem>();
-            if (m_dragDropTargetGO == null)
+            _dragDrop = ServiceCore.Get<DragDropSystem>();
+            if (m_DragDropTargetGo == null)
             {
-                m_dragDropTargetGO = gameObject;
+                m_DragDropTargetGo = gameObject;
             }
-            m_dragDropTargets = m_dragDropTargetGO.GetComponents<Component>().OfType<IDropTarget>().ToArray();
-            if (m_dragDropTargets.Length == 0)
+
+            _dragDropTargets = m_DragDropTargetGo.GetComponents<Component>().OfType<IDropTarget>().ToArray();
+            if (_dragDropTargets.Length == 0)
             {
                 Debug.LogWarning("dragDropTargetGO does not contains components with IDragDropTarget interface implemented");
-                m_dragDropTargets = new[] { this };
+                _dragDropTargets = new[] { this as IDropTarget };
             }
         }
 
         protected virtual void OnDestroy()
         {
-            m_dragDropTargets = null;
+            _dragDropTargets = null;
         }
 
 
         void IPointerEnterHandler.OnPointerEnter(PointerEventData eventData)
         {
             IsPointerOver = true;
-            if (dragDrop.InProgress && dragDrop.Source != (object)this)
+            if (_dragDrop.InProgress && (DropTarget)_dragDrop.Source != this)
             {
-                DragEnter(dragDrop.DragObjects, eventData);
+                DragEnter(_dragDrop.DragObjects, eventData);
 
-                dragDrop.BeginDrag += OnBeginDrag;
-                dragDrop.Drag += OnDrag;
-                dragDrop.Drop += OnDrop;
+                _dragDrop.BeginDrag += OnBeginDrag;
+                _dragDrop.Drag += OnDrag;
+                _dragDrop.Drop += OnDrop;
             }
         }
 
         void IPointerExitHandler.OnPointerExit(PointerEventData eventData)
         {
             IsPointerOver = false;
-            dragDrop.BeginDrag -= OnBeginDrag;
-            dragDrop.Drop -= OnDrop;
-            dragDrop.Drag -= OnDrag;
-            if (dragDrop.InProgress && dragDrop.Source != (object)this)
+            _dragDrop.BeginDrag -= OnBeginDrag;
+            _dragDrop.Drop -= OnDrop;
+            _dragDrop.Drag -= OnDrag;
+            if (_dragDrop.InProgress && (DropTarget)_dragDrop.Source != this)
             {
                 DragLeave(eventData);
             }
@@ -83,36 +82,36 @@ namespace NonsensicalKit.Simulation.DragSystem
 
         private void OnBeginDrag(PointerEventData pointerEventData)
         {
-            if (dragDrop.InProgress)
+            if (_dragDrop.InProgress)
             {
-                for (int i = 0; i < m_dragDropTargets.Length; ++i)
+                for (int i = 0; i < _dragDropTargets.Length; ++i)
                 {
-                    m_dragDropTargets[i].BeginDrag(dragDrop.DragObjects, pointerEventData);
+                    _dragDropTargets[i].BeginDrag(_dragDrop.DragObjects, pointerEventData);
                 }
             }
         }
 
         private void OnDrag(PointerEventData pointerEventData)
         {
-            if (dragDrop.InProgress)
+            if (_dragDrop.InProgress)
             {
-                for (int i = 0; i < m_dragDropTargets.Length; ++i)
+                for (int i = 0; i < _dragDropTargets.Length; ++i)
                 {
-                    m_dragDropTargets[i].Drag(dragDrop.DragObjects, pointerEventData);
+                    _dragDropTargets[i].Drag(_dragDrop.DragObjects, pointerEventData);
                 }
             }
         }
 
         private void OnDrop(PointerEventData eventData)
         {
-            dragDrop.BeginDrag -= OnBeginDrag;
-            dragDrop.Drop -= OnDrop;
-            dragDrop.Drag -= OnDrag;
-            if (dragDrop.InProgress)
+            _dragDrop.BeginDrag -= OnBeginDrag;
+            _dragDrop.Drop -= OnDrop;
+            _dragDrop.Drag -= OnDrag;
+            if (_dragDrop.InProgress)
             {
-                for (int i = 0; i < m_dragDropTargets.Length; ++i)
+                for (int i = 0; i < _dragDropTargets.Length; ++i)
                 {
-                    m_dragDropTargets[i].Drop(dragDrop.DragObjects, eventData);
+                    _dragDropTargets[i].Drop(_dragDrop.DragObjects, eventData);
                 }
             }
         }

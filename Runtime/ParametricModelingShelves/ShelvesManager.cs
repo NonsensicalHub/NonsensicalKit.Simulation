@@ -17,7 +17,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 
         public float[] LayerIntervals
         {
-            get { return m_layerIntervals; }
+            get => m_layerIntervals;
             set
             {
                 m_layerIntervals = value;
@@ -118,16 +118,16 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     for (int z = 0; z < m_cellCount.z; z++)
                     {
                         Matrix4x4 m4x4 = new Matrix4x4();
-                        m4x4.SetTRS(_cellsPos[x, y, z] + addHeight, transform.rotation, Vector3.one);
+                        m4x4.SetTRS(CellsPos[x, y, z] + addHeight, transform.rotation, Vector3.one);
                         Matrix4x4 m4x4_2 = new Matrix4x4();
-                        m4x4_2.SetTRS(_cellsPos[x, y, z] + addHeight, transform.rotation, Vector3.zero);
+                        m4x4_2.SetTRS(CellsPos[x, y, z] + addHeight, transform.rotation, Vector3.zero);
                         for (int i = 0; i < m_loadPrefabConfig.Length; i++)
                         {
                             if (m_loadPrefabConfig[i].Check(x, y, z))
                             {
                                 m_loadsConfigs[i].SetNewLoadNewTrans(x, y, z, _loadsVisible.SafeGet(x, y, z) ? m4x4 : m4x4_2, false);
                                 var loadTarget = _loadTargets[i, x, y, z];
-                                loadTarget.transform.SetPositionAndRotation(transform.position + _cellsPos[x, y, z] + addHeight, transform.rotation);
+                                loadTarget.transform.SetPositionAndRotation(transform.position + CellsPos[x, y, z] + addHeight, transform.rotation);
                                 loadTarget.transform.localScale = _loadsVisible.SafeGet(x, y, z) ? Vector3.one : Vector3.zero;
                             }
                         }
@@ -163,7 +163,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             for (int i = 0; i < m_loadPrefabConfig.Length; i++)
             {
                 m_loadsConfigs[i] = new LoadsConfig();
-                m_loadsConfigs[i].Init(m_cellCount, m_loadPrefabConfig[i].Prefab);
+                m_loadsConfigs[i].Init(m_cellCount, m_loadPrefabConfig[i].m_Prefab);
                 m_loadsConfigs[i].SetLTW(transform.localToWorldMatrix);
             }
 
@@ -193,22 +193,22 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     for (int z = 0; z < m_cellCount.z; z++)
                     {
                         Matrix4x4 m4x4 = new Matrix4x4();
-                        m4x4.SetTRS(_cellsPos[x, y, z] + addHeight, transform.rotation, Vector3.one);
+                        m4x4.SetTRS(CellsPos[x, y, z] + addHeight, transform.rotation, Vector3.one);
                         Matrix4x4 m4x4_2 = new Matrix4x4();
-                        m4x4_2.SetTRS(_cellsPos[x, y, z] + addHeight, transform.rotation, Vector3.zero);
+                        m4x4_2.SetTRS(CellsPos[x, y, z] + addHeight, transform.rotation, Vector3.zero);
                         for (int i = 0; i < m_loadPrefabConfig.Length; i++)
                         {
                             if (m_loadPrefabConfig[i].Check(x, y, z))
                             {
                                 m_loadsConfigs[i].AddNewLoad(x, y, z, _loadsVisible[x, y, z] ? m4x4 : m4x4_2, false);
                                 var newTarget = new GameObject();
-                                newTarget.transform.SetPositionAndRotation(transform.position + _cellsPos[x, y, z] + addHeight, transform.rotation);
+                                newTarget.transform.SetPositionAndRotation(transform.position + CellsPos[x, y, z] + addHeight, transform.rotation);
                                 newTarget.transform.localScale = _loadsVisible[x, y, z] ? Vector3.one : Vector3.zero;
                                 var newBox = newTarget.AddComponent<BoxCollider>();
-                                newBox.center = m_loadPrefabConfig[i].Bounds.center;
-                                newBox.size = m_loadPrefabConfig[i].Bounds.size;
+                                newBox.center = m_loadPrefabConfig[i].m_Bounds.center;
+                                newBox.size = m_loadPrefabConfig[i].m_Bounds.size;
                                 var newLoadTarget = newTarget.AddComponent<LoadTarget>();
-                                newLoadTarget.Pos = new Vector3Int(x, y, z);
+                                newLoadTarget.m_Pos = new Vector3Int(x, y, z);
                                 newTarget.transform.SetParent(transform, true);
                                 _loadTargets[i, x, y, z] = (newTarget);
                             }
@@ -225,13 +225,14 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 
         public void Clean()
         {
-            if (_loadTargets.m_Array!=null)
+            if (_loadTargets.m_Array != null)
             {
                 foreach (var item in _loadTargets.m_Array)
                 {
                     item.Destroy();
                 }
             }
+
             m_loadsConfigs = null;
 
             if (m_layersParent != null)

@@ -1,4 +1,3 @@
-using NonsensicalKit.Core;
 using NonsensicalKit.UGUI.Table;
 using TMPro;
 using UnityEngine;
@@ -17,7 +16,7 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
         {
             base.Awake();
             m_selected.SetActive(false);
-            if (m_btn_click!=null)
+            if (m_btn_click != null)
             {
                 m_btn_click.onClick.AddListener(OnButtonClick);
             }
@@ -32,7 +31,7 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
 
         private void OnButtonClick()
         {
-            Publish("InteractMenuClick",ElementData.index);
+            Publish("InteractMenuClick", ElementData.Index);
         }
     }
 }

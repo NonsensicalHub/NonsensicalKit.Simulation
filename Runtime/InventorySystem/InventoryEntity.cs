@@ -1,6 +1,6 @@
+using System;
 using NonsensicalKit.Core.Log;
 using NonsensicalKit.Core.Service;
-using System;
 
 namespace NonsensicalKit.Simulation.Inventory
 {
@@ -49,7 +49,7 @@ namespace NonsensicalKit.Simulation.Inventory
 
         public ItemEntity GetEntity(int index)
         {
-            if (index>=0&&index<_items.Length)
+            if (index >= 0 && index < _items.Length)
             {
                 return _items[index];
             }
@@ -74,6 +74,7 @@ namespace NonsensicalKit.Simulation.Inventory
                     count += item.StackNum;
                 }
             }
+
             return count;
         }
 
@@ -84,7 +85,7 @@ namespace NonsensicalKit.Simulation.Inventory
                 index = LocationLegalCell(item.ID);
                 if (index == -1)
                 {
-                    ServiceCore.Get<InventorySystem>().AbandonItem(item,count);
+                    ServiceCore.Get<InventorySystem>().AbandonItem(item, count);
                     LogCore.Info("库存已满,无法继续添加物体");
                     return false;
                 }
@@ -113,6 +114,7 @@ namespace NonsensicalKit.Simulation.Inventory
                     LogCore.Info("库存已满,无法继续添加物体");
                     return false;
                 }
+
                 if (AddItem(item, overflow, nextIndex, false) == false)
                 {
                     return false;
@@ -145,9 +147,11 @@ namespace NonsensicalKit.Simulation.Inventory
                         _items[index].Data = null;
                         _items[index].StackNum = 0;
                     }
+
                     InventoryChanged?.Invoke(GetEntitys());
                 }
             }
+
             return false;
         }
 
@@ -194,6 +198,7 @@ namespace NonsensicalKit.Simulation.Inventory
                 {
                     firstEmpty = index;
                 }
+
                 count++;
                 index++;
                 if (index == _items.Length)
@@ -201,6 +206,7 @@ namespace NonsensicalKit.Simulation.Inventory
                     index = 0;
                 }
             }
+
             return firstEmpty;
         }
     }

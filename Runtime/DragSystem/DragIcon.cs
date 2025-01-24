@@ -13,17 +13,17 @@ namespace NonsensicalKit.Simulation.DragSystem
 
         private Camera _eventCamera;
         private RectTransform _rect;
-        private DragDropSystem dds;
+        private DragDropSystem _dds;
 
         protected override void Awake()
         {
             base.Awake();
             _rect = GetComponent<RectTransform>();
-            IOCC.Set<DragIcon>(this);
-            dds = ServiceCore.Get<DragDropSystem>();
-            dds.BeginDrag += OnBeginDrag;
-            dds.Drag += OnDrag;
-            dds.Drop += OnDrop;
+            IOCC.Set(this);
+            _dds = ServiceCore.Get<DragDropSystem>();
+            _dds.BeginDrag += OnBeginDrag;
+            _dds.Drag += OnDrag;
+            _dds.Drop += OnDrop;
         }
 
         protected override void OnDestroy()
@@ -36,6 +36,7 @@ namespace NonsensicalKit.Simulation.DragSystem
         {
             m_img_icon.sprite = sprite;
         }
+
         public void ChangeSprite(string iconPath)
         {
             m_img_icon.sprite = Resources.Load<Sprite>(iconPath);
@@ -44,16 +45,14 @@ namespace NonsensicalKit.Simulation.DragSystem
         public void OnBeginDrag(PointerEventData eventData)
         {
             _eventCamera = eventData.enterEventCamera;
-            Vector3 pos;
-            RectTransformUtility.ScreenPointToWorldPointInRectangle(_rect, eventData.position, eventData.enterEventCamera, out pos);
+            RectTransformUtility.ScreenPointToWorldPointInRectangle(_rect, eventData.position, eventData.enterEventCamera, out var pos);
             transform.position = pos;
             OpenSelf();
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            Vector3 pos;
-            RectTransformUtility.ScreenPointToWorldPointInRectangle(_rect, eventData.position, _eventCamera, out pos);
+            RectTransformUtility.ScreenPointToWorldPointInRectangle(_rect, eventData.position, _eventCamera, out var pos);
             _rect.position = pos;
         }
 

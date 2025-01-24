@@ -1,28 +1,29 @@
+using System;
+using System.Collections.Generic;
 using NaughtyAttributes;
 using NonsensicalKit.Tools;
 using NonsensicalKit.Tools.MeshTool;
-using System;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace NonsensicalKit.Simulation.ParametricModelingShelves
 {
     public class ShelvesBuilder : ShelvesBase
     {
         [SerializeField] private ShelvesBuildPrefabConfig[] m_prefabConfigs;
-        [SerializeField] private  ShelvesManager m_manager;
+        [SerializeField] private ShelvesManager m_manager;
 
         private Dictionary<ShelvesPrefabType, List<ShelvesBuildPrefabConfig>> _configs;
         private List<GameObject>[] _layerObjs;
+
         [Button]
         public void Clean()
         {
             _layerObjs = null;
             foreach (var item in m_prefabConfigs)
             {
-                item.Pool.Clean();
+                item.m_Pool.Clean();
             }
+
             m_manager.Clean();
             gameObject.SetDirty();
         }
@@ -45,14 +46,14 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 
             foreach (var item in m_prefabConfigs)
             {
-                item.Pool.Cache();
+                item.m_Pool.Cache();
             }
 
             Init();
 
             m_manager.Init(this);
 
-           _layerObjs = new List<GameObject>[m_cellCount.y];
+            _layerObjs = new List<GameObject>[m_cellCount.y];
             for (int i = 0; i < _layerObjs.Length; i++)
             {
                 _layerObjs[i] = new List<GameObject>();
@@ -106,7 +107,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
 
             foreach (var item in m_prefabConfigs)
             {
-                item.Pool.Flush();
+                item.m_Pool.Flush();
             }
         }
 
@@ -118,13 +119,15 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             {
                 layers[i] = ModelHelper.MergeMesh(_layerObjs[i]);
             }
+
             m_manager.SetLayers(layers);
             _layerObjs = null;
 
             foreach (var item in m_prefabConfigs)
             {
-                item.Pool.Clear();
+                item.m_Pool.Clear();
             }
+
             gameObject.SetDirty();
         }
 
@@ -136,9 +139,10 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             {
                 _configs.Add((ShelvesPrefabType)item, new List<ShelvesBuildPrefabConfig>());
             }
+
             foreach (var item in m_prefabConfigs)
             {
-                _configs[item.PrefabType].Add(item);
+                _configs[item.m_PrefabType].Add(item);
                 item.InitBuffer(m_cellCount, m_simpleExclude);
             }
         }
@@ -150,12 +154,13 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             {
                 if (item.Check(x, 0, z))
                 {
-                    var newPillar = item.Pool.New();
+                    var newPillar = item.m_Pool.New();
                     corners.Add(newPillar);
-                    newPillar.transform.position = transform.position + _pillarsPos[x, 0, z] + _bottomOffset;
-                    newPillar.transform.localScale = Vector3.Scale(item.DefaultScale, new Vector3(1, m_bottomHeight / item.OriginSize.y, 1));
+                    newPillar.transform.position = transform.position + PillarsPos[x, 0, z] + BottomOffset;
+                    newPillar.transform.localScale = Vector3.Scale(item.m_DefaultScale, new Vector3(1, m_bottomHeight / item.m_OriginSize.y, 1));
                 }
             }
+
             return corners;
         }
 
@@ -166,12 +171,13 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             {
                 if (item.Check(x, y, z))
                 {
-                    var newPillar = item.Pool.New();
+                    var newPillar = item.m_Pool.New();
                     corners.Add(newPillar);
-                    newPillar.transform.position = transform.position + _pillarsPos[x, y, z];
-                    newPillar.transform.localScale = Vector3.Scale(item.DefaultScale, new Vector3(1, _cellYSize[y] / item.OriginSize.y, 1));
+                    newPillar.transform.position = transform.position + PillarsPos[x, y, z];
+                    newPillar.transform.localScale = Vector3.Scale(item.m_DefaultScale, new Vector3(1, CellYSize[y] / item.m_OriginSize.y, 1));
                 }
             }
+
             return corners;
         }
 
@@ -182,12 +188,13 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             {
                 if (item.Check(x, y, z))
                 {
-                    var newCrossbar = item.Pool.New();
+                    var newCrossbar = item.m_Pool.New();
                     sides.Add(newCrossbar);
-                    newCrossbar.transform.position = transform.position + _horizontalCorssbarPos[x, y, z];
-                    newCrossbar.transform.localScale = Vector3.Scale(item.DefaultScale, new Vector3(_cellXSize[x] / item.OriginSize.x, 1, 1));
+                    newCrossbar.transform.position = transform.position + HorizontalCrossbarPos[x, y, z];
+                    newCrossbar.transform.localScale = Vector3.Scale(item.m_DefaultScale, new Vector3(CellXSize[x] / item.m_OriginSize.x, 1, 1));
                 }
             }
+
             return sides;
         }
 
@@ -198,12 +205,13 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             {
                 if (item.Check(x, y, z))
                 {
-                    var newCrossbar = item.Pool.New();
+                    var newCrossbar = item.m_Pool.New();
                     sides.Add(newCrossbar);
-                    newCrossbar.transform.position = transform.position + _verticalCorssbarPos[x, y, z];
-                    newCrossbar.transform.localScale = Vector3.Scale(item.DefaultScale, new Vector3(1, 1, _cellZSize[z] / item.OriginSize.z));
+                    newCrossbar.transform.position = transform.position + VerticalCrossbarPos[x, y, z];
+                    newCrossbar.transform.localScale = Vector3.Scale(item.m_DefaultScale, new Vector3(1, 1, CellZSize[z] / item.m_OriginSize.z));
                 }
             }
+
             return sides;
         }
 
@@ -214,12 +222,14 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             {
                 if (item.Check(x, y, z))
                 {
-                    var newCenter = item.Pool.New();
+                    var newCenter = item.m_Pool.New();
                     centers.Add(newCenter);
-                    newCenter.transform.position = transform.position + _cellsPos[x, y, z];
-                    newCenter.transform.localScale = Vector3.Scale(item.DefaultScale, new Vector3(_cellXSize[x] / item.OriginSize.x, 1, _cellZSize[z] / item.OriginSize.z));
+                    newCenter.transform.position = transform.position + CellsPos[x, y, z];
+                    newCenter.transform.localScale = Vector3.Scale(item.m_DefaultScale,
+                        new Vector3(CellXSize[x] / item.m_OriginSize.x, 1, CellZSize[z] / item.m_OriginSize.z));
                 }
             }
+
             return centers;
         }
     }

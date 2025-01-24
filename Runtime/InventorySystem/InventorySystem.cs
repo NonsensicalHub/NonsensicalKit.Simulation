@@ -1,7 +1,7 @@
-using NonsensicalKit.Core.Log;
-using NonsensicalKit.Core.Service;
 using System;
 using System.Collections.Generic;
+using NonsensicalKit.Core.Log;
+using NonsensicalKit.Core.Service;
 
 namespace NonsensicalKit.Simulation.Inventory
 {
@@ -15,64 +15,61 @@ namespace NonsensicalKit.Simulation.Inventory
         public bool IsReady { get; set; }
         public Action InitCompleted { get; set; }
 
-        private Dictionary<string, ItemData> _items;    //当前场景包括的物品的信息
-        private Dictionary<string, InventoryEntity> _inventorys;
+        private readonly Dictionary<string, ItemData> _items; //当前场景包括的物品的信息
+        private readonly Dictionary<string, InventoryEntity> _inventories;
 
         public InventorySystem()
         {
             _items = new Dictionary<string, ItemData>();
-            _inventorys = new Dictionary<string, InventoryEntity>();
+            _inventories = new Dictionary<string, InventoryEntity>();
         }
 
-        public void Init(IEnumerable<InventoryData> inventorys, IEnumerable<ItemData> items)
+        public void Init(IEnumerable<InventoryData> inventories, IEnumerable<ItemData> items)
         {
-            foreach (var item in inventorys)
+            foreach (var item in inventories)
             {
-                if (_inventorys.ContainsKey(item.ID) == false)
+                if (_inventories.ContainsKey(item.ID) == false)
                 {
-                    _inventorys.Add(item.ID, new InventoryEntity(item));
+                    _inventories.Add(item.ID, new InventoryEntity(item));
                 }
             }
-            if (_inventorys.Count == 0)
+
+            if (_inventories.Count == 0)
             {
                 //保证至少要有一个默认库存
-                _inventorys.Add(DefaultID, new InventoryEntity(DefaultID, 50));
+                _inventories.Add(DefaultID, new InventoryEntity(DefaultID, 50));
             }
 
             foreach (var item in items)
             {
-                if (_items.ContainsKey(item.ID) == false)
-                {
-                    _items.Add(item.ID, item);
-                }
+                _items.TryAdd(item.ID, item);
             }
+
             IsReady = true;
             InitCompleted?.Invoke();
         }
 
-        public void AddListener(Action<ItemEntity[]> callback, string inventorysID = DefaultID)
+        public void AddListener(Action<ItemEntity[]> callback, string inventoryID = DefaultID)
         {
-            if (_inventorys.ContainsKey(inventorysID))
+            if (_inventories.ContainsKey(inventoryID))
             {
-                _inventorys[DefaultID].InventoryChanged += callback;
+                _inventories[DefaultID].InventoryChanged += callback;
             }
             else
             {
-                LogCore.Warning("未配置的库存id:" + inventorysID);
-                return;
+                LogCore.Warning("未配置的库存id:" + inventoryID);
             }
         }
 
-        public void RemoveListener(Action<ItemEntity[]> callback, string inventorysID = DefaultID)
+        public void RemoveListener(Action<ItemEntity[]> callback, string inventoryID = DefaultID)
         {
-            if (_inventorys.ContainsKey(inventorysID))
+            if (_inventories.ContainsKey(inventoryID))
             {
-                _inventorys[DefaultID].InventoryChanged -= callback;
+                _inventories[DefaultID].InventoryChanged -= callback;
             }
             else
             {
-                LogCore.Warning("未配置的库存id:" + inventorysID);
-                return;
+                LogCore.Warning("未配置的库存id:" + inventoryID);
             }
         }
 
@@ -84,10 +81,11 @@ namespace NonsensicalKit.Simulation.Inventory
         public int GetItemCount(string itemID)
         {
             int count = 0;
-            foreach (var item in _inventorys.Values)
+            foreach (var item in _inventories.Values)
             {
                 count += item.GetItemCount(itemID);
             }
+
             return count;
         }
 
@@ -95,13 +93,13 @@ namespace NonsensicalKit.Simulation.Inventory
         /// 获取某个物品在特定库存中的数量
         /// </summary>
         /// <param name="itemID"></param>
-        /// <param name="inventorysID"></param>
+        /// <param name="inventoryID"></param>
         /// <returns></returns>
-        public int GetItemCount(string inventorysID, string itemID)
+        public int GetItemCount(string inventoryID, string itemID)
         {
-            if (_inventorys.ContainsKey(itemID))
+            if (_inventories.ContainsKey(itemID))
             {
-                return _inventorys[inventorysID].GetItemCount(itemID);
+                return _inventories[inventoryID].GetItemCount(itemID);
             }
             else
             {
@@ -109,37 +107,38 @@ namespace NonsensicalKit.Simulation.Inventory
             }
         }
 
-        public bool AddItem(string itemID, int count = 1, int index = -1, string inventorysID = DefaultID)
+        public bool AddItem(string itemID, int count = 1, int index = -1, string inventoryID = DefaultID)
         {
-            if (_items.ContainsKey(itemID) == false)
+            if (_items.TryGetValue(itemID, out var item) == false)
             {
                 LogCore.Warning("未配置的物品id:" + itemID);
                 return false;
             }
 
-            if (_inventorys.ContainsKey(inventorysID))
+            if (_inventories.TryGetValue(inventoryID, out var inventory))
             {
-                return _inventorys[inventorysID].AddItem(_items[itemID], count, index, true);
+                return inventory.AddItem(item, count, index);
             }
             else
             {
-                LogCore.Warning("未配置的库存id:" + inventorysID);
+                LogCore.Warning("未配置的库存id:" + inventoryID);
                 return false;
             }
         }
 
-        public void MoveItem(int oldIndex, string oldInventorysID, int newIndex, string newInventorysID)
+        public void MoveItem(int oldIndex, string oldInventoryID, int newIndex, string newInventoryID)
         {
-            if (_inventorys.ContainsKey(oldInventorysID)&& _inventorys.ContainsKey(newInventorysID))
+            if (_inventories.ContainsKey(oldInventoryID) && _inventories.ContainsKey(newInventoryID))
             {
-                var oldEntity = _inventorys[oldInventorysID][oldIndex];
-                var newEntity = _inventorys[newInventorysID][newIndex];
+                var oldEntity = _inventories[oldInventoryID][oldIndex];
+                var newEntity = _inventories[newInventoryID][newIndex];
 
-                if (oldEntity==null||newEntity==null)
+                if (oldEntity == null || newEntity == null)
                 {
-                    LogCore.Warning($"索引异常[{oldInventorysID}:{oldIndex},{newInventorysID}:{newIndex}]" );
-                    return ;
+                    LogCore.Warning($"索引异常[{oldInventoryID}:{oldIndex},{newInventoryID}:{newIndex}]");
+                    return;
                 }
+
                 if (oldEntity.Data != null)
                 {
                     if (newEntity.Data != null)
@@ -147,7 +146,7 @@ namespace NonsensicalKit.Simulation.Inventory
                         if (oldEntity.Data.ID == newEntity.Data.ID)
                         {
                             //相同则尝试堆叠
-                            if (oldEntity.Data.MaxStackNumber>1)
+                            if (oldEntity.Data.MaxStackNumber > 1)
                             {
                                 var sum = oldEntity.StackNum + newEntity.StackNum;
                                 var max = oldEntity.Data.MaxStackNumber;
@@ -190,38 +189,38 @@ namespace NonsensicalKit.Simulation.Inventory
                         oldEntity.Data = null;
                         oldEntity.StackNum = 0;
                     }
-                    _inventorys[oldInventorysID].RingIt();
-                    if (oldInventorysID!= newInventorysID)
+
+                    _inventories[oldInventoryID].RingIt();
+                    if (oldInventoryID != newInventoryID)
                     {
-                        _inventorys[newInventorysID].RingIt();
+                        _inventories[newInventoryID].RingIt();
                     }
                 }
             }
         }
 
-        public bool UseItem(int index, int count = 1, string inventorysID = DefaultID)
+        public bool UseItem(int index, int count = 1, string inventoryID = DefaultID)
         {
-            if (_inventorys.ContainsKey(inventorysID))
+            if (_inventories.TryGetValue(inventoryID, out var inventory))
             {
-                return _inventorys[inventorysID].UseItem(index, count);
+                return inventory.UseItem(index, count);
             }
             else
             {
-                LogCore.Warning("未配置的库存id:" + inventorysID);
+                LogCore.Warning("未配置的库存id:" + inventoryID);
                 return false;
             }
         }
 
-        public void RemoveItem(int index, string inventorysID = DefaultID)
+        public void RemoveItem(int index, string inventoryID = DefaultID)
         {
-            if (_inventorys.ContainsKey(inventorysID))
+            if (_inventories.TryGetValue(inventoryID, out var inventory))
             {
-                _inventorys[inventorysID].RemoveItem(index);
+                inventory.RemoveItem(index);
             }
             else
             {
-                LogCore.Warning("未配置的库存id:" + inventorysID);
-                return;
+                LogCore.Warning("未配置的库存id:" + inventoryID);
             }
         }
 
@@ -230,15 +229,15 @@ namespace NonsensicalKit.Simulation.Inventory
             //舍弃添加时多余的物品
         }
 
-        public ItemEntity[] GetItemEntity(string inventorysID = DefaultID)
+        public ItemEntity[] GetItemEntity(string inventoryID = DefaultID)
         {
-            if (_inventorys.ContainsKey(inventorysID))
+            if (_inventories.TryGetValue(inventoryID, out var inventory))
             {
-                return _inventorys[inventorysID].GetEntitys();
+                return inventory.GetEntitys();
             }
             else
             {
-                LogCore.Warning("未配置的库存id:" + inventorysID);
+                LogCore.Warning("未配置的库存id:" + inventoryID);
                 return null;
             }
         }

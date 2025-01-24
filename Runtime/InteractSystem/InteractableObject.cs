@@ -1,6 +1,6 @@
+using System;
 using NonsensicalKit.Core;
 using NonsensicalKit.Core.Service;
-using System;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -15,14 +15,17 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
         /// 交互操作的名称
         /// </summary>
         [SerializeField] private string m_interactName;
+
         /// <summary>
         /// 从默认状态变为等待状态时
         /// </summary>
         [SerializeField] private UnityEvent m_onStartWaiting = new();
+
         /// <summary>
         /// 从等待状态变为默认状态时
         /// </summary>
         [SerializeField] private UnityEvent m_onStopWaiting = new();
+
         /// <summary>
         /// 交互时
         /// </summary>
@@ -52,27 +55,30 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
         private Func<bool> _validate;
 
         public bool CanInteract { get { return _canInteract; } set { _canInteract = value; } }
+
         /// <summary>
         /// 可由外界控制的是否可交互变量
         /// </summary>
         private bool _canInteract = true;
+
         /// <summary>
         /// 是否正在等待交互，用于判断此时是否能通过使用的交互方式进行交互，比如碰撞交互此值代表就代表是否碰到玩家，鼠标交互此值就代表鼠标是否悬停在可交互区域
         /// </summary>
         private bool _isWaitingInteract;
 
-        private InteractQueueSystem _System
+        private InteractQueueSystem System
         {
             get
             {
-                if (_system == null)
+                if (!_system)
                 {
-
                     _system = ServiceCore.Get<InteractQueueSystem>();
                 }
+
                 return _system;
             }
         }
+
         private InteractQueueSystem _system;
 
         public virtual void Interact()
@@ -100,7 +106,7 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
                 if (Verify())
                 {
                     m_onStartWaiting?.Invoke();
-                    _System.EnterQueue(this);
+                    System.EnterQueue(this);
                 }
             }
         }
@@ -111,7 +117,7 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
             {
                 _isWaitingInteract = false;
                 m_onStartWaiting?.Invoke();
-                _System.ExitQueue(this);
+                System.ExitQueue(this);
             }
         }
 
@@ -124,12 +130,15 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
             {
                 return false;
             }
+
             if (ValidateFunc == null)
             {
                 return true;
             }
-            foreach (Func<bool> f in ValidateFunc.GetInvocationList())
+
+            foreach (var func in ValidateFunc.GetInvocationList())
             {
+                var f = (Func<bool>)func;
                 if (!f())
                 {
                     return false;

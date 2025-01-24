@@ -1,8 +1,8 @@
+using System.Collections.Generic;
 using NonsensicalKit.Core;
 using NonsensicalKit.Core.Log;
 using NonsensicalKit.Core.Service;
 using NonsensicalKit.Simulation.Inventory;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace NonsensicalKit.Simulation.Mission
@@ -36,7 +36,7 @@ namespace NonsensicalKit.Simulation.Mission
             }
 
             _missionSystem = ServiceCore.Get<MissionSystem>();
-            ServiceCore.SafeGet<InventorySystem>((System.Action<InventorySystem>)this.OnGetInventorySystem);
+            ServiceCore.SafeGet<InventorySystem>(OnGetInventorySystem);
 
             Subscribe<string>("StartMission", MissingTypeText.Collect, OnStartMission);
             Subscribe<string>("StopMission", MissingTypeText.Collect, OnStopMission);
@@ -65,6 +65,7 @@ namespace NonsensicalKit.Simulation.Mission
                 LogCore.Warning($"收集任务{_missionSystem.GetMissionName(missionID)}未进行配置");
                 return;
             }
+
             var collectMission = _missionData[missionID];
             if (IsCollectMissionCompleted(collectMission))
             {
@@ -85,6 +86,7 @@ namespace NonsensicalKit.Simulation.Mission
                     return false;
                 }
             }
+
             return true;
         }
 

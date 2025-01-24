@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace NonsensicalKit.Simulation.InteractQueueSystem
@@ -10,6 +8,5 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
     /// </summary>
     public class ColliderInteractExecutor : MonoBehaviour
     {
-        
     }
 }
