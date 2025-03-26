@@ -1,6 +1,6 @@
 using NonsensicalKit.Core.Service;
-using NonsensicalKit.Temp.InteractQueueSystem;
-using NonsensicalKit.Temp.InventorySystem;
+using NonsensicalKit.Simulation.InteractQueueSystem;
+using NonsensicalKit.Simulation.Inventory;
 using UnityEngine;
 
 public class DropItem : MonoBehaviour

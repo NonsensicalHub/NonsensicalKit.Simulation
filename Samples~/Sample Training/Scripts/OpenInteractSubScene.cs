@@ -1,8 +1,7 @@
 using NonsensicalKit.Core;
 using NonsensicalKit.Core.Service;
-using NonsensicalKit.DigitalTwin.LogicNodeTreeSystem;
+using NonsensicalKit.Tools.LogicNodeTreeSystem;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class OpenInteractSubScene : NonsensicalMono
 {

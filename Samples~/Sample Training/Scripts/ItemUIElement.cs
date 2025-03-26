@@ -1,6 +1,7 @@
 using NonsensicalKit.Core;
 using NonsensicalKit.Core.Service;
-using NonsensicalKit.Temp.InventorySystem;
+using NonsensicalKit.Simulation.DragSystem;
+using NonsensicalKit.Simulation.Inventory;
 using NonsensicalKit.UGUI.Table;
 using TMPro;
 using UnityEngine;

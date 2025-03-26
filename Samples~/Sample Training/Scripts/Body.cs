@@ -9,11 +9,11 @@ namespace NonsensicalKit.Temp.MeshKit
         [SerializeField] Leg[] legs;
         [SerializeField][Range(0.1f,1.5f)] float angle =1;    //值越高则越近
 
-        private int groundLayer;
+        private int _groundLayer;
 
         private void Awake()
         {
-            groundLayer = LayerMask.GetMask("Ground");
+            _groundLayer = LayerMask.NameToLayer("Ground");
         }
 
         private void Start()
@@ -26,7 +26,7 @@ namespace NonsensicalKit.Temp.MeshKit
         }
 
         private void Update()
-        {
+        { 
             if (Time.frameCount%5==0)
             {
                 foreach (var item in legs)
@@ -41,10 +41,9 @@ namespace NonsensicalKit.Temp.MeshKit
 
         private void SetLegPoint(Ray ray, Leg leg)
         {
-            RaycastHit RaycastHit;
-            if (Physics.Raycast(ray, out RaycastHit, 100, groundLayer))
+            if (Physics.Raycast(ray, out RaycastHit raycastHit, 100, _groundLayer))
             {
-                leg.SetPoint(RaycastHit.point);
+                leg.SetPoint(raycastHit.point);
             }
             else
             {
@@ -74,7 +73,7 @@ namespace NonsensicalKit.Temp.MeshKit
                 {
                     dir += item - transform.position;
                 }
-                dir = VectorTool.PointProjection(dir, transform.up);
+                dir = VectorTool.VectorProjection(dir, transform.up);
                 dir = -dir.normalized;
                 dir = dir.RotateAroundPivot(transform.up, new Vector3(0, Random.Range(-45, 45), 0));
                 SetLegPoint(new Ray(transform.position, dir - transform.up* angle), leg);

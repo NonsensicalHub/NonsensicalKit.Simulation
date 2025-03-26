@@ -1,6 +1,4 @@
-using NonsensicalKit.Temp.InteractQueueSystem;
-using System.Collections;
-using System.Collections.Generic;
+using NonsensicalKit.Simulation.InteractQueueSystem;
 using UnityEngine;
 
 namespace NonsensicalKit.Temp.InteractQueueSystem.Sample

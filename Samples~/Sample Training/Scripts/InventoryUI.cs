@@ -1,5 +1,5 @@
 using NonsensicalKit.Core.Service;
-using NonsensicalKit.Temp.InventorySystem;
+using NonsensicalKit.Simulation.Inventory;
 using NonsensicalKit.UGUI.Table;
 using UnityEngine;
 
@@ -28,10 +28,10 @@ public class InventoryUI : ListTableManager<ItemUIElement,ItemEntity>
     {
         base.UpdateUI();
 
-        for (int i = 0; i < _elements.Count; i++)
+        for (int i = 0; i < Elements.Count; i++)
         {
-            _elements[i]._inventoryID = m_inventoryID;
-            _elements[i]._inventoryIndex = i;
+            Elements[i]._inventoryID = m_inventoryID;
+            Elements[i]._inventoryIndex = i;
         }
     }
 }
