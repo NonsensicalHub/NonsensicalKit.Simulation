@@ -35,7 +35,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             m_Buffer = new Array3<bool>(cellCount.x, cellCount.y, cellCount.z);
             if (m_DefaultState)
             {
-                m_Buffer.Reset(true);
+                m_Buffer.Fill(true);
             }
 
             if (m_UseMinMax)
@@ -72,7 +72,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     {
                         if (item.z < 0)
                         {
-                            m_Buffer.Reset(true);
+                            m_Buffer.Fill(true);
                             break;
                         }
                         else
@@ -161,7 +161,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     {
                         if (item.z < 0)
                         {
-                            m_Buffer.Reset(false);
+                            m_Buffer.Fill(false);
                             break;
                         }
                         else
@@ -273,7 +273,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     {
                         if (item.z < 0)
                         {
-                            m_Buffer.Reset(false);
+                            m_Buffer.Fill(false);
                             break;
                         }
                         else
@@ -384,7 +384,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             }
 
             Array3<bool> simpleExcludeBuffer = new Array3<bool>(cellCount.x, cellCount.y, cellCount.z);
-            simpleExcludeBuffer.Reset(true);
+            simpleExcludeBuffer.Fill(true);
             foreach (var item in simpleExclude)
             {
                 if (item.x >= cellCount.x
@@ -400,7 +400,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                     {
                         if (item.z < 0)
                         {
-                            simpleExcludeBuffer.Reset(false);
+                            simpleExcludeBuffer.Fill(false);
                             break;
                         }
                         else
@@ -474,11 +474,11 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                 }
             }
 
-            for (int column = 0; column < m_Buffer.Length0; column++)
+            for (int column = 0; column < m_Buffer.m_Length0; column++)
             {
-                for (int layer = 0; layer < m_Buffer.Length1; layer++)
+                for (int layer = 0; layer < m_Buffer.m_Length1; layer++)
                 {
-                    for (int row = 0; row < m_Buffer.Length2; row++)
+                    for (int row = 0; row < m_Buffer.m_Length2; row++)
                     {
                         bool b = true;
                         switch (m_PrefabType)

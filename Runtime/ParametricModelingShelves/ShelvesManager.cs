@@ -125,7 +125,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                         {
                             if (m_loadPrefabConfig[i].Check(x, y, z))
                             {
-                                m_loadsConfigs[i].SetNewLoadNewTrans(x, y, z, _loadsVisible.SafeGet(x, y, z) ? m4x4 : m4x4_2, false);
+                                m_loadsConfigs[i].SetNewTrans(x, y, z, _loadsVisible.SafeGet(x, y, z) ? m4x4 : m4x4_2, false);
                                 var loadTarget = _loadTargets[i, x, y, z];
                                 loadTarget.transform.SetPositionAndRotation(transform.position + CellsPos[x, y, z] + addHeight, transform.rotation);
                                 loadTarget.transform.localScale = _loadsVisible.SafeGet(x, y, z) ? Vector3.one : Vector3.zero;
@@ -158,7 +158,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             UpdateLayerIntervals(false);
 
             _loadsVisible = new Array3<bool>(m_cellCount.x, m_cellCount.y, m_cellCount.z);
-            _loadsVisible.Reset(true);
+            _loadsVisible.Fill(true);
 
             for (int i = 0; i < m_loadPrefabConfig.Length; i++)
             {
@@ -314,7 +314,13 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             }
         }
 
+        [Obsolete("Use SetNewTrans")]
         public void SetNewLoadNewTrans(int column, int layer, int row, Matrix4x4 trans, bool autoUpdate = true)
+        {
+            SetNewTrans(column, layer, row, trans, autoUpdate);
+        }
+
+        public void SetNewTrans(int column, int layer, int row, Matrix4x4 trans, bool autoUpdate = true)
         {
             LoadTrans[Index[column, layer, row]] = trans;
             if (autoUpdate)
