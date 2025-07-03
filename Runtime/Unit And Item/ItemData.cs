@@ -1,8 +1,8 @@
 using UnityEngine;
 
-namespace NonsensicalKit.Simulation.Inventory
+namespace NonsensicalKit.Simulation
 {
-    [CreateAssetMenu(fileName = "ItemData", menuName = "ScriptableObjects/ItemData")]
+    [CreateAssetMenu(fileName = "ItemData", menuName = "NonsensicalKit/ScriptableObject/ItemData", order = -100)]
     public class ItemData : ScriptableObject
     {
         /// <summary>

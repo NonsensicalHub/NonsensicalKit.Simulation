@@ -13,6 +13,7 @@ namespace NonsensicalKit.Simulation.Mission
     public class CollectMissionListener : NonsensicalMono
     {
         [SerializeField] private CollectMissionData[] m_datas;
+        [SerializeField] private string  m_backpackID="backpack";
         private Dictionary<string, CollectMissionData> _missionData;
         private List<string> _listeningMission;
 
@@ -47,7 +48,7 @@ namespace NonsensicalKit.Simulation.Mission
             base.OnDestroy();
             if (_inventorySystem != null)
             {
-                _inventorySystem.RemoveListener(OnItemChanged);
+                _inventorySystem.RemoveListener(m_backpackID,OnItemChanged);
                 _inventorySystem = null;
             }
         }
@@ -55,7 +56,7 @@ namespace NonsensicalKit.Simulation.Mission
         private void OnGetInventorySystem(InventorySystem system)
         {
             _inventorySystem = system;
-            _inventorySystem.AddListener(OnItemChanged);
+            _inventorySystem.AddListener(m_backpackID,OnItemChanged);
         }
 
         private void OnStartMission(string missionID)
