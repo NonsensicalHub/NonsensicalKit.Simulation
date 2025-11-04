@@ -14,7 +14,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
         [SerializeField] private bool m_skipFirstPoint;
         [SerializeField] private bool m_forcesBezierEndAngle = true;
 
-        private bool _moving;
+        public bool Moving { get; private set; }
 
         public float GlobalSpeed { get; set; } = 1;
 
@@ -35,7 +35,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
 
         private void OnDisable()
         {
-            _moving = false;
+            Moving = false;
             _path.Clear();
             _targets.Clear();
         }
@@ -43,7 +43,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
 
         private void Update()
         {
-            if (!_moving)
+            if (!Moving)
             {
                 if (_targets.Count > 0)
                 {
@@ -58,7 +58,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
                         //前往起点
                         _lastPos = transform.position;
                         _currentPath = _path.Dequeue();
-                        _moving = true;
+                        Moving = true;
                         _moveTimer = 0;
                         _moveTotalTime = Vector3.Distance(_currentPath.Node.Position, transform.position) / m_moveSpeed;
                         if (m_lineRenderer)
@@ -69,7 +69,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
                 }
             }
 
-            if (_moving)
+            if (Moving)
             {
                 if (m_lineRenderer != null)
                 {
@@ -91,7 +91,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
                 {
                     if (_path.Count == 0)
                     {
-                        _moving = false;
+                        Moving = false;
                         if (m_lineRenderer)
                         {
                             m_lineRenderer.enabled = false;

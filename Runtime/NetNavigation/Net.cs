@@ -316,7 +316,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
                 if (point == null || point.m_Path == null) continue;
                 foreach (var cPath in point.m_Path)
                 {
-                    if (cPath == null || cPath.Target == null) continue;
+                    if (cPath == null || cPath.Target == null) continue;    
                     switch (cPath.Type)
                     {
                         case PathType.Straight:
