@@ -19,16 +19,16 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
     [Serializable]
     public abstract class ShelvesPrefabConfig
     {
-        [FormerlySerializedAs("DefaultScale")] public Vector3 m_DefaultScale = Vector3.one;
-        [FormerlySerializedAs("DefaultState")] public bool m_DefaultState;
+        [FormerlySerializedAs("DefaultScale")] public Vector3 m_DefaultScale = Vector3.one; //默认缩放
+        [FormerlySerializedAs("DefaultState")] public bool m_DefaultState;  //默认是否显示
 
-        [FormerlySerializedAs("UseMinMax")] public bool m_UseMinMax = true;
+        [FormerlySerializedAs("UseMinMax")] public bool m_UseMinMax = true; //MinMax区域内的所有位置和默认状态相反
         [FormerlySerializedAs("Min")] public Vector3Int m_Min;
         [FormerlySerializedAs("Max")] public Vector3Int m_Max;
-        [FormerlySerializedAs("Include")] public Vector3Int[] m_Include;
-        [FormerlySerializedAs("Exclude")] public Vector3Int[] m_Exclude;
+        [FormerlySerializedAs("Include")] public Vector3Int[] m_Include;//指定显示，指定位置会强制变成显示状态，负数坐标代表统配
+        [FormerlySerializedAs("Exclude")] public Vector3Int[] m_Exclude;//指定隐藏，指定位置会强制变成隐藏状态
 
-        [FormerlySerializedAs("Buffer")] public Array3<bool> m_Buffer;
+        [FormerlySerializedAs("Buffer")] public Array3<bool> m_Buffer;  //对应位置是否显示
 
         public virtual void InitBuffer(Vector3Int cellCount, Vector3Int[] simpleExclude)
         {
