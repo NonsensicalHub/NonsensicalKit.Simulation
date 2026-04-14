@@ -1,20 +1,22 @@
 {
   "name": "com.nonsensicallab.nonsensicalkit.simulation",
   "displayName": "NonsensicalKit.Simulation",
-  "author": { "name": "NonsensicalLab" },
-  "version": "0.0.1",
+  "author": {
+    "name": "NonsensicalLab"
+  },
+  "version": "0.9.0",
   "unity": "2021.3",
   "license": "MIT",
-  "description": "\u6a21\u62df\u76f8\u5173",
+  "description": "\u6a21\u62df\u76f8\u5173\uff0c\u4f9d\u8d56Core\u548cUGUI",
   "samples": [
     {
       "displayName": "Sample Training",
-      "description": "示例训练",
+      "description": "\u793a\u4f8b\u8bad\u7ec3",
       "path": "Samples~/Sample Training"
     },
     {
       "displayName": "ParametricModelingShelves",
-      "description": "参数化货架",
+      "description": "\u53c2\u6570\u5316\u8d27\u67b6",
       "path": "Samples~/ParametricModelingShelves"
     }
   ]
