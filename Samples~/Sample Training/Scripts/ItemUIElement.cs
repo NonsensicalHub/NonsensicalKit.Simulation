@@ -1,5 +1,6 @@
 using NonsensicalKit.Core;
 using NonsensicalKit.Core.Service;
+using NonsensicalKit.Simulation;
 using NonsensicalKit.Simulation.DragSystem;
 using NonsensicalKit.Simulation.Inventory;
 using NonsensicalKit.UGUI.Table;

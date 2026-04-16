@@ -1,4 +1,5 @@
 using NonsensicalKit.Core.Service;
+using NonsensicalKit.Simulation;
 using NonsensicalKit.Simulation.Inventory;
 using NonsensicalKit.UGUI.Table;
 using UnityEngine;
@@ -16,7 +17,7 @@ public class InventoryUI : ListTableManager<ItemUIElement,ItemEntity>
     private void OnGetSystem(InventorySystem system)
     {
         UpdateUI(system.GetItemEntity(m_inventoryID));
-        system.AddListener(OnUpdateInventory, m_inventoryID);
+        system.AddListener(m_inventoryID,OnUpdateInventory);
     }
 
     private void OnUpdateInventory(ItemEntity[] items)

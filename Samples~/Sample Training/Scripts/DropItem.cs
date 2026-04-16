@@ -24,7 +24,8 @@ public class DropItem : MonoBehaviour
         {
             _itemExist = false;
             m_object.gameObject.SetActive(false);
-            ServiceCore.Get<InventorySystem>().AddItem(m_itemID, m_itemCount);
+            //ServiceCore.Get<InventorySystem>().StoreItem(m_itemID, m_itemCount);
+            //TODO：旧的系统没有兼容新的逻辑
         }
     }
 

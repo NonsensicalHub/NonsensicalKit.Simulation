@@ -1,6 +1,6 @@
 using NonsensicalKit.Core;
+using NonsensicalKit.Core.DagLogicNode;
 using NonsensicalKit.Core.Service;
-using NonsensicalKit.Tools.LogicNodeTreeSystem;
 using UnityEngine;
 
 public class OpenInteractSubScene : NonsensicalMono
@@ -19,8 +19,8 @@ public class OpenInteractSubScene : NonsensicalMono
 
         _go = Instantiate( Resources.Load<GameObject>("Play A Ball"));
 
-        _logicNodeBuffer = ServiceCore.Get<LogicNodeManager>().CrtSelectNode.NodeID;
-        ServiceCore.Get<LogicNodeManager>().SwitchNode(m_logicNodeName);
+        _logicNodeBuffer = ServiceCore.Get<DagLogicManager>().CrtSelectNode.NodeID;
+        ServiceCore.Get<DagLogicManager>().SwitchNode(m_logicNodeName);
         _missionIDBuffer = missionID;
         Subscribe<bool>("InteractCompleted", missionID, OnSubSceneCompleted);
     }
@@ -28,7 +28,7 @@ public class OpenInteractSubScene : NonsensicalMono
     private void OnSubSceneCompleted(bool playerWin)
     {
         Destroy(_go);
-        ServiceCore.Get<LogicNodeManager>().SwitchNode(_logicNodeBuffer);
+        ServiceCore.Get<DagLogicManager>().SwitchNode(_logicNodeBuffer);
         Unsubscribe<bool>("InteractCompleted", _missionIDBuffer, OnSubSceneCompleted);
     }
 }
