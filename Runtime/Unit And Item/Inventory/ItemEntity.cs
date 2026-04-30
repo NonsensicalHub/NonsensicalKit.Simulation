@@ -13,7 +13,7 @@ namespace NonsensicalKit.Simulation
 
         public bool IsEmpty => Data == null;
         public bool IsNotEmpty => Data != null;
-        public int CanStoreNum => Data.MaxStackNumber - StackNum;
+        public int CanStoreNum => Data == null ? 0 : Data.MaxStackNumber - StackNum;
 
         public ItemEntity(ItemData data, int count, string inventoryID, int inventoryIndex)
         {

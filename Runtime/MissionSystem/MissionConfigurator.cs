@@ -1,4 +1,5 @@
 using NonsensicalKit.Core.Service;
+using System;
 using UnityEngine;
 
 namespace NonsensicalKit.Simulation.Mission
@@ -20,7 +21,7 @@ namespace NonsensicalKit.Simulation.Mission
 
         private void OnGetSystem(MissionSystem system)
         {
-            system.InitMission(m_missions);
+            system.InitMission(m_missions ?? Array.Empty<MissionData>());
             if (m_autoStart)
             {
                 system.AutoAccept();

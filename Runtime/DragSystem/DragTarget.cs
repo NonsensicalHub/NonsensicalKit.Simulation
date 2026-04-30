@@ -1,4 +1,5 @@
 using NonsensicalKit.Core;
+using NonsensicalKit.Core.Service;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -15,11 +16,12 @@ namespace NonsensicalKit.Simulation.DragSystem
 
         protected virtual void Awake()
         {
-            DDS = IOCC.Get<DragDropSystem>();
+            DDS = ServiceCore.Get<DragDropSystem>();
         }
 
         public virtual void OnPointerDown(PointerEventData eventData)
         {
+            if (DDS == null) return;
             DDS.RaiseBeginDrag(this, DragItems, eventData);
         }
 
@@ -29,11 +31,13 @@ namespace NonsensicalKit.Simulation.DragSystem
 
         public virtual void OnDrag(PointerEventData eventData)
         {
+            if (DDS == null) return;
             DDS.RaiseDrag(eventData);
         }
 
         public virtual void OnPointerUp(PointerEventData eventData)
         {
+            if (DDS == null) return;
             DDS.RaiseDrop(eventData);
         }
     }

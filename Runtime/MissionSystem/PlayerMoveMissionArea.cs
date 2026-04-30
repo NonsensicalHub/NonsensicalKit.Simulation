@@ -6,6 +6,7 @@ using UnityEngine.Serialization;
 
 namespace NonsensicalKit.Simulation.Mission
 {
+    [RequireComponent(typeof(Collider))]
     public class PlayerMoveMissionArea : NonsensicalMono
     {
         [SerializeField] private string m_missionID;
@@ -21,6 +22,11 @@ namespace NonsensicalKit.Simulation.Mission
         {
             _missionSystem = ServiceCore.Get<MissionSystem>();
             _collider = GetComponent<Collider>();
+            if (_collider == null)
+            {
+                return;
+            }
+
             _collider.enabled = false;
             Subscribe<string>("StartMission", MissingTypeText.PlayerMove, OnStartMission);
             Subscribe<string>("StopMission", MissingTypeText.PlayerMove, OnStopMission);
@@ -30,6 +36,7 @@ namespace NonsensicalKit.Simulation.Mission
         {
             if (missionID == m_missionID)
             {
+                if (_collider == null) return;
                 _collider.enabled = true;
                 _running = true;
             }
@@ -39,6 +46,7 @@ namespace NonsensicalKit.Simulation.Mission
         {
             if (missionID == m_missionID)
             {
+                if (_collider == null) return;
                 _collider.enabled = false;
                 _running = false;
             }

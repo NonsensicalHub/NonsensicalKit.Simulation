@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using NonsensicalKit.Core;
 using NonsensicalKit.Core.Log;
 using NonsensicalKit.Core.Service;
@@ -24,8 +25,13 @@ namespace NonsensicalKit.Simulation.Mission
         {
             _listeningMission = new List<string>();
             _missionData = new Dictionary<string, CollectMissionData>();
-            foreach (var item in m_datas)
+            foreach (var item in m_datas ?? Array.Empty<CollectMissionData>())
             {
+                if (item == null || string.IsNullOrWhiteSpace(item.MissionID))
+                {
+                    continue;
+                }
+
                 if (_missionData.ContainsKey(item.MissionID))
                 {
                     LogCore.Warning($"收集任务ID配置重复{item.MissionID}");
@@ -80,7 +86,12 @@ namespace NonsensicalKit.Simulation.Mission
 
         private bool IsCollectMissionCompleted(CollectMissionData collectMission)
         {
-            foreach (var item in collectMission.ItemRequired)
+            if (_inventorySystem == null || collectMission == null)
+            {
+                return false;
+            }
+
+            foreach (var item in collectMission.ItemRequired ?? Array.Empty<ItemRequired>())
             {
                 if (_inventorySystem.GetItemCount(item.ItemID) < item.RequiredQuantity)
                 {
@@ -115,6 +126,11 @@ namespace NonsensicalKit.Simulation.Mission
 
         private void OnItemChanged(ItemEntity[] entitys)
         {
+            if (_inventorySystem == null)
+            {
+                return;
+            }
+
             var list = _listeningMission.ToArray();
             foreach (var item in list)
             {

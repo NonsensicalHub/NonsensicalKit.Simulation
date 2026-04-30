@@ -5,6 +5,7 @@ using UnityEngine.Events;
 
 namespace NonsensicalKit.Simulation.Mission
 {
+    [RequireComponent(typeof(Collider))]
     public class ObjectMoveMissionArea : NonsensicalMono
     {
         [SerializeField] private ObjectMoveMissionData m_data;
@@ -21,6 +22,11 @@ namespace NonsensicalKit.Simulation.Mission
         {
             _missionSystem = ServiceCore.Get<MissionSystem>();
             _collider = GetComponent<Collider>();
+            if (_collider == null || m_data == null)
+            {
+                return;
+            }
+
             _collider.enabled = false;
             Subscribe<string>("StartMission", MissingTypeText.ObjectMove, OnStartMission);
             Subscribe<string>("StopMission", MissingTypeText.ObjectMove, OnStopMission);
@@ -28,6 +34,7 @@ namespace NonsensicalKit.Simulation.Mission
 
         private void OnStartMission(string missionID)
         {
+            if (m_data == null || _collider == null) return;
             if (missionID == m_data.MissionID)
             {
                 _collider.enabled = true;
@@ -37,6 +44,7 @@ namespace NonsensicalKit.Simulation.Mission
 
         private void OnStopMission(string missionID)
         {
+            if (m_data == null || _collider == null) return;
             if (missionID == m_data.MissionID)
             {
                 _collider.enabled = false;
@@ -46,6 +54,7 @@ namespace NonsensicalKit.Simulation.Mission
 
         private void OnTriggerEnter(Collider other)
         {
+            if (m_data == null) return;
             if (_isRunning)
             {
                 var v = other.GetComponent<ObjectMoveMissionObject>();
@@ -63,6 +72,7 @@ namespace NonsensicalKit.Simulation.Mission
 
         private void OnTriggerExit(Collider other)
         {
+            if (m_data == null) return;
             if (_isRunning)
             {
                 var v = other.GetComponent<ObjectMoveMissionObject>();

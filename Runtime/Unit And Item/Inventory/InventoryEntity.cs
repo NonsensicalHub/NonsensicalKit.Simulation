@@ -89,7 +89,13 @@ namespace NonsensicalKit.Simulation.Inventory
         /// <returns></returns>
         public int GetItemEmptyCount(string itemID)
         {
-            var maxStackSize = _inventorySystem[itemID].MaxStackNumber;
+            var itemData = _inventorySystem.GetItemData(itemID);
+            if (itemData == null)
+            {
+                return 0;
+            }
+
+            var maxStackSize = itemData.MaxStackNumber;
             int count = 0;
             foreach (var item in _items)
             {
@@ -198,8 +204,9 @@ namespace NonsensicalKit.Simulation.Inventory
                 }
                 else
                 {
-                    _items[index].StackNum = 0;
-                    takeCount += _items[index].StackNum;
+                    var currentCount = _items[index].StackNum;
+                    _items[index].Clear();
+                    takeCount += currentCount;
                 }
             }
 
@@ -218,6 +225,11 @@ namespace NonsensicalKit.Simulation.Inventory
 
         public bool UseItem(int index, int count = 1)
         {
+            if (count <= 0 || index < 0 || index >= _items.Length)
+            {
+                return false;
+            }
+
             var entity = _items[index];
             if (entity.Data != null)
             {
@@ -240,6 +252,11 @@ namespace NonsensicalKit.Simulation.Inventory
 
         public void DeleteItem(int index)
         {
+            if (index < 0 || index >= _items.Length)
+            {
+                return;
+            }
+
             var entity = _items[index];
             if (entity.IsNotEmpty)
             {
@@ -268,7 +285,7 @@ namespace NonsensicalKit.Simulation.Inventory
             int count = 0;
             int index = startIndex;
             var data = _inventorySystem.GetItemData(itemID);
-            var canStack = data.MaxStackNumber > 1;
+            var canStack = data != null && data.MaxStackNumber > 1;
             while (count < _items.Length)
             {
                 if (_items[index].IsNotEmpty)
@@ -310,10 +327,9 @@ namespace NonsensicalKit.Simulation.Inventory
         {
             int count = 0;
             int index = startIndex;
-            var maxStackNumber = _inventorySystem.GetItemData(itemID).MaxStackNumber;
             while (count < _items.Length)
             {
-                if (_items[index].Is(itemID) && _items[index].StackNum < maxStackNumber)
+                if (_items[index].Is(itemID) && _items[index].StackNum > 0)
                 {
                     return index;
                 }

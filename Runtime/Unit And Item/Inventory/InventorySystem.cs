@@ -52,8 +52,8 @@ namespace NonsensicalKit.Simulation.Inventory
         {
             if (_inventories.TryGetValue(inventoryID, out var inventory))
             {
-                var emptyCount = inventory.GetItemEmptyCount(itemID);
-                return emptyCount >= count;
+                var itemCount = inventory.GetItemCount(itemID);
+                return itemCount >= count;
             }
             else
             {
@@ -130,9 +130,9 @@ namespace NonsensicalKit.Simulation.Inventory
         /// <returns></returns>
         public int GetItemCount(string inventoryID, string itemID)
         {
-            if (_inventories.ContainsKey(itemID))
+            if (_inventories.TryGetValue(inventoryID, out var inventory))
             {
-                return _inventories[inventoryID].GetItemCount(itemID);
+                return inventory.GetItemCount(itemID);
             }
             else
             {
@@ -288,7 +288,7 @@ namespace NonsensicalKit.Simulation.Inventory
             else
             {
                 LogCore.Warning("未配置的库存id:" + inventoryID);
-                return null;
+                return Array.Empty<ItemEntity>();
             }
         }
 

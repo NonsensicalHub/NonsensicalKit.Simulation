@@ -19,12 +19,15 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         public void Clean()
         {
             _layerObjs = null;
-            foreach (var item in m_prefabConfigs)
+            foreach (var item in m_prefabConfigs ?? Array.Empty<ShelvesBuildPrefabConfig>())
             {
                 item.m_Pool.Clean();
             }
 
-            m_manager.Clean();
+            if (m_manager != null)
+            {
+                m_manager.Clean();
+            }
             gameObject.SetDirty();
         }
 
@@ -41,6 +44,12 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             if (m_cellCount.x <= 0 || m_cellCount.y <= 0 || m_cellCount.z <= 0)
             {
                 Debug.Log("非法尺寸");
+                return;
+            }
+
+            if (m_prefabConfigs == null || m_prefabConfigs.Length == 0 || m_manager == null)
+            {
+                Debug.Log("货架构建配置不完整");
                 return;
             }
 

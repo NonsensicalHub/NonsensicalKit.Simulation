@@ -29,7 +29,11 @@ namespace NonsensicalKit.Simulation.NetNavigation
         {
             if (m_net != null)
             {
-                transform.position = m_net.GetNearestPoint(transform.position).transform.position;
+                var nearestPoint = m_net.GetNearestPoint(transform.position);
+                if (nearestPoint != null)
+                {
+                    transform.position = nearestPoint.transform.position;
+                }
             }
         }
 
@@ -43,16 +47,31 @@ namespace NonsensicalKit.Simulation.NetNavigation
 
         private void Update()
         {
+            if (m_net == null)
+            {
+                return;
+            }
+
             if (!Moving)
             {
                 if (_targets.Count > 0)
                 {
                     if (m_net.TryFindPath(transform.position, _targets.Dequeue(), out var path))
                     {
+                        if (path == null || path.Count == 0)
+                        {
+                            return;
+                        }
+
                         _path = new Queue<NodePath>(path);
-                        if (m_skipFirstPoint)
+                        if (m_skipFirstPoint && _path.Count > 0)
                         {
                             _path.Dequeue();
+                        }
+
+                        if (_path.Count == 0)
+                        {
+                            return;
                         }
 
                         //前往起点
@@ -60,7 +79,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
                         _currentPath = _path.Dequeue();
                         Moving = true;
                         _moveTimer = 0;
-                        _moveTotalTime = Vector3.Distance(_currentPath.Node.Position, transform.position) / m_moveSpeed;
+                        _moveTotalTime = Mathf.Max(0.0001f, Vector3.Distance(_currentPath.Node.Position, transform.position) / Mathf.Max(0.0001f, m_moveSpeed));
                         if (m_lineRenderer)
                         {
                             m_lineRenderer.enabled = true;
@@ -104,7 +123,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
                         bool bezier = _currentPath.Type == PathType.Bezier;
                         _currentPath = _path.Dequeue();
                         _moveTimer = 0;
-                        _moveTotalTime = _currentPath.Distance / m_moveSpeed;
+                        _moveTotalTime = Mathf.Max(0.0001f, _currentPath.Distance / Mathf.Max(0.0001f, m_moveSpeed));
                         if (bezier && m_forcesBezierEndAngle) //贝塞尔曲线运动结束时角度会略有偏差，为了运动连贯性强制修正角度
                         {
                             var lookDir = new Vector3(_currentPath.Node.Position.x, transform.position.y, _currentPath.Node.Position.z) -
@@ -168,8 +187,18 @@ namespace NonsensicalKit.Simulation.NetNavigation
 
         public void Move(NetPoint point, bool force = false)
         {
+            if (point == null || point.Net == null)
+            {
+                return;
+            }
+
             m_net = point.Net;
-            transform.position = m_net.GetNearestPoint(transform.position).transform.position;
+            var nearestPoint = m_net.GetNearestPoint(transform.position);
+            if (nearestPoint != null)
+            {
+                transform.position = nearestPoint.transform.position;
+            }
+
             Move(point.transform.position, force);
         }
 

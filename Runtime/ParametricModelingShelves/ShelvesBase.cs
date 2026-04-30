@@ -63,6 +63,10 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
             }
             else
             {
+                m_cellXSize ??= System.Array.Empty<float>();
+                m_cellYSize ??= System.Array.Empty<float>();
+                m_cellZSize ??= System.Array.Empty<float>();
+
                 float buffer = 1;
                 for (int i = 0; i <= m_cellCount.x; i++)
                 {

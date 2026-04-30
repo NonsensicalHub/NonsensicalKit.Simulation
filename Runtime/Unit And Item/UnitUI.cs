@@ -18,11 +18,16 @@ namespace NonsensicalKit.Simulation
 
         private void ShowUnit(UnitBase unit)
         {
+            if (unit == null)
+            {
+                return;
+            }
+
             Publish("HideUnitUI");
             UnitUIPage page = m_defaultPage;
 
             var type=unit.GetType().ToString();
-            foreach (var setting in m_setting)
+            foreach (var setting in m_setting ?? Array.Empty<UnitUISetting>())
             {
                 if (type==setting.TypeName)
                 {
@@ -30,8 +35,11 @@ namespace NonsensicalKit.Simulation
                     break;
                 }
             }
-            
-            page.ShowUnitUI(unit);
+
+            if (page != null)
+            {
+                page.ShowUnitUI(unit);
+            }
         }
     }
     

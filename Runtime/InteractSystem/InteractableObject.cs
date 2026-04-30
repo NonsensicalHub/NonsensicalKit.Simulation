@@ -116,7 +116,7 @@ namespace NonsensicalKit.Simulation.InteractQueueSystem
             if (_isWaitingInteract)
             {
                 _isWaitingInteract = false;
-                m_onStartWaiting?.Invoke();
+                m_onStopWaiting?.Invoke();
                 System.ExitQueue(this);
             }
         }

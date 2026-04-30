@@ -1,4 +1,5 @@
 using NonsensicalKit.Core.Service;
+using System;
 using UnityEngine;
 
 namespace NonsensicalKit.Simulation.Inventory
@@ -9,7 +10,7 @@ namespace NonsensicalKit.Simulation.Inventory
 
         private void Awake()
         {
-            ServiceCore.Get<InventorySystem>().InitItems(m_items);
+            ServiceCore.Get<InventorySystem>().InitItems(m_items ?? Array.Empty<ItemData>());
         }
     }
 }

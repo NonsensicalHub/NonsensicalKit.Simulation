@@ -51,14 +51,21 @@ namespace NonsensicalKit.Simulation.DragSystem
 
         protected virtual void OnDestroy()
         {
-            _dragDropTargets = null;
+            if (_dragDrop != null)
+            {
+                _dragDrop.BeginDrag -= OnBeginDrag;
+                _dragDrop.Drop -= OnDrop;
+                _dragDrop.Drag -= OnDrag;
+            }
+
+            _dragDropTargets = Array.Empty<IDropTarget>();
         }
 
 
         void IPointerEnterHandler.OnPointerEnter(PointerEventData eventData)
         {
             IsPointerOver = true;
-            if (_dragDrop.InProgress && (DropTarget)_dragDrop.Source != this)
+            if (_dragDrop != null && _dragDrop.InProgress && !ReferenceEquals(_dragDrop.Source as DropTarget, this))
             {
                 DragEnter(_dragDrop.DragObjects, eventData);
 
@@ -71,10 +78,15 @@ namespace NonsensicalKit.Simulation.DragSystem
         void IPointerExitHandler.OnPointerExit(PointerEventData eventData)
         {
             IsPointerOver = false;
+            if (_dragDrop == null)
+            {
+                return;
+            }
+
             _dragDrop.BeginDrag -= OnBeginDrag;
             _dragDrop.Drop -= OnDrop;
             _dragDrop.Drag -= OnDrag;
-            if (_dragDrop.InProgress && (DropTarget)_dragDrop.Source != this)
+            if (_dragDrop.InProgress && !ReferenceEquals(_dragDrop.Source as DropTarget, this))
             {
                 DragLeave(eventData);
             }

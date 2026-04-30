@@ -105,7 +105,7 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
         [Button("UpdateLoads")]
         private void UpdateLoads()
         {
-            if (m_loadsConfigs == null)
+            if (m_loadsConfigs == null || _layerAddingHeight == null || m_loadPrefabConfig == null)
             {
                 return;
             }
@@ -127,8 +127,11 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                             {
                                 m_loadsConfigs[i].SetNewTrans(x, y, z, _loadsVisible.SafeGet(x, y, z) ? m4x4 : m4x4_2, false);
                                 var loadTarget = _loadTargets[i, x, y, z];
-                                loadTarget.transform.SetPositionAndRotation(transform.position + CellsPos[x, y, z] + addHeight, transform.rotation);
-                                loadTarget.transform.localScale = _loadsVisible.SafeGet(x, y, z) ? Vector3.one : Vector3.zero;
+                                if (loadTarget != null)
+                                {
+                                    loadTarget.transform.SetPositionAndRotation(transform.position + CellsPos[x, y, z] + addHeight, transform.rotation);
+                                    loadTarget.transform.localScale = _loadsVisible.SafeGet(x, y, z) ? Vector3.one : Vector3.zero;
+                                }
                             }
                         }
                     }
@@ -140,9 +143,17 @@ namespace NonsensicalKit.Simulation.ParametricModelingShelves
                 item.UpdateParts();
             }
 
-            for (int i = 0; i < m_layersParent.Length; i++)
+            if (m_layersParent == null)
             {
-                m_layersParent[i].transform.localPosition = new Vector3(0, _layerAddingHeight[i], 0);
+                return;
+            }
+
+            for (int i = 0; i < m_layersParent.Length && i < _layerAddingHeight.Length; i++)
+            {
+                if (m_layersParent[i] != null)
+                {
+                    m_layersParent[i].transform.localPosition = new Vector3(0, _layerAddingHeight[i], 0);
+                }
             }
         }
 

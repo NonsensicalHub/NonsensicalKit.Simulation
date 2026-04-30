@@ -22,7 +22,7 @@ namespace NonsensicalKit.Simulation
         {
             InventorySystem.RemoveInventoryEntity(m_unitID);
         }
-
+        
         public bool StoreItem(string itemId, int num)
         {
             if (CanStore(itemId, num))
@@ -35,7 +35,7 @@ namespace NonsensicalKit.Simulation
                 return false;
             }
         }
-
+        
         public bool TakeItem(string itemId, int num)
         {
             if (CanTake(itemId, num))

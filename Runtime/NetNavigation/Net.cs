@@ -130,21 +130,35 @@ namespace NonsensicalKit.Simulation.NetNavigation
         public bool TryFindPath(NetPoint startPoint, NetPoint endPoint, out List<NodePath> path)
         {
             path = new List<NodePath>();
-            var startNode = _nodes[startPoint];
-            var endNode = _nodes[endPoint];
-            if (startNode == null || endNode == null) return false;
+            if (startPoint == null || endPoint == null)
+            {
+                return false;
+            }
 
-            SortedList<float, AStarEndNode> findingNode = new SortedList<float, AStarEndNode> { { 0, new AStarEndNode(startNode) } };
+            if (!_nodes.TryGetValue(startPoint, out var startNode) || !_nodes.TryGetValue(endPoint, out var endNode))
+            {
+                return false;
+            }
+
+            SortedDictionary<float, Queue<AStarEndNode>> findingNode = new SortedDictionary<float, Queue<AStarEndNode>>();
+            AddFindingNode(findingNode, 0, new AStarEndNode(startNode));
             Dictionary<NetNode, float> minLength = new Dictionary<NetNode, float> { { startNode, 0 } };
 
             while (findingNode.Count > 0)
             {
-                var currentNode = findingNode.Values[0];
-                findingNode.RemoveAt(0);
+                var currentNode = PopFindingNode(findingNode);
+                if (currentNode == null)
+                {
+                    break;
+                }
 
                 for (int i = 0; i < currentNode.Node.ConnectedPath.Length; i++)
                 {
                     var cPath = currentNode.Node.ConnectedPath[i];
+                    if (cPath?.Node == null)
+                    {
+                        continue;
+                    }
 
                     var cNode = cPath.Node;
 
@@ -161,11 +175,40 @@ namespace NonsensicalKit.Simulation.NetNavigation
 
                     var newEndNode = new AStarEndNode(cPath, currentNode, currentNode.Node.ConnectedPath[i].Distance);
                     var power = newEndNode.PathLength + Vector3.Distance(cNode.Position, endNode.Position) * DistanceWeightModification;
-                    findingNode.Add(power, newEndNode);
+                    AddFindingNode(findingNode, power, newEndNode);
                 }
             }
 
             return false;
+        }
+
+        private static void AddFindingNode(SortedDictionary<float, Queue<AStarEndNode>> findingNode, float power, AStarEndNode node)
+        {
+            if (!findingNode.TryGetValue(power, out var queue))
+            {
+                queue = new Queue<AStarEndNode>();
+                findingNode.Add(power, queue);
+            }
+
+            queue.Enqueue(node);
+        }
+
+        private static AStarEndNode PopFindingNode(SortedDictionary<float, Queue<AStarEndNode>> findingNode)
+        {
+            if (findingNode.Count == 0)
+            {
+                return null;
+            }
+
+            var first = findingNode.First();
+            var queue = first.Value;
+            var node = queue.Dequeue();
+            if (queue.Count == 0)
+            {
+                findingNode.Remove(first.Key);
+            }
+
+            return node;
         }
 
         private class AStarEndNode
@@ -229,7 +272,9 @@ namespace NonsensicalKit.Simulation.NetNavigation
             if (m_points.Count < 1) return;
 
             //检测是否完全联通，没有的话就联通最近的点
-            while (true)
+            int guard = 0;
+            int maxLoop = Mathf.Max(32, m_points.Count * m_points.Count * 4);
+            while (guard++ < maxLoop)
             {
                 for (int i = 0; i < m_points.Count; i++)
                 {
@@ -306,6 +351,11 @@ namespace NonsensicalKit.Simulation.NetNavigation
                     minLinkPoint.m_Path.Add(new NetPath() { Target = minPoint });
                 }
             }
+
+            if (guard >= maxLoop)
+            {
+                LogCore.Warning("智能连接达到最大循环次数，已提前终止");
+            }
         }
 
         private void OnDrawGizmos()
@@ -380,7 +430,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
             {
                 foreach (var point in _net.Points)
                 {
-                    if (point == null) return;
+                    if (point == null) continue;
                     var pos = point.transform.position;
                     var newPos = Handles.PositionHandle(pos, Quaternion.identity);
 

@@ -39,8 +39,19 @@ namespace NonsensicalKit.Simulation.Mission
         public void InitMission(MissionData[] missions)
         {
             ClearMission();
+            if (missions == null || missions.Length == 0)
+            {
+                return;
+            }
+
             foreach (var item in missions)
             {
+                if (item == null || string.IsNullOrWhiteSpace(item.ID))
+                {
+                    LogCore.Warning("存在非法任务配置（空任务或空ID），已跳过");
+                    continue;
+                }
+
                 if (_missions.ContainsKey(item.ID))
                 {
                     LogCore.Warning($"任务ID重复：{item.ID}");
@@ -66,7 +77,7 @@ namespace NonsensicalKit.Simulation.Mission
                 }
 
                 bool flag = true;
-                foreach (var item2 in item.Value.Data.PremiseMissionIDs)
+                foreach (var item2 in item.Value.Data.PremiseMissionIDs ?? Array.Empty<string>())
                 {
                     if (_completedMissions.Contains(item2) == false)
                     {
@@ -86,14 +97,19 @@ namespace NonsensicalKit.Simulation.Mission
 
         public void MissionCompleted(string missionID)
         {
-            if (_missions[missionID].Status != MissionStatus.Accepted)
+            if (!TryGetMission(missionID, out var mission))
             {
-                LogCore.Warning($"任务{_missions[missionID].Data.Name}未接受，无法完成");
+                return;
+            }
+
+            if (mission.Status != MissionStatus.Accepted)
+            {
+                LogCore.Warning($"任务{mission.Data.Name}未接受，无法完成");
             }
             else
             {
-                IOCC.PublishWithID("StopMission", _missions[missionID].Data.Type, missionID);
-                _missions[missionID].Status = MissionStatus.Completed;
+                IOCC.PublishWithID("StopMission", mission.Data.Type, missionID);
+                mission.Status = MissionStatus.Completed;
                 OnMissionStatusChanged?.Invoke();
                 _completedMissions.Add(missionID);
                 if (_autoAccept)
@@ -105,14 +121,19 @@ namespace NonsensicalKit.Simulation.Mission
 
         public void MissionFailed(string missionID)
         {
-            if (_missions[missionID].Status != MissionStatus.Accepted)
+            if (!TryGetMission(missionID, out var mission))
             {
-                LogCore.Warning($"任务{_missions[missionID].Data.Name}未接受，无法失败");
+                return;
+            }
+
+            if (mission.Status != MissionStatus.Accepted)
+            {
+                LogCore.Warning($"任务{mission.Data.Name}未接受，无法失败");
             }
             else
             {
-                IOCC.PublishWithID("StopMission", _missions[missionID].Data.Type, missionID);
-                _missions[missionID].Status = MissionStatus.Failed;
+                IOCC.PublishWithID("StopMission", mission.Data.Type, missionID);
+                mission.Status = MissionStatus.Failed;
                 OnMissionStatusChanged?.Invoke();
             }
         }
@@ -150,14 +171,19 @@ namespace NonsensicalKit.Simulation.Mission
         /// <param name="missionID"></param>
         private void StartMission(string missionID)
         {
-            if (_missions[missionID].Status != MissionStatus.Unaccepted && _missions[missionID].Status != MissionStatus.Failed)
+            if (!TryGetMission(missionID, out var mission))
             {
-                LogCore.Warning($"任务{_missions[missionID].Data.Name}重复接受");
+                return;
+            }
+
+            if (mission.Status != MissionStatus.Unaccepted && mission.Status != MissionStatus.Failed)
+            {
+                LogCore.Warning($"任务{mission.Data.Name}重复接受");
             }
             else
             {
-                _missions[missionID].Status = MissionStatus.Accepted;
-                IOCC.PublishWithID("StartMission", _missions[missionID].Data.Type, _missions[missionID].Data.ID);
+                mission.Status = MissionStatus.Accepted;
+                IOCC.PublishWithID("StartMission", mission.Data.Type, mission.Data.ID);
                 OnMissionStatusChanged?.Invoke();
             }
         }
@@ -174,6 +200,24 @@ namespace NonsensicalKit.Simulation.Mission
 
             _missions.Clear();
             OnMissionStatusChanged?.Invoke();
+        }
+
+        private bool TryGetMission(string missionID, out MissionObject mission)
+        {
+            if (string.IsNullOrWhiteSpace(missionID))
+            {
+                mission = null;
+                LogCore.Warning("任务ID为空");
+                return false;
+            }
+
+            if (_missions.TryGetValue(missionID, out mission))
+            {
+                return true;
+            }
+
+            LogCore.Warning($"任务ID不存在：{missionID}");
+            return false;
         }
     }
 
