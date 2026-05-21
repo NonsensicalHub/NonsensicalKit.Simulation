@@ -4,7 +4,9 @@
     "references": [
         "NonsensicalKit.Core",
         "NonsensicalKit.UGUI",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Unity.InputSystem",
+        "NonsensicalKit.DigitalTwin"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

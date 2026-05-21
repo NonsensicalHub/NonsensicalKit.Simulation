@@ -16,3 +16,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - 修复Core包更新导致的示例错误
+
+## [0.9.2] - 2026-05-21
+
+### Added
+- 添加 接收远程设备输入与信息解析注入
