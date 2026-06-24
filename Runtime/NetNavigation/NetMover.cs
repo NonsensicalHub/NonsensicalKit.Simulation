@@ -24,7 +24,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
         private float _moveTimer;
         private float _moveTotalTime;
         private NodePath _currentPath;
-
+        
         private void Awake()
         {
             if (m_net != null)
@@ -43,8 +43,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
             _path.Clear();
             _targets.Clear();
         }
-
-
+  
         private void Update()
         {
             if (m_net == null)
@@ -66,7 +65,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
                         _path = new Queue<NodePath>(path);
                         if (m_skipFirstPoint && _path.Count > 0)
                         {
-                            _path.Dequeue();
+                            _path.Dequeue(); 
                         }
 
                         if (_path.Count == 0)
@@ -170,7 +169,7 @@ namespace NonsensicalKit.Simulation.NetNavigation
                             _moveTimer += Time.deltaTime * GlobalSpeed;
 
                             var radio = Mathf.Min(1, _moveTimer / _moveTotalTime);
-                            var (point, dir) = _currentPath.Curve.GetPointAndTangentByArcLengthRadio(radio);
+                            var (point, dir) = _currentPath.Curve.GetPointAndTangentByArcLengthRatio(radio);
                             transform.position = point;
                             if (dir != Vector3.zero)
                             {

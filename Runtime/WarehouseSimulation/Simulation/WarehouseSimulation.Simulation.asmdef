@@ -1,0 +1,17 @@
+{
+    "name": "WarehouseSimulation.Simulation",
+    "rootNamespace": "NonsensicalKit.Simulation.WarehouseSimulation.Simulation",
+    "references": [
+        "WarehouseSimulation",
+        "WarehouseSimulation.Allocation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

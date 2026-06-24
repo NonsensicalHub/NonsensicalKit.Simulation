@@ -18,6 +18,11 @@
       "displayName": "ParametricModelingShelves",
       "description": "\u53c2\u6570\u5316\u8d27\u67b6",
       "path": "Samples~/ParametricModelingShelves"
+    },
+    {
+      "displayName": "WarehouseSimulation",
+      "description": "出入库仿真",
+      "path": "Samples~/WarehouseSimulation"
     }
   ]
 }

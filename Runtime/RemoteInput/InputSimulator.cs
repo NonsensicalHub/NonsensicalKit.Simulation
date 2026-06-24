@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using NonsensicalKit.Tools;
 using NonsensicalKit.Tools.InputTool;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -78,9 +79,10 @@ public class InputSimulator
             }
         }
     }
-
+    
     public void SimulateInput(SerializedInputEvent data)
     {
+        Debug.Log(JsonTool.SerializeObject(data));
         switch (data.type)
         {
             case "mousemove": OnMouseMove(data); break;
@@ -108,14 +110,15 @@ public class InputSimulator
             _mouse.delta.WriteValueIntoEvent(delta, e);
             InputSystem.QueueEvent(e);
         }
-
         OnMousePosChanged?.Invoke(crtPos);
-        OnMouseMoveChanged?.Invoke(_mouse.delta.ReadValue());
+        //Debug.Log($"{crtPos} => {_lastMousePos} --- {delta} ？？？{_mouse.delta.ReadValue()}");
+        //OnMouseMoveChanged?.Invoke(_mouse.delta.ReadValue()); 
+        OnMouseMoveChanged?.Invoke(delta);
 
         _lastMousePos = crtPos;
     }
 
-    //  鼠标按下
+    //  鼠标按下  
     private void OnMouseDown(SerializedInputEvent data)
     {
         var lastMousePos = ConvertPos(data);

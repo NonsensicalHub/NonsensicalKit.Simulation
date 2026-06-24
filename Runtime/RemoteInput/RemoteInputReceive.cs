@@ -52,7 +52,7 @@ public class RemoteInputReceive : MonoSingleton<RemoteInputReceive>
             case ReceiveType.WebSocket:
 #if !UNITY_WEBGL||UNITY_EDITOR
                 Subscribe<string>("GetSocketMessage", GetSocketMessage);
-                m_socketClient.StartServer();
+                m_socketClient?.StartServer();
 #endif
                 break;
             case ReceiveType.WebMessage:
@@ -62,7 +62,7 @@ public class RemoteInputReceive : MonoSingleton<RemoteInputReceive>
                 Subscribe<string>("GetWebRemoteMessage", GetSocketMessage);
 #if !UNITY_WEBGL||UNITY_EDITOR
                 Subscribe<string>("GetSocketMessage", GetSocketMessage);
-                m_socketClient.StartServer();
+                m_socketClient?.StartServer();
 #endif
                 break;
             default: throw new ArgumentOutOfRangeException();
@@ -101,13 +101,13 @@ public class RemoteInputReceive : MonoSingleton<RemoteInputReceive>
             InputSystem.DisableDevice(Keyboard.current);
         }
     }
-
+    
     private void OnApplicationQuit()
     {
         InputSystem.EnableDevice(Mouse.current);
         InputSystem.EnableDevice(Keyboard.current);
     }
-
+   
     private void GetSocketMessage(string msg)
     {
         SerializedInputEvent jsonMsg = JsonConvert.DeserializeObject<SerializedInputEvent>(msg);
