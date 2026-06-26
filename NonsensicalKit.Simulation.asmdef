@@ -1,0 +1,22 @@
+{
+    "name": "NonsensicalKit.Simulation",
+    "rootNamespace": "",
+    "references": [
+        "NonsensicalKit.Core",
+        "NonsensicalKit.NaughtyAttributes",
+        "NonsensicalKit.UGUI",
+        "NonsensicalKit.UGUI.Items",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem",
+        "NonsensicalKit.DigitalTwin"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

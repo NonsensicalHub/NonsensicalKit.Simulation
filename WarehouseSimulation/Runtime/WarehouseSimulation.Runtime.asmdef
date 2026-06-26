@@ -1,0 +1,25 @@
+{
+    "name": "WarehouseSimulation.Runtime",
+    "rootNamespace": "NonsensicalKit.Simulation.WarehouseSimulation.Runtime",
+    "references": [
+        "WarehouseSimulation",
+        "WarehouseSimulation.Allocation",
+        "WarehouseSimulation.Playback",
+        "WarehouseSimulation.Simulation",
+        "NonsensicalKit.Core",
+        "NonsensicalKit.NaughtyAttributes",
+        "NonsensicalKit.DigitalTwin",
+        "Unity.TextMeshPro",
+        "NonsensicalKit.UGUI",
+        "NonsensicalKit.UGUI.Items"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
