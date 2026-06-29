@@ -2,7 +2,8 @@
     "name": "WarehouseSimulation.Allocation",
     "rootNamespace": "NonsensicalKit.Simulation.WarehouseSimulation.Allocation",
     "references": [
-        "NonsensicalKit.Core",
+        "NonsensicalKit.Core.Runtime",
+        "NonsensicalKit.NaughtyAttributes",
         "WarehouseSimulation"
     ],
     "includePlatforms": [],

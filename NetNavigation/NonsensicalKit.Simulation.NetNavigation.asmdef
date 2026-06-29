@@ -1,11 +1,8 @@
 {
-    "name": "WarehouseSimulation.Playback",
-    "rootNamespace": "NonsensicalKit.Simulation.WarehouseSimulation.Playback",
+    "name": "NonsensicalKit.Simulation.NetNavigation",
+    "rootNamespace": "NonsensicalKit.Simulation.NetNavigation",
     "references": [
-        "WarehouseSimulation",
-        "WarehouseSimulation.Allocation",
-        "NonsensicalKit.Core.Runtime",
-        "NonsensicalKit.NaughtyAttributes"
+        "NonsensicalKit.Core.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -6,12 +6,12 @@
         "WarehouseSimulation.Allocation",
         "WarehouseSimulation.Playback",
         "WarehouseSimulation.Simulation",
-        "NonsensicalKit.Core",
-        "NonsensicalKit.NaughtyAttributes",
-        "NonsensicalKit.DigitalTwin",
         "Unity.TextMeshPro",
-        "NonsensicalKit.UGUI",
-        "NonsensicalKit.UGUI.Items"
+        "NonsensicalKit.Core.Runtime",
+        "NonsensicalKit.UGUI.Items",
+        "NonsensicalKit.DigitalTwin.Motion",
+        "NonsensicalKit.DigitalTwin.Warehouse",
+        "NonsensicalKit.NaughtyAttributes"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

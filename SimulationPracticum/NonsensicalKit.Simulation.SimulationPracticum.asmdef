@@ -1,0 +1,30 @@
+{
+    "name": "NonsensicalKit.Simulation.SimulationPracticum",
+    "rootNamespace": "NonsensicalKit.Simulation",
+    "references": [
+        "NonsensicalKit.Core.Runtime",
+        "NonsensicalKit.UGUI.Items",
+        "NonsensicalKit.UGUI.Table",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "1.0.0",
+            "define": "TEXTMESHPRO_PRESENT"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.0.0",
+            "define": "TEXTMESHPRO_PRESENT"
+        }
+    ],
+    "noEngineReferences": false
+}

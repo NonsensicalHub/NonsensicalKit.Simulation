@@ -1,12 +1,11 @@
 {
-    "name": "NonsensicalKit.Simulation.Editor",
-    "rootNamespace": "",
+    "name": "NonsensicalKit.Simulation.ParametricModelingShelves",
+    "rootNamespace": "NonsensicalKit.Simulation.ParametricModelingShelves",
     "references": [
-        "NonsensicalKit.Simulation"
+        "NonsensicalKit.Core.Runtime",
+        "NonsensicalKit.NaughtyAttributes"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

@@ -2,8 +2,10 @@
     "name": "WarehouseSimulation",
     "rootNamespace": "NonsensicalKit.Simulation.WarehouseSimulation",
     "references": [
-        "NonsensicalKit.Core",
-        "NonsensicalKit.DigitalTwin"
+        "NonsensicalKit.Core.Runtime",
+        "NonsensicalKit.NaughtyAttributes",
+        "NonsensicalKit.DigitalTwin.Motion",
+        "NonsensicalKit.DigitalTwin.Warehouse"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

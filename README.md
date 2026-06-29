@@ -1,6 +1,7 @@
 # NonsensicalKit.Simulation
 
 `com.nonsensicallab.nonsensicalkit.simulation` 是模拟实训能力包，提供可组合的训练场景基础系统，覆盖交互、任务、库存、导航、参数化货架与 UI 拖拽等典型能力。
+需要纯虚拟模拟功能时导入这个包。
 
 ## 文档说明
 

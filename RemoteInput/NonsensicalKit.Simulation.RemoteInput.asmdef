@@ -1,14 +1,12 @@
 {
-    "name": "NonsensicalKit.Simulation",
+    "name": "NonsensicalKit.Simulation.RemoteInput",
     "rootNamespace": "",
     "references": [
-        "NonsensicalKit.Core",
+        "NonsensicalKit.Core.Runtime",
         "NonsensicalKit.NaughtyAttributes",
-        "NonsensicalKit.UGUI",
-        "NonsensicalKit.UGUI.Items",
-        "Unity.TextMeshPro",
-        "Unity.InputSystem",
-        "NonsensicalKit.DigitalTwin"
+        "NonsensicalKit.DigitalTwin.Items",
+        "NonsensicalKit.DigitalTwin.Motion",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
