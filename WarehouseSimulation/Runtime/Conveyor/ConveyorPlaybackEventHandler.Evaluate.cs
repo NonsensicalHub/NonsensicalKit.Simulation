@@ -538,6 +538,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
             var fromWorld = fromTf.position;
             var toWorld = toTf.position;
+            var map = Bindings?.ConveyorMap;
+            _topology.TryGetEdge(seg.FromNodeIndex, seg.ToNodeIndex, out var segEdge);
             if (!_subTaskIndex.TryGetJobTasks(jobId, out var jobTasks))
             {
                 jobTasks = System.Array.Empty<SimSubTask>();
@@ -574,7 +576,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                         position = Vector3.Lerp(fromWorld, toWorld, progress);
                         return true;
                     }
-                    var toT = ConveyorMapMath.GetZoneNormalizedPosition(capacity, slot);
+                    var toT = ResolveStopNormalizedT(map, segEdge, capacity, slot);
                     var stopWorld = Vector3.Lerp(fromTf.position, toTf.position, toT);
                     position = Vector3.Lerp(fromWorld, stopWorld, progress);
                     return true;
@@ -587,7 +589,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                         position = Vector3.Lerp(fromWorld, toWorld, progress);
                         return true;
                     }
-                    var toT = ConveyorMapMath.GetZoneNormalizedPosition(capacity, slot);
+                    var toT = ResolveStopNormalizedT(map, segEdge, capacity, slot);
                     var stopWorld = Vector3.Lerp(fromTf.position, toTf.position, toT);
                     position = Vector3.Lerp(fromWorld, stopWorld, progress);
                     return true;
@@ -601,7 +603,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     }
                     if (SimSubTaskKinds.IsPickupArrivalHop(task))
                     {
-                        var fromTT = ConveyorMapMath.GetZoneNormalizedPosition(capacity, 0);
+                        var fromTT = ResolveStopNormalizedT(map, segEdge, capacity, 0);
                         var fromPos = Vector3.Lerp(fromWorld, toWorld, fromTT);
                         position = Vector3.Lerp(fromPos, toWorld, progress);
                         return true;
@@ -613,9 +615,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     }
                     var fromSlot = toSlot + 1;
                     var fromT = fromSlot < capacity
-                        ? ConveyorMapMath.GetZoneNormalizedPosition(capacity, fromSlot)
+                        ? ResolveStopNormalizedT(map, segEdge, capacity, fromSlot)
                         : 0f;
-                    var toT = ConveyorMapMath.GetZoneNormalizedPosition(capacity, toSlot);
+                    var toT = ResolveStopNormalizedT(map, segEdge, capacity, toSlot);
                     position = Vector3.Lerp(fromWorld, toWorld, Mathf.Lerp(fromT, toT, progress));
                     return true;
                 }
@@ -625,7 +627,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     {
                         return false;
                     }
-                    var t = ConveyorMapMath.GetZoneNormalizedPosition(capacity, task.SegmentSlotIndex);
+                    var t = ResolveStopNormalizedT(map, segEdge, capacity, task.SegmentSlotIndex);
                     position = Vector3.Lerp(fromWorld, toWorld, t);
                     return true;
                 }
@@ -681,7 +683,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                             waitSlot = capacity - 1;
                         }
 
-                        var t = ConveyorMapMath.GetZoneNormalizedPosition(capacity, waitSlot);
+                        var t = ResolveStopNormalizedT(map, segEdge, capacity, waitSlot);
                         position = Vector3.Lerp(fromWorld, toWorld, t);
                         return true;
                     }
@@ -701,7 +703,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                         task,
                         out position);
             }
-            return false;
+        }
+
+        private static float ResolveStopNormalizedT(
+            WarehouseConveyorMap map,
+            SimConveyorMapEdge edge,
+            int capacity,
+            int slotIndex)
+        {
+            if (map != null && edge.DistanceMeters > 1e-6f)
+            {
+                return ConveyorMapMath.GetZoneNormalizedPosition(map, edge, capacity, slotIndex);
+            }
+
+            return ConveyorMapMath.GetZoneNormalizedPosition(capacity, slotIndex);
         }
 
         private bool TryResolveVerticalTransferTargetWorld(in SimSubTask task, out Vector3 targetWorld)

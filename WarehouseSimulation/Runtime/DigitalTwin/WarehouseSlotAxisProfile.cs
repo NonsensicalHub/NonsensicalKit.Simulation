@@ -8,7 +8,7 @@ using NonsensicalKit.Simulation.WarehouseSimulation.Allocation;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.DigitalTwin
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 货位轴向坐标表（与 Warehouse 局部坐标一致：PosX=列、PosY=层、PosZ=排）。

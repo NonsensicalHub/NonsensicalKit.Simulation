@@ -352,8 +352,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     continue;
                 }
 
-                var hop = ConveyorMapMath.GetZoneHopSeconds(map, edge);
-                if (hop <= 1e-9f)
+                var approachHop = ConveyorMapMath.GetNodeApproachHopSeconds(map, edge);
+                if (approachHop <= 1e-9f)
                 {
                     continue;
                 }
@@ -378,7 +378,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
                     var arrive = stops[s];
                     var nextArrive = s > 0 ? stops[s - 1] : seg.ExitSimTime;
-                    var moveOutStart = nextArrive - hop;
+                    var outboundHop = s > 0
+                        ? ConveyorMapMath.GetZoneHopSecondsFromPrevious(map, edge, s - 1)
+                        : approachHop;
+                    var moveOutStart = s == 0 && destIsJunction
+                        ? seg.ExitSimTime
+                        : nextArrive - outboundHop;
                     if (moveOutStart <= arrive + TimeEpsilon)
                     {
                         continue;
@@ -406,7 +411,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         nextSeg,
                         topology,
                         map,
-                        hop,
+                        approachHop,
                         out var holdStart,
                         out var holdEnd))
                 {
@@ -754,7 +759,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (task.FromNodeIndex >= 0
                 && topology.TryGetEdge(task.FromNodeIndex, nodeIndex, out var edge))
             {
-                hop = ConveyorMapMath.GetZoneHopSeconds(map, edge);
+                hop = ConveyorMapMath.GetNodeApproachHopSeconds(map, edge);
             }
 
             var zoneStart = task.StartSimTime - hop;

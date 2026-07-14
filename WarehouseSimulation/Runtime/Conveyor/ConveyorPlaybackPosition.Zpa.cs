@@ -24,14 +24,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             worldPosition = fromWorld;
             var stops = segment.StopArriveSimTimes;
             var capacity = stops.Length;
-            var hop = GetEdgeHopSeconds(map, topology, segment);
+            var approachHop = GetNodeApproachHopSeconds(map, topology, segment);
 
             var destIsJunction = segment.ToNodeIndex >= 0
                                  && segment.ToNodeIndex < topology.Map.Nodes.Length
                                  && topology.GetNode(segment.ToNodeIndex).Kind == SimConveyorNodeKind.Junction;
 
             var junctionEnterHopStart = destIsJunction
-                ? JunctionSubTaskTiming.GetJunctionEnterHopStart(segment, hop)
+                ? JunctionSubTaskTiming.GetJunctionEnterHopStart(segment, approachHop)
                 : double.MaxValue;
 
             if (destIsJunction
@@ -53,14 +53,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
             var entryStop = capacity - 1;
             var entryArrive = stops[entryStop];
+            var entryHop = GetSlotHopSeconds(map, topology, segment, entryStop);
             var fromIsJunction = segment.FromNodeIndex >= 0
                                  && segment.FromNodeIndex < topology.Map.Nodes.Length
                                  && topology.GetNode(segment.FromNodeIndex).Kind == SimConveyorNodeKind.Junction;
             var fromIsInfeed = IsFromInfeed(topology, segment);
             if (fromIsInfeed
                 && TrySampleInfeedDepartOnEdge(
+                    map,
+                    topology,
                     segment,
-                    hop,
                     simTime,
                     fromWorld,
                     toWorld,
@@ -70,7 +72,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 return true;
             }
 
-            var moveInStart = Math.Max(segment.EntrySimTime, entryArrive - hop);
+            var moveInStart = Math.Max(segment.EntrySimTime, entryArrive - entryHop);
 
             // 首停留点由非入库口路段 / 路口移动覆盖，避免重复插值造成闪现。
             if (!fromIsJunction
@@ -79,8 +81,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 && simTime < entryArrive - TimeEpsilon)
             {
                 var fromT = 0f;
-                var toT = ConveyorMapMath.GetZoneNormalizedPosition(capacity, entryStop);
-                var span = hop;
+                var toT = SampleStopNormalizedT(map, topology, segment, entryStop);
+                var span = entryArrive - moveInStart;
                 var progress = span > TimeEpsilon
                     ? (float)((simTime - moveInStart) / span)
                     : 1f;
@@ -92,17 +94,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             for (var s = capacity - 1; s >= 0; s--)
             {
                 var arrive = stops[s];
+                var slotHop = GetSlotHopSeconds(map, topology, segment, s);
                 var hopInStart = s < capacity - 1
-                    ? Math.Max(stops[s + 1], arrive - hop)
+                    ? Math.Max(stops[s + 1], arrive - slotHop)
                     : fromIsInfeed
                         ? arrive
                         : moveInStart;
                 if (simTime >= hopInStart - TimeEpsilon && simTime < arrive - TimeEpsilon)
                 {
                     var fromT = s < capacity - 1
-                        ? ConveyorMapMath.GetZoneNormalizedPosition(capacity, s + 1)
+                        ? SampleStopNormalizedT(map, topology, segment, s + 1)
                         : 0f;
-                    var toT = ConveyorMapMath.GetZoneNormalizedPosition(capacity, s);
+                    var toT = SampleStopNormalizedT(map, topology, segment, s);
                     var span = arrive - hopInStart;
                     var progress = span > TimeEpsilon
                         ? (float)((simTime - hopInStart) / span)
@@ -113,11 +116,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 }
 
                 var nextArrive = s > 0 ? stops[s - 1] : segment.ExitSimTime;
-                var moveOutStart = nextArrive - hop;
+                var outboundHop = s > 0
+                    ? GetSlotHopSeconds(map, topology, segment, s - 1)
+                    : approachHop;
+                var moveOutStart = s == 0 && destIsJunction
+                    ? segment.ExitSimTime
+                    : nextArrive - outboundHop;
 
                 if (simTime >= arrive - TimeEpsilon && simTime <= moveOutStart + TimeEpsilon)
                 {
-                    worldPosition = SampleStopPoint(fromWorld, toWorld, capacity, s);
+                    worldPosition = SampleStopPoint(map, topology, fromWorld, toWorld, segment, s);
                     return true;
                 }
 
@@ -125,11 +133,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     && simTime >= moveOutStart - TimeEpsilon
                     && simTime < nextArrive - TimeEpsilon)
                 {
-                    var fromT = ConveyorMapMath.GetZoneNormalizedPosition(capacity, s);
+                    var fromT = SampleStopNormalizedT(map, topology, segment, s);
                     var toT = s > 0
-                        ? ConveyorMapMath.GetZoneNormalizedPosition(capacity, s - 1)
+                        ? SampleStopNormalizedT(map, topology, segment, s - 1)
                         : 1f;
-                    var span = hop;
+                    var span = nextArrive - moveOutStart;
                     var progress = span > TimeEpsilon
                         ? (float)((simTime - moveOutStart) / span)
                         : 1f;
@@ -141,6 +149,24 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
             worldPosition = toWorld;
             return true;
+        }
+
+        private static float SampleStopNormalizedT(
+            WarehouseConveyorMap map,
+            ConveyorMapTopology topology,
+            in ConveyorSegmentScheduleEntry segment,
+            int slotIndex)
+        {
+            if (topology.TryGetEdge(segment.FromNodeIndex, segment.ToNodeIndex, out var edge))
+            {
+                return ConveyorMapMath.GetZoneNormalizedPosition(
+                    map,
+                    edge,
+                    segment.StopArriveSimTimes.Length,
+                    slotIndex);
+            }
+
+            return ConveyorMapMath.GetZoneNormalizedPosition(segment.StopArriveSimTimes.Length, slotIndex);
         }
     }
 }

@@ -1,9 +1,8 @@
 using NaughtyAttributes;
 using UnityEngine;
 using NonsensicalKit.Simulation.WarehouseSimulation.Playback;
-using NonsensicalKit.Simulation.WarehouseSimulation.Runtime.Runner;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.UI
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 场景级 UI 根组件：统一引用仿真运行器、回放控制器与各 ControlPart，便于一次性挂载整套控制面板。

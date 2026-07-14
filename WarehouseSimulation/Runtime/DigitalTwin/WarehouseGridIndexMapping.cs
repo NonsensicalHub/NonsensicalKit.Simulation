@@ -1,7 +1,7 @@
 using NonsensicalKit.Core;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.DigitalTwin
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 仿真 <see cref="GridIndex"/> 与数字孪生 <see cref="Int4"/> 的索引映射。

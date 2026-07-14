@@ -2,7 +2,7 @@ using UnityEngine;
 using NonsensicalKit.Simulation.WarehouseSimulation.Allocation;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.DigitalTwin
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     public sealed partial class JointControllerStackerJobRigPlayback
     {

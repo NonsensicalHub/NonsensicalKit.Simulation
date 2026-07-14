@@ -3,9 +3,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
-using NonsensicalKit.Simulation.WarehouseSimulation.Runtime.Runner;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.UI
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 绑定 <see cref="WarehouseSimRunner"/>，提供运行仿真、导出报告与打开目录等 UI 操作。

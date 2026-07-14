@@ -1,6 +1,6 @@
 using System;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.UI
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     internal static class WarehouseSimSimTimeFormatting
     {

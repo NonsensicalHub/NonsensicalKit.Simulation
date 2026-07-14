@@ -1,7 +1,7 @@
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 {
     /// <summary>
-    /// 离散事件类型枚举：每个值对应 <see cref="StackerWarehouseSimulator"/> 中 <c>Dispatch</c> 的一个分支。
+    /// 离散事件类型枚举：每个值对应仓库仿真主循环 <c>Dispatch</c> 的一个分支。
     /// </summary>
     /// <remarks>事件按仿真时刻排序处理；同刻事件按枚举序、JobId、Payload 打破平局以保证确定性。</remarks>
     public enum SimEventType
@@ -18,8 +18,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         /// <summary>流程计划：Instant 模式一次性释放全部数量（Payload = 计划条目下标）。</summary>
         FlowPlanInstantRelease,
 
-        /// <summary>入库口开始服务（料箱上到入库口）。</summary>
-        InfeedServiceStart,
         /// <summary>入库口服务结束，进入输送阶段。</summary>
         InfeedServiceComplete,
         /// <summary>货箱尾端离开入库口碰撞区，释放入库口物理占用。</summary>
@@ -42,7 +40,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         ConveyorSegmentComplete,
         /// <summary>输送路径中单个 zone 结束，推进下一 zone（Payload = 已完成 zone 下标）。</summary>
         ConveyorZoneComplete,
-        /// <summary>沿输送路径到达取货点。</summary>
         /// <summary>输送路径全部 zone 完成，货箱到达取货点。</summary>
         ConveyorTransitComplete,
 

@@ -2,7 +2,7 @@ using NonsensicalKit.DigitalTwin;
 using UnityEngine;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.DigitalTwin
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 堆垛机三轴与 <see cref="JointController.Joints"/> 数组下标的约定映射。

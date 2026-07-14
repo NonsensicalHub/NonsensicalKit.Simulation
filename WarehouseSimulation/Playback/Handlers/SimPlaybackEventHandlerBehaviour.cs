@@ -1,4 +1,5 @@
 using UnityEngine;
+using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
 {
@@ -6,7 +7,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
     public abstract class SimPlaybackEventHandlerBehaviour : MonoBehaviour
     {
         /// <summary>处理一条回放事件（可选，用于调试日志等）。</summary>
-        public virtual void OnPlaybackEvent(Model.SimPlaybackEvent evt)
+        public virtual void OnPlaybackEvent(SimPlaybackEvent evt)
         {
         }
 
@@ -14,7 +15,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
         /// 按仿真时刻求值场景状态（用于进度条跳转与子任务时间轴驱动）。
         /// 默认无操作；具体 Handler 可覆盖以支持任意时刻恢复。
         /// </summary>
-        public virtual void OnPlaybackEvaluate(double simTime, System.Collections.Generic.IReadOnlyList<Model.SimSubTask> subTasks)
+        public virtual void OnPlaybackEvaluate(double simTime, System.Collections.Generic.IReadOnlyList<SimSubTask> subTasks)
         {
         }
 

@@ -7,7 +7,7 @@ using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 using NonsensicalKit.Simulation.WarehouseSimulation.Playback;
 using NonsensicalKit.Simulation.WarehouseSimulation.Simulation;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.Runner
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>场景入口：运行仓库仿真（入库/出库等）并写入回放数据；场景可视由回放控制器单独驱动。</summary>
     public class WarehouseSimRunner : MonoBehaviour

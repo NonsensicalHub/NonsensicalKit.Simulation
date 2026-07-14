@@ -428,6 +428,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     OnConveyorRouteRetryDispatched(evt.JobId);
                     if (TryGetJob(evt.JobId, evt.Type, out var retryJob))
                     {
+                        if (retryJob.Direction == SimFlowDirection.Outbound)
+                        {
+                            RefreshOutboundPickupRouteHold(retryJob);
+                        }
+
                         TryBeginConveyor(retryJob);
                     }
 
@@ -492,8 +497,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
                     break;
 
-                // 预留：入库服务开始相位（当前由 BeginInfeed 直接排定 Complete）
-                case SimEventType.InfeedServiceStart:
+                default:
+                    WarehouseSimLog.Warn($"未处理的仿真事件 {evt.Type}（JobId={evt.JobId}，Payload={evt.Payload}）。");
                     break;
             }
         }
@@ -513,7 +518,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         #endregion
         
-        /// <summary>构建输送拓扑并校验入库口。</summary>
+        /// <summary>构建输送拓扑并按流程计划校验端口配置。</summary>
         private bool ValidateTopology(out string error)
         {
             error = null;

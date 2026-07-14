@@ -326,73 +326,78 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
                 case ConveyorPathZoneKind.EdgeSlot when nextZone.Kind == ConveyorPathZoneKind.Junction:
                 {
+                    var approachHop = nextZone.HopSeconds;
                     var junctionEnter = ResolveJunctionDownstreamEnter(
                         nextZone.ResourceId,
                         arrive,
-                        hop,
+                        approachHop,
                         nextZone.ToNodeIndex,
                         nextZone.JunctionNextNodeIndex);
-                    return junctionEnter - hop;
+                    return junctionEnter - approachHop;
                 }
 
                 case ConveyorPathZoneKind.EdgeSlot when nextZone.Kind == ConveyorPathZoneKind.Pickup:
                 {
                     if (job == null)
                     {
-                        return arrive + hop;
+                        return arrive + nextZone.HopSeconds;
                     }
 
+                    var approachHop = nextZone.HopSeconds;
                     var pickupEnter = ResolvePickupDownstreamEnter(
                         nextZone.ResourceId,
                         arrive,
-                        hop,
+                        approachHop,
                         enter => PickupDwellAfterEnter(job, nextZone.ToNodeIndex, enter));
-                    return pickupEnter - hop;
+                    return pickupEnter - approachHop;
                 }
 
                 case ConveyorPathZoneKind.EdgeSlot when nextZone.Kind == ConveyorPathZoneKind.Outfeed:
                 {
                     if (job == null)
                     {
-                        return arrive + hop;
+                        return arrive + nextZone.HopSeconds;
                     }
 
+                    var approachHop = nextZone.HopSeconds;
                     var outfeedEnter = ResolveOutfeedDownstreamEnter(
                         nextZone.ResourceId,
                         arrive,
-                        hop,
+                        approachHop,
                         enter => OutfeedDwellAfterEnter(nextZone.ToNodeIndex, enter));
-                    return outfeedEnter - hop;
+                    return outfeedEnter - approachHop;
                 }
 
                 case ConveyorPathZoneKind.EdgeSlot when nextZone.Kind == ConveyorPathZoneKind.ProcessStation:
                 {
                     if (job == null)
                     {
-                        return arrive + hop;
+                        return arrive + nextZone.HopSeconds;
                     }
 
+                    var approachHop = nextZone.HopSeconds;
                     var processEnter = ResolveOutfeedDownstreamEnter(
                         nextZone.ResourceId,
                         arrive,
-                        hop,
+                        approachHop,
                         enter => ProcessDwellAfterEnter(job, nextZone.ToNodeIndex, enter));
-                    return processEnter - hop;
+                    return processEnter - approachHop;
                 }
 
                 case ConveyorPathZoneKind.EdgeSlot when nextZone.Kind == ConveyorPathZoneKind.VerticalTransfer:
                 {
                     if (job == null)
                     {
-                        return arrive + hop;
+                        return arrive + nextZone.HopSeconds;
                     }
 
+                    var approachHop = nextZone.HopSeconds;
                     var transferEnter = ResolveOutfeedDownstreamEnter(
                         nextZone.ResourceId,
                         arrive,
-                        hop,
+                        approachHop,
                         enter => TransferDwellAfterEnter(nextZone.ToNodeIndex, enter));
-                    return transferEnter - hop;
+                    return transferEnter - approachHop;
                 }
 
                 case ConveyorPathZoneKind.Junction when nextZone.Kind == ConveyorPathZoneKind.EdgeSlot:
@@ -523,15 +528,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             var exitTime = junctionZone.HasValue
-                ? Math.Max(s0Leave, junctionZone.Value.ArriveSimTime - edgeAnchor.HopSeconds)
+                ? Math.Max(s0Leave, junctionZone.Value.ArriveSimTime - junctionZone.Value.HopSeconds)
                 : pickupZone.HasValue
-                    ? Math.Max(s0Leave, pickupZone.Value.ArriveSimTime - edgeAnchor.HopSeconds)
+                    ? Math.Max(s0Leave, pickupZone.Value.ArriveSimTime - pickupZone.Value.HopSeconds)
                     : outfeedZone.HasValue
-                        ? Math.Max(s0Leave, outfeedZone.Value.ArriveSimTime - edgeAnchor.HopSeconds)
+                        ? Math.Max(s0Leave, outfeedZone.Value.ArriveSimTime - outfeedZone.Value.HopSeconds)
                         : processZone.HasValue
-                            ? Math.Max(s0Leave, processZone.Value.ArriveSimTime - edgeAnchor.HopSeconds)
+                            ? Math.Max(s0Leave, processZone.Value.ArriveSimTime - processZone.Value.HopSeconds)
                             : verticalTransferZone.HasValue
-                                ? Math.Max(s0Leave, verticalTransferZone.Value.ArriveSimTime - edgeAnchor.HopSeconds)
+                                ? Math.Max(s0Leave, verticalTransferZone.Value.ArriveSimTime - verticalTransferZone.Value.HopSeconds)
                                 : s0Leave;
             if (exitTime < entryTime)
             {

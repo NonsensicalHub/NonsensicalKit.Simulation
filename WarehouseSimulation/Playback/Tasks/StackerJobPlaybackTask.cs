@@ -1,6 +1,6 @@
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback.Tasks
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
 {
     /// <summary>堆垛机宏观任务：入库为取货点→货位，出库为货位→取货点（不含取/移/放子步骤细节）。</summary>
     public struct StackerJobPlaybackTask

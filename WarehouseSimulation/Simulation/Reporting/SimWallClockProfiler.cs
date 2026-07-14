@@ -153,7 +153,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     nameof(SimEventType.FlowCargoRelease) => "DES 事件 · 流程放货",
                     nameof(SimEventType.FlowPlanBatchRelease) => "DES 事件 · 流程批次放货",
                     nameof(SimEventType.FlowPlanInstantRelease) => "DES 事件 · 流程一次性放货",
-                    nameof(SimEventType.InfeedServiceStart) => "DES 事件 · 入库服务开始",
                     nameof(SimEventType.InfeedServiceComplete) => "DES 事件 · 入库服务完成",
                     nameof(SimEventType.InfeedPortPhysicalRelease) => "DES 事件 · 入库口物理释放",
                     nameof(SimEventType.OutfeedServiceComplete) => "DES 事件 · 出库服务完成",

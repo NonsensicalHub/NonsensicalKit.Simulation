@@ -152,6 +152,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 if (job.PickupPointIndex >= 0 && job.PickupCompleteSimTime > 0)
                 {
                     _outboundAwaitingConveyorRoute.Add(job.JobId);
+                    RefreshOutboundPickupRouteHold(job);
                 }
 
                 return;

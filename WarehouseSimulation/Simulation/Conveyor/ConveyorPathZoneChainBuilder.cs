@@ -30,9 +30,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
 
                 ref var toNode = ref topology.GetNode(to);
-                var hop = ConveyorMapMath.GetZoneHopSeconds(map, edge);
                 var capacity = topology.Map.GetEdgeCapacity(edge);
                 var slotIds = ConveyorMapMath.BuildSegmentSlotIds(map, from, to, capacity);
+                var nodeApproachHop = ConveyorMapMath.GetNodeApproachHopSeconds(map, edge);
 
                 for (var s = capacity - 1; s >= 0; s--)
                 {
@@ -44,7 +44,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         FromNodeIndex = from,
                         ToNodeIndex = to,
                         SlotIndex = s,
-                        HopSeconds = hop,
+                        HopSeconds = ConveyorMapMath.GetZoneHopSecondsFromPrevious(map, edge, s),
                     });
                 }
 
@@ -61,7 +61,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         FromNodeIndex = from,
                         ToNodeIndex = to,
                         SlotIndex = -1,
-                        HopSeconds = hop,
+                        HopSeconds = nodeApproachHop,
                         JunctionNextNodeIndex = nextNode,
                     });
                 }
@@ -75,7 +75,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         FromNodeIndex = from,
                         ToNodeIndex = to,
                         SlotIndex = -1,
-                        HopSeconds = hop,
+                        HopSeconds = nodeApproachHop,
                     });
                 }
                 else if (toNode.Kind == SimConveyorNodeKind.OutfeedPort)
@@ -88,7 +88,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         FromNodeIndex = from,
                         ToNodeIndex = to,
                         SlotIndex = -1,
-                        HopSeconds = hop,
+                        HopSeconds = nodeApproachHop,
                     });
                 }
                 else if (toNode.Kind == SimConveyorNodeKind.ProcessStation
@@ -102,7 +102,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         FromNodeIndex = from,
                         ToNodeIndex = to,
                         SlotIndex = -1,
-                        HopSeconds = hop,
+                        HopSeconds = nodeApproachHop,
                     });
                 }
                 else if (toNode.Kind == SimConveyorNodeKind.VerticalTransfer)
@@ -115,7 +115,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         FromNodeIndex = from,
                         ToNodeIndex = to,
                         SlotIndex = -1,
-                        HopSeconds = hop,
+                        HopSeconds = nodeApproachHop,
                     });
                 }
             }

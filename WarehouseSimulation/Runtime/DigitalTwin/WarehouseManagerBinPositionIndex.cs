@@ -5,7 +5,7 @@ using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.DigitalTwin
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 桥接 WarehouseManager：提供货位局部/世界坐标，底层复用 <see cref="SlotPositionIndex"/>。

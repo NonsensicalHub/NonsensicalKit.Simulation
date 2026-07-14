@@ -8,9 +8,8 @@ using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 using NonsensicalKit.Simulation.WarehouseSimulation.Playback;
-using NonsensicalKit.Simulation.WarehouseSimulation.Playback.Tasks;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.DigitalTwin
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 堆垛机回放：通过 <see cref="JointController"/> 驱动关节，关节目标值来自 WarehouseManager 货位坐标。

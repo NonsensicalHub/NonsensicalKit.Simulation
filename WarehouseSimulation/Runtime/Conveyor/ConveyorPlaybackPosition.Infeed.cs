@@ -3,6 +3,7 @@ using UnityEngine;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
+using NonsensicalKit.Simulation.WarehouseSimulation.Simulation;
 
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
@@ -12,9 +13,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         /// 入库口驶离时刻：与 <see cref="StackerWarehouseSimulator.RecordInfeedDepartMoveSubTask"/> 一致。
         /// </summary>
         private static bool TryEvaluateInfeedDepart(
+            WarehouseConveyorMap map,
             ConveyorMapTopology topology,
             in ConveyorSegmentScheduleEntry segment,
-            float hopSeconds,
             double simTime,
             Vector3 fromWorld,
             Vector3 toWorld,
@@ -28,9 +29,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
 
             var anchor = infeedDepart?.AnchorWorld ?? fromWorld;
+            var entryHop = segment.StopArriveSimTimes != null && segment.StopArriveSimTimes.Length > 0
+                ? GetSlotHopSeconds(map, topology, segment, segment.StopArriveSimTimes.Length - 1)
+                : GetEdgeHopSeconds(map, topology, segment);
+
             if (segment.StopArriveSimTimes == null || segment.StopArriveSimTimes.Length == 0)
             {
-                if (!TryResolveInfeedDepartWindow(segment, hopSeconds, infeedDepart, out var moveStart, out var moveEnd))
+                if (!TryResolveInfeedDepartWindow(segment, entryHop, infeedDepart, out var moveStart, out var moveEnd))
                 {
                     return false;
                 }
@@ -55,8 +60,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
 
             return TrySampleInfeedDepartOnEdge(
+                map,
+                topology,
                 segment,
-                hopSeconds,
                 simTime,
                 fromWorld,
                 toWorld,
@@ -65,8 +71,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         }
 
         private static bool TrySampleInfeedDepartOnEdge(
+            WarehouseConveyorMap map,
+            ConveyorMapTopology topology,
             in ConveyorSegmentScheduleEntry segment,
-            float hop,
             double simTime,
             Vector3 fromWorld,
             Vector3 toWorld,
@@ -80,7 +87,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 return false;
             }
 
-            if (!TryResolveInfeedDepartWindow(segment, hop, infeedDepart, out var moveStart, out var moveEnd))
+            var entryHop = GetSlotHopSeconds(map, topology, segment, stops.Length - 1);
+            if (!TryResolveInfeedDepartWindow(segment, entryHop, infeedDepart, out var moveStart, out var moveEnd))
             {
                 return false;
             }
@@ -96,8 +104,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
 
             var entryStop = stops.Length - 1;
-            var toT = ConveyorMapMath.GetZoneNormalizedPosition(stops.Length, entryStop);
-            var stopWorld = Vector3.Lerp(fromWorld, toWorld, toT);
+            var stopWorld = SampleStopPoint(map, topology, fromWorld, toWorld, segment, entryStop);
             var anchor = infeedDepart?.AnchorWorld ?? fromWorld;
             var span = moveEnd - moveStart;
             var progress = span > TimeEpsilon

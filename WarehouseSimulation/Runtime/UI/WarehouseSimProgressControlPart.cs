@@ -7,7 +7,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using NonsensicalKit.Simulation.WarehouseSimulation.Playback;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.UI
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 将 UI 进度条绑定到 <see cref="WarehouseSimPlaybackController"/>，

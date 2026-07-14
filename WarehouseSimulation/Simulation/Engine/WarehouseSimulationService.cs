@@ -2,6 +2,7 @@ using UnityEngine;
 using NonsensicalKit.Simulation.WarehouseSimulation.Allocation;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
+using NonsensicalKit.Simulation.WarehouseSimulation.Runtime;
 
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 {

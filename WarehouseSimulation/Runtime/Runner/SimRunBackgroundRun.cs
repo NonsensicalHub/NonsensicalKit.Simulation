@@ -9,7 +9,7 @@ using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 using NonsensicalKit.Simulation.WarehouseSimulation.Simulation;
 using Debug = UnityEngine.Debug;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.Runner
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>在后台线程执行仓库仿真，完成后在主线程回调。</summary>
     internal static class SimRunBackgroundRun

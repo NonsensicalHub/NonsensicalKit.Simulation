@@ -136,11 +136,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 return true;
             }
 
-            var hopSeconds = GetEdgeHopSeconds(map, topology, segment);
             if (TryEvaluateInfeedDepart(
+                    map,
                     topology,
                     segment,
-                    hopSeconds,
                     simTime,
                     fromWorld,
                     toWorld,
@@ -188,10 +187,60 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             return true;
         }
 
+        private static Vector3 SampleStopPoint(
+            WarehouseConveyorMap map,
+            ConveyorMapTopology topology,
+            Vector3 fromWorld,
+            Vector3 toWorld,
+            in ConveyorSegmentScheduleEntry segment,
+            int slotIndex)
+        {
+            if (topology.TryGetEdge(segment.FromNodeIndex, segment.ToNodeIndex, out var edge))
+            {
+                var t = ConveyorMapMath.GetZoneNormalizedPosition(
+                    map,
+                    edge,
+                    segment.StopArriveSimTimes.Length,
+                    slotIndex);
+                return Vector3.Lerp(fromWorld, toWorld, t);
+            }
+
+            var capacity = segment.StopArriveSimTimes?.Length ?? 1;
+            var fallbackT = ConveyorMapMath.GetZoneNormalizedPosition(capacity, slotIndex);
+            return Vector3.Lerp(fromWorld, toWorld, fallbackT);
+        }
+
         private static Vector3 SampleStopPoint(Vector3 fromWorld, Vector3 toWorld, int capacity, int slotIndex)
         {
             var t = ConveyorMapMath.GetZoneNormalizedPosition(capacity, slotIndex);
             return Vector3.Lerp(fromWorld, toWorld, t);
+        }
+
+        private static float GetSlotHopSeconds(
+            WarehouseConveyorMap map,
+            ConveyorMapTopology topology,
+            in ConveyorSegmentScheduleEntry segment,
+            int slotIndex)
+        {
+            if (topology.TryGetEdge(segment.FromNodeIndex, segment.ToNodeIndex, out var edge))
+            {
+                return ConveyorMapMath.GetZoneHopSecondsFromPrevious(map, edge, slotIndex);
+            }
+
+            return GetEdgeHopSeconds(map, topology, segment);
+        }
+
+        private static float GetNodeApproachHopSeconds(
+            WarehouseConveyorMap map,
+            ConveyorMapTopology topology,
+            in ConveyorSegmentScheduleEntry segment)
+        {
+            if (topology.TryGetEdge(segment.FromNodeIndex, segment.ToNodeIndex, out var edge))
+            {
+                return ConveyorMapMath.GetNodeApproachHopSeconds(map, edge);
+            }
+
+            return GetEdgeHopSeconds(map, topology, segment);
         }
 
         private static float GetEdgeHopSeconds(

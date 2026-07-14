@@ -3,9 +3,8 @@ using NonsensicalKit.DigitalTwin.Warehouse;
 using UnityEngine;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Playback;
-using NonsensicalKit.Simulation.WarehouseSimulation.Runtime.Runner;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.DigitalTwin
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 将仿真结束时的货位占用快照写入 <see cref="WarehouseManager"/>。

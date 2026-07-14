@@ -39,23 +39,33 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 
             exitEnd = ResolveTransitEnd(junctionSeg, nextSeg);
 
-            var nextHop = hop;
+            var approachHop = hop;
+            if (topology.TryGetEdge(junctionSeg.FromNodeIndex, junctionSeg.ToNodeIndex, out var junctionEdge))
+            {
+                approachHop = ConveyorMapMath.GetNodeApproachHopSeconds(map, junctionEdge);
+                if (approachHop <= 1e-9f)
+                {
+                    approachHop = hop;
+                }
+            }
+
+            var nextHop = approachHop;
             if (nextSeg.HasValue
                 && topology.TryGetEdge(
                     junctionSeg.ToNodeIndex,
                     nextSeg.Value.ToNodeIndex,
                     out var nextEdge))
             {
-                nextHop = ConveyorMapMath.GetZoneHopSeconds(map, nextEdge);
+                nextHop = ConveyorMapMath.GetEdgeTerminalHopSeconds(map, nextEdge);
                 if (nextHop <= 1e-9f)
                 {
-                    nextHop = hop;
+                    nextHop = approachHop;
                 }
             }
 
-            // 驶入路口：从路段 ExitSimTime（进入路口停留点）再 hop 至路口中心；与 ZPA 末段 hop 首尾相接。
+            // 驶入路口：从路段 ExitSimTime（末停留点）再经端部留白距离至路口中心。
             enterStart = junctionSeg.ExitSimTime;
-            enterEnd = enterStart + hop;
+            enterEnd = enterStart + approachHop;
 
             // 驶出移动最早可开始时刻：到达路口中心即可驶出；仅当下一段入口停留点被占时推迟。
             exitMoveStart = enterEnd;
@@ -125,7 +135,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             {
                 if (nextHop <= 1e-9f)
                 {
-                    nextHop = ConveyorMapMath.GetZoneHopSeconds(map, nextEdge);
+                    nextHop = ConveyorMapMath.GetEdgeTerminalHopSeconds(map, nextEdge);
                     if (nextHop <= 1e-9f)
                     {
                         nextHop = hop;

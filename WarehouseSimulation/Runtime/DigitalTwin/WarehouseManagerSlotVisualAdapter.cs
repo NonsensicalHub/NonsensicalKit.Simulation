@@ -3,9 +3,9 @@ using NonsensicalKit.Core;
 using NonsensicalKit.DigitalTwin.Warehouse;
 using UnityEngine;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
-using NonsensicalKit.Simulation.WarehouseSimulation.Playback.Tasks;
+using NonsensicalKit.Simulation.WarehouseSimulation.Playback;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.DigitalTwin
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 将货位回放快照桥接到 <see cref="WarehouseManager"/> 的 GPU 实例渲染。

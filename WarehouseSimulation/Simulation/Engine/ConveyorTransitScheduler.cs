@@ -44,7 +44,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return exitHopStart;
             }
 
-            var nextHop = ConveyorMapMath.GetZoneHopSeconds(_topology.Map, nextEdge);
+            var nextHop = ConveyorMapMath.GetEdgeTerminalHopSeconds(_topology.Map, nextEdge);
             if (nextHop <= 1e-9f)
             {
                 nextHop = hop;

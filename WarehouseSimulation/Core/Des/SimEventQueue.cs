@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 {

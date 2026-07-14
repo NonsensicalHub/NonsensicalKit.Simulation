@@ -21,15 +21,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private bool[] _outfeedPortDispatchScheduled;
         private int[] _outfeedPortOrderScratch;
         private bool _outfeedQueueFillScheduled;
-        private int _outfeedRoundRobinCursor;
         private readonly HashSet<GridIndex> _outboundReservedSlots = new();
         /// <summary>已在交互点放货后、输送接走前释放堆垛机负载计数的出库任务。</summary>
         private readonly HashSet<int> _outboundStackerReleasedAfterPickup = new();
         /// <summary>出库交互点当前预约窗（替换更新，避免叠加 86400s 占位导致仿真时间爆炸）。</summary>
         private readonly Dictionary<int, (string ResourceId, double Start, double End)> _outboundPickupHolds = new();
 
-        /// <summary>交互点等待出库输送路径时的占位时长（会被选路成功后的真实离开时刻替换）。</summary>
-        private const double OutboundPickupPendingRouteHoldSeconds = 3600d;
+        /// <summary>交互点等待出库输送路径时的占位窗口（每次重试会续期；选路成功后替换为真实离开时刻）。</summary>
+        private const double OutboundPickupRouteHoldWindowSeconds = 3600d;
 
         private void InitOutfeedPorts()
         {
@@ -49,7 +48,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _outfeedServiceFreeByPort = new double[outfeedCount];
             _outfeedPortDispatchScheduled = new bool[outfeedCount];
             _outfeedPortOrderScratch = new int[Math.Max(1, outfeedCount)];
-            _outfeedRoundRobinCursor = 0;
             _outfeedQueueFillScheduled = false;
         }
 
@@ -326,10 +324,22 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// <summary>
         /// 堆垛机放货后占用交互点，直至输送接走；无出库口时亦保持占用，待选路成功后收窄结束时刻。
         /// </summary>
-        private void HoldOutboundPickupUntilConveyorDeparture(WarehouseJob job)
+        private void HoldOutboundPickupUntilConveyorDeparture(WarehouseJob job) =>
+            RefreshOutboundPickupRouteHold(job);
+
+        /// <summary>续期出库交互点占位窗口，避免长时间等待选路时预约过期。</summary>
+        internal void RefreshOutboundPickupRouteHold(WarehouseJob job)
         {
+            if (job == null
+                || job.Direction != SimFlowDirection.Outbound
+                || job.PickupPointIndex < 0)
+            {
+                return;
+            }
+
             var holdStart = job.PickupCompleteSimTime > 0 ? job.PickupCompleteSimTime : _clock.Now;
-            SetOutboundPickupHold(job, holdStart + OutboundPickupPendingRouteHoldSeconds);
+            var holdEnd = Math.Max(_clock.Now, holdStart) + OutboundPickupRouteHoldWindowSeconds;
+            SetOutboundPickupHold(job, holdEnd);
         }
 
         /// <summary>货箱离开交互点（出库输送首段入口 slot 开始驶离）后释放堆垛机负载并尝试派下一出库任务。</summary>

@@ -8,7 +8,7 @@ using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 using NonsensicalKit.Simulation.WarehouseSimulation.Simulation;
 using Debug = UnityEngine.Debug;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.Runner
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>在后台线程生成并写入仿真 HTML/Markdown 报告，完成后在主线程回调。</summary>
     internal static class SimRunBackgroundExport

@@ -582,11 +582,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var attachPath = i == schedule.Count - 1 || (i == 0 && infeedEnd <= 0);
 
             var stops = seg.StopArriveSimTimes;
-            var hop = 0f;
-            if (_topology.TryGetEdge(seg.FromNodeIndex, seg.ToNodeIndex, out var edge))
-            {
-                hop = ConveyorMapMath.GetZoneHopSeconds(_mapSource?.ConveyorMap, edge);
-            }
+            var entryHop = ResolveEntryHop(seg);
+            var approachHop = ResolveApproachHop(seg);
 
             var fromInfeed = _topology.GetNode(seg.FromNodeIndex).Kind == SimConveyorNodeKind.InfeedPort;
             if (i == 0 && infeedEnd > 0 && seg.DesiredEntrySimTime > infeedEnd + 1e-9)
@@ -612,7 +609,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     seg,
                     desired,
                     fromInfeed,
-                    hop,
+                    entryHop,
                     infeedEnd,
                     stops))
             {
@@ -661,7 +658,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             if (i == 0 && fromInfeed)
             {
-                RecordInfeedDepartMoveSubTask(job, seg, stops, hop, attachPath);
+                RecordInfeedDepartMoveSubTask(job, seg, stops, entryHop, attachPath);
                 attachPath = false;
             }
 
@@ -671,11 +668,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                                  && _topology.GetNode(seg.ToNodeIndex).Kind == SimConveyorNodeKind.Junction;
             if (deferJunction && destIsJunction && nextSeg == null)
             {
-                RecordZpaSegmentSubTasks(job, seg, stops, hop, attachPath, fromInfeed, nextSeg: null, skipJunction: true);
+                RecordZpaSegmentSubTasks(job, seg, stops, entryHop, approachHop, attachPath, fromInfeed, nextSeg: null, skipJunction: true);
             }
             else
             {
-                RecordZpaSegmentSubTasks(job, seg, stops, hop, attachPath, fromInfeed, nextSeg);
+                RecordZpaSegmentSubTasks(job, seg, stops, entryHop, approachHop, attachPath, fromInfeed, nextSeg);
             }
         }
 
@@ -702,9 +699,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
-            var hop = ConveyorMapMath.GetZoneHopSeconds(_mapSource?.ConveyorMap, edge);
+            var approachHop = ResolveApproachHop(seg);
             var nextSeg = schedule[junctionSegmentIndex + 1];
-            RecordJunctionSubTasks(job, seg, nextSeg, hop, attachPathContext: false);
+            RecordJunctionSubTasks(job, seg, nextSeg, approachHop, attachPathContext: false);
         }
 
         private void RecordInfeedDepartMoveSubTask(
@@ -736,7 +733,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var hop = 0f;
             if (_topology.TryGetEdge(seg.FromNodeIndex, seg.ToNodeIndex, out var edge))
             {
-                hop = ConveyorMapMath.GetZoneHopSeconds(_mapSource?.ConveyorMap, edge);
+                hop = ConveyorMapMath.GetZoneHopSecondsFromPrevious(
+                    _mapSource?.ConveyorMap,
+                    edge,
+                    entrySlot);
             }
 
             TryRecordInfeedDepartMoveSubTask(
@@ -876,7 +876,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             WarehouseJob job,
             ConveyorSegmentScheduleEntry seg,
             double[] stops,
-            float hop,
+            float entryHop,
+            float approachHop,
             bool attachPathContext,
             bool fromInfeed = false,
             ConveyorSegmentScheduleEntry? nextSeg = null,
@@ -917,32 +918,31 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             for (var s = capacity - 1; s >= 0; s--)
             {
                 var arrive = stops[s];
+                var slotHop = ResolveSlotHop(seg, s);
                 if (s < capacity - 1)
                 {
-                    var hopInStart = ResolveHopInStart(s, stops, seg.EntrySimTime, hop);
+                    var hopInStart = ResolveHopInStart(s, stops, seg.EntrySimTime, slotHop);
                     RecordPhase(SimSubTaskKind.SegmentHopMove, hopInStart, arrive, s);
                 }
 
                 var nextArrive = s > 0 ? stops[s - 1] : seg.ExitSimTime;
-                var moveOutStart = nextArrive - hop;
+                var outboundHop = s > 0 ? ResolveSlotHop(seg, s - 1) : approachHop;
+                var moveOutStart = s == 0 && destIsJunction
+                    ? seg.ExitSimTime
+                    : nextArrive - outboundHop;
                 if (s == 0 && destIsPickup)
                 {
-                    moveOutStart = Math.Min(moveOutStart, seg.ExitSimTime - hop);
-                }
-
-                if (s == 0 && destIsJunction)
-                {
-                    moveOutStart = Math.Min(moveOutStart, seg.ExitSimTime);
+                    moveOutStart = Math.Min(moveOutStart, seg.ExitSimTime - approachHop);
                 }
 
                 RecordPhase(SimSubTaskKind.SegmentStopDwell, arrive, moveOutStart, s);
             }
 
-            RecordSegmentExitCoverage(job, seg, stops, hop, capacity, destIsPickup, destIsJunction);
+            RecordSegmentExitCoverage(job, seg, stops, approachHop, capacity, destIsPickup, destIsJunction);
 
             if (destIsJunction && !skipJunction)
             {
-                RecordJunctionSubTasks(job, seg, nextSeg, hop, attachPathContext && !pathAttached);
+                RecordJunctionSubTasks(job, seg, nextSeg, approachHop, attachPathContext && !pathAttached);
             }
         }
 
@@ -950,17 +950,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             WarehouseJob job,
             ConveyorSegmentScheduleEntry seg,
             double[] stops,
-            float hop,
+            float approachHop,
             int capacity,
             bool destIsPickup,
             bool destIsJunction)
         {
-            if (hop <= 1e-9f || destIsJunction)
+            if (approachHop <= 1e-9f || destIsJunction)
             {
                 return;
             }
 
-            var exitHopStart = seg.ExitSimTime - hop;
+            var exitHopStart = seg.ExitSimTime - approachHop;
             if (seg.ExitSimTime <= exitHopStart + 1e-9)
             {
                 return;
@@ -1111,6 +1111,33 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 zone.ToNodeIndex,
                 -1,
                 attachPathContext: true);
+        }
+
+        private float ResolveSlotHop(in ConveyorSegmentScheduleEntry seg, int slotIndex)
+        {
+            if (!_topology.TryGetEdge(seg.FromNodeIndex, seg.ToNodeIndex, out var edge))
+            {
+                return 0f;
+            }
+
+            return ConveyorMapMath.GetZoneHopSecondsFromPrevious(_mapSource?.ConveyorMap, edge, slotIndex);
+        }
+
+        private float ResolveEntryHop(in ConveyorSegmentScheduleEntry seg)
+        {
+            var stops = seg.StopArriveSimTimes;
+            var entrySlot = stops != null && stops.Length > 0 ? stops.Length - 1 : 0;
+            return ResolveSlotHop(seg, entrySlot);
+        }
+
+        private float ResolveApproachHop(in ConveyorSegmentScheduleEntry seg)
+        {
+            if (!_topology.TryGetEdge(seg.FromNodeIndex, seg.ToNodeIndex, out var edge))
+            {
+                return 0f;
+            }
+
+            return ConveyorMapMath.GetNodeApproachHopSeconds(_mapSource?.ConveyorMap, edge);
         }
 
     }

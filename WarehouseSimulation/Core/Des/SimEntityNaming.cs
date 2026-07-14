@@ -1,5 +1,6 @@
 using System;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
+using NonsensicalKit.Simulation.WarehouseSimulation.Simulation;
 
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 {

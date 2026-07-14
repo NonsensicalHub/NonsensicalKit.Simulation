@@ -1,4 +1,4 @@
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.UI
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     public sealed class WarehouseSimRunState
     {

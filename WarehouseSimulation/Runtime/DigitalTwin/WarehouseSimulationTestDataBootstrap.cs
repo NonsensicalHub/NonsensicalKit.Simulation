@@ -6,7 +6,7 @@ using NonsensicalKit.Simulation.WarehouseSimulation.Allocation;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.DigitalTwin
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 生成与仿真网格尺寸一致的 WarehouseManager 数据文件。

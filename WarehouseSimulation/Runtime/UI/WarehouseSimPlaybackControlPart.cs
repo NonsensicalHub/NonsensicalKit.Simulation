@@ -7,7 +7,7 @@ using UnityEngine.UI;
 using NonsensicalKit.Simulation.WarehouseSimulation.Playback;
 using NonsensicalKit.UGUI;
 
-namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime.UI
+namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 {
     /// <summary>
     /// 绑定 <see cref="WarehouseSimPlaybackController"/>，提供播放/暂停/停止、从事件源加载与倍速调节。

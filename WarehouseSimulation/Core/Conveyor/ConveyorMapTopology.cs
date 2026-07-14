@@ -56,7 +56,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             }
         }
 
-        /// <summary>从 ScriptableObject 构建邻接表，并校验节点 ID、取货点数量与入库口可达性。</summary>
+        /// <summary>从 ScriptableObject 构建邻接表，并校验节点 ID、端口、取货点与可达性。</summary>
         public static bool TryBuild(WarehouseConveyorMap map, out ConveyorMapTopology topology, out string error) =>
             TryBuild(map, null, out topology, out error);
 
@@ -82,6 +82,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             var pickups = new List<int>();
             var outfeeds = new List<int>();
             var processStations = new List<int>();
+            var verticalTransfers = new List<int>();
             var pickupsPerStacker = new Dictionary<int, List<int>>();
 
             for (var i = 0; i < map.Nodes.Length; i++)
@@ -148,12 +149,39 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                         }
 
                         break;
+                    case SimConveyorNodeKind.VerticalTransfer:
+                        verticalTransfers.Add(i);
+                        break;
                 }
             }
 
-            if (infeeds.Count == 0)
+            for (var i = 0; i < verticalTransfers.Count; i++)
             {
-                error = "地图中至少需要一个 InfeedPort 节点。";
+                var vtIndex = verticalTransfers[i];
+                ref var vtNode = ref map.Nodes[vtIndex];
+                var vtLabel = SimEntityNaming.FormatLogicalId(in vtNode, vtIndex);
+                var targetLogicalId = vtNode.TransferTargetLogicalId?.Trim();
+                if (string.IsNullOrEmpty(targetLogicalId))
+                {
+                    continue;
+                }
+
+                if (string.Equals(targetLogicalId, vtNode.LogicalId?.Trim(), StringComparison.Ordinal))
+                {
+                    error = $"垂直提升机节点 {vtLabel} 的目标层节点不能指向自身。";
+                    return false;
+                }
+
+                if (!logicalIds.Contains(targetLogicalId))
+                {
+                    error = $"垂直提升机节点 {vtLabel} 的 TransferTargetLogicalId「{targetLogicalId}」不存在。";
+                    return false;
+                }
+            }
+
+            if (infeeds.Count == 0 && outfeeds.Count == 0)
+            {
+                error = "地图中至少需要一个入库口（InfeedPort）或出库口（OutfeedPort）节点。";
                 return false;
             }
 
@@ -212,43 +240,56 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 
             topology = new ConveyorMapTopology(map, infeeds, pickups, outfeeds, processStations, outEdges, inEdges, edgeData);
 
-            foreach (var infeed in infeeds)
+            for (var i = 0; i < verticalTransfers.Count; i++)
             {
-                var reachablePickups = CountReachableInboundPickups(topology, infeed);
-                if (reachablePickups < 1)
+                var vtIndex = verticalTransfers[i];
+                if (outEdges[vtIndex].Count == 0 && inEdges[vtIndex].Count == 0)
                 {
-                    var id = SimEntityNaming.FormatLogicalId(map, infeed);
-                    error = $"入库口节点 {id} 沿输送网无法到达任何可入库堆垛机交互点。";
+                    error = $"垂直提升机节点 {SimEntityNaming.FormatLogicalId(map, vtIndex)} 未连接任何输送边。";
                     return false;
                 }
             }
 
-            foreach (var pickup in pickups)
+            if (infeeds.Count > 0)
             {
-                ref var pickupNode = ref map.Nodes[pickup];
-                if (!StackerInteractionModeUtility.AllowsInbound(in pickupNode))
-                {
-                    continue;
-                }
-
-                var reachableFromInfeed = false;
                 foreach (var infeed in infeeds)
                 {
-                    if (topology.TryFindShortestPathByTransit(infeed, pickup, out var path)
-                        && path != null
-                        && path.Count >= 2)
+                    var reachablePickups = CountReachableInboundPickups(topology, infeed);
+                    if (reachablePickups < 1)
                     {
-                        reachableFromInfeed = true;
-                        break;
+                        var id = SimEntityNaming.FormatLogicalId(map, infeed);
+                        error = $"入库口节点 {id} 沿输送网无法到达任何可入库堆垛机交互点。";
+                        return false;
                     }
                 }
 
-                if (!reachableFromInfeed)
+                foreach (var pickup in pickups)
                 {
-                    error =
-                        $"堆垛机交互点 {SimEntityNaming.FormatLogicalId(in pickupNode, pickup)} 标记为可入库，" +
-                        "但沿输送网无法从任一路入库口到达（请检查有向边是否指向该交互点）。";
-                    return false;
+                    ref var pickupNode = ref map.Nodes[pickup];
+                    if (!StackerInteractionModeUtility.AllowsInbound(in pickupNode))
+                    {
+                        continue;
+                    }
+
+                    var reachableFromInfeed = false;
+                    foreach (var infeed in infeeds)
+                    {
+                        if (topology.TryFindShortestPathByTransit(infeed, pickup, out var path)
+                            && path != null
+                            && path.Count >= 2)
+                        {
+                            reachableFromInfeed = true;
+                            break;
+                        }
+                    }
+
+                    if (!reachableFromInfeed)
+                    {
+                        error =
+                            $"堆垛机交互点 {SimEntityNaming.FormatLogicalId(in pickupNode, pickup)} 标记为可入库，" +
+                            "但沿输送网无法从任一路入库口到达（请检查有向边是否指向该交互点）。";
+                        return false;
+                    }
                 }
             }
 

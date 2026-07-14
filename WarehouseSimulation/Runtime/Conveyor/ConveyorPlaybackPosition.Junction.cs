@@ -31,13 +31,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 return false;
             }
 
-            var hop = GetEdgeHopSeconds(map, topology, segment);
+            var approachHop = GetNodeApproachHopSeconds(map, topology, segment);
             if (!JunctionSubTaskTiming.TryResolveWindows(
                     segment,
                     nextSegment,
                     topology,
                     map,
-                    hop,
+                    approachHop,
                     out var enterStart,
                     out var enterEnd,
                     out _,
@@ -55,7 +55,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
             var stops = segment.StopArriveSimTimes;
             var capacity = stops.Length;
-            var stop0 = SampleStopPoint(fromWorld, toWorld, capacity, 0);
+            var stop0 = SampleStopPoint(map, topology, fromWorld, toWorld, segment, 0);
             var exitTarget = ResolveJunctionExitTarget(
                 map, topology, toWorld, nextSegment, nextFromWorld, nextToWorld);
 
@@ -69,7 +69,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 return true;
             }
 
-            var hasWait = JunctionSubTaskTiming.HasJunctionWait(stops[0], enterEnd, exitMoveStart, hop);
+            var hasWait = JunctionSubTaskTiming.HasJunctionWait(stops[0], enterEnd, exitMoveStart, approachHop);
             if (hasWait && simTime < exitMoveStart - TimeEpsilon)
             {
                 worldPosition = toWorld;
@@ -114,13 +114,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
 
             var nextStops = nextSegment.Value.StopArriveSimTimes;
-            if (nextStops != null && nextStops.Length > 0)
+            if (nextStops != null && nextStops.Length > 0 && nextFromWorld.HasValue && nextToWorld.HasValue)
             {
                 var nextCapacity = nextStops.Length;
+                var nextSeg = nextSegment.Value;
                 return SampleStopPoint(
+                    map,
+                    topology,
                     nextFromWorld.Value,
                     nextToWorld.Value,
-                    nextCapacity,
+                    nextSeg,
                     nextCapacity - 1);
             }
 
@@ -133,7 +136,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                         nextSegment.Value.ToNodeIndex,
                         out var nextEdge))
                 {
-                    hop = ConveyorMapMath.GetZoneHopSeconds(map, nextEdge);
+                    hop = ConveyorMapMath.GetEdgeTerminalHopSeconds(map, nextEdge);
                 }
 
                 if (hop > TimeEpsilon)

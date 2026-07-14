@@ -11,6 +11,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
             ScheduleMode = SimFlowScheduleMode.Instant,
         };
 
+        /// <summary>单段出库、瞬间到达。</summary>
+        public static SimFlowPlanEntry InstantOutbound(int quantity) => new()
+        {
+            Direction = SimFlowDirection.Outbound,
+            Quantity = quantity,
+            ScheduleMode = SimFlowScheduleMode.Instant,
+        };
+
         /// <summary>单段入库、分次到达（上下限相等时为固定间隔与固定批量）。</summary>
         public static SimFlowPlanEntry StaggeredInbound(
             int quantity,
