@@ -4,25 +4,35 @@
   "author": {
     "name": "NonsensicalLab"
   },
-  "version": "0.9.1",
+  "version": "0.9.3",
   "unity": "2021.3",
   "license": "MIT",
-  "description": "\u6a21\u62df\u76f8\u5173\uff0c\u4f9d\u8d56Core\u548cUGUI",
+  "description": "模拟实训与脚本动画能力包，覆盖交互训练、库存导航、参数化货架，以及 Timeline 脚本动画（路网、叉车、堆垛机、机械臂、开箱、缠膜等）。依赖 Core、DigitalTwin、Timeline；缠膜 Shader 需 URP。",
+  "dependencies": {
+    "com.nonsensicallab.nonsensicalkit.core": "1.0.7",
+    "com.nonsensicallab.nonsensicalkit.digitaltwin": "1.1.2",
+    "com.unity.timeline": "1.6.5"
+  },
   "samples": [
     {
       "displayName": "Sample Training",
-      "description": "\u793a\u4f8b\u8bad\u7ec3",
+      "description": "示例训练",
       "path": "Samples~/Sample Training"
     },
     {
       "displayName": "ParametricModelingShelves",
-      "description": "\u53c2\u6570\u5316\u8d27\u67b6",
+      "description": "参数化货架",
       "path": "Samples~/ParametricModelingShelves"
     },
     {
       "displayName": "WarehouseSimulation",
       "description": "出入库仿真",
       "path": "Samples~/WarehouseSimulation"
+    },
+    {
+      "displayName": "ScriptAnimation",
+      "description": "Timeline 脚本动画综合演示（含 OpenBox、FilmWrapping 子场景）。导入后可用菜单 Tools/ScriptAnimation 打开。",
+      "path": "Samples~/ScriptAnimation"
     }
   ]
 }

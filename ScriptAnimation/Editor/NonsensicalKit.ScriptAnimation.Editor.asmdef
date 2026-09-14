@@ -1,0 +1,22 @@
+{
+    "name": "NonsensicalKit.ScriptAnimation.Editor",
+    "rootNamespace": "NonsensicalKit.ScriptAnimation.Editor",
+    "references": [
+        "NonsensicalKit.ScriptAnimation.Runtime",
+        "Unity.Timeline",
+        "Unity.Timeline.Editor",
+        "NonsensicalKit.Core.Runtime",
+        "NonsensicalKit.DigitalTwin.Warehouse"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

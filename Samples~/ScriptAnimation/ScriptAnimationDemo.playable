@@ -1,0 +1,2971 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8622277937263407964
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f6789012345678abcde024, type: 3}
+  m_Name: StackerClip
+  m_EditorClassIdentifier: 
+  Data:
+    HasStartCell: 0
+    StartCell:
+      m_i1: 0
+      m_i2: 0
+      m_i3: 0
+      m_i4: 0
+    EndCell:
+      m_i1: 1
+      m_i2: 2
+      m_i3: 3
+      m_i4: 0
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    TravelSpeed: 2
+    TravelAcceleration: 1.5
+    LiftSpeed: 1.2
+    LiftAcceleration: 1
+    AutoSyncDuration: 1
+--- !u!114 &-8215982895705691696
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd2e93bcc4baeb641ade3521210ebd9e, type: 3}
+  m_Name: OpenBox
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: -3780483295510962682}
+    m_Duration: 2
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -8215982895705691696}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u5F00\u7BB1 \u4FA7\u58C1 0\u21921"
+  - m_Version: 1
+    m_Start: 2
+    m_ClipIn: 0
+    m_Asset: {fileID: 3035380749804837269}
+    m_Duration: 2
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -8215982895705691696}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u5F00\u7BB1 \u5E95\u77ED\u21921,\u5E95\u957F\u21921"
+  - m_Version: 1
+    m_Start: 4
+    m_ClipIn: 0
+    m_Asset: {fileID: 3944819712605275643}
+    m_Duration: 2
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -8215982895705691696}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u5F00\u7BB1 \u9876\u77ED\u21921,\u9876\u957F\u21921"
+  m_Markers:
+    m_Objects: []
+  m_PostPlaybackState: 0
+  m_MinClipDuration: 0.01
+  m_InstantHoldFrames: 50
+--- !u!114 &-8181652660710255196
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2af7d7b075fca2e418e3e67615b92ab4, type: 3}
+  m_Name: StackerForkClip
+  m_EditorClassIdentifier: 
+  Data:
+    Mode: 0
+    ForkTravelOffset: 0
+    ForkPlaceOffset: 0.65
+    ForkLiftOffset: 0.9
+    ForkSpeed: 0.8
+    AutoSyncDuration: 1
+--- !u!114 &-8174164351256485909
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4530396277792e7419ad9a3840a2edb6, type: 3}
+  m_Name: FilmWrapClip
+  m_EditorClassIdentifier: 
+  Data:
+    FromProgress: 0
+    ToProgress: 1
+    Ease:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    AutoSyncDuration: 0
+    DurationSeconds: 6
+--- !u!114 &-6042290241128872429
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18815a2e8c96b5f4eb8af2fb380f10a9, type: 3}
+  m_Name: PathMoveClip
+  m_EditorClassIdentifier: 
+  Network:
+    exposedName: d62c31cb18aa47099a5390272ea264c2
+    defaultValue: {fileID: 0}
+  StartNode:
+    exposedName: 1da76a0a12c946719f162d7e3d3ddf2d
+    defaultValue: {fileID: 0}
+  EndNode:
+    exposedName: 1f181f6466fa459ab3c77260d847b20c
+    defaultValue: {fileID: 0}
+  Data:
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    MoveSpeed: 2
+    MoveMode: 0
+    RotateSpeed: 90
+    ReverseFacing: 0
+    MoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    AutoSyncDuration: 1
+--- !u!114 &-4633807055277359595
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18815a2e8c96b5f4eb8af2fb380f10a9, type: 3}
+  m_Name: PathMoveClip
+  m_EditorClassIdentifier: 
+  Network:
+    exposedName: 484c699dfe774af48b399faebbab5614
+    defaultValue: {fileID: 0}
+  StartNode:
+    exposedName: 73fa5eeb2afa4e3bbfa62e4931addd12
+    defaultValue: {fileID: 0}
+  EndNode:
+    exposedName: 702a984aff2043e9938f1de3622edee7
+    defaultValue: {fileID: 0}
+  Data:
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    MoveSpeed: 2
+    MoveMode: 0
+    RotateSpeed: 90
+    ReverseFacing: 0
+    MoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    AutoSyncDuration: 1
+--- !u!114 &-4437588850967422312
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ed4ce27be46dfc48b1dabef6b569587, type: 3}
+  m_Name: ReverseUTurnClip
+  m_EditorClassIdentifier: 
+  PrevNode:
+    exposedName: 83c9f9d207e842d68a481f2375459a44
+    defaultValue: {fileID: 0}
+  CornerNode:
+    exposedName: 71c009e32a5045de99cdc423754a2ee6
+    defaultValue: {fileID: 0}
+  NextNode:
+    exposedName: 4b0e2a9302ec476cafbd1efc7c0eb117
+    defaultValue: {fileID: 0}
+  Data:
+    BackDistance: 0.8
+    EarlyTurnDistance: 1
+    MoveSpeed: 2
+    RotateSpeed: 90
+    MoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    ReverseFacing: 0
+    AutoSyncDuration: 1
+--- !u!114 &-3780483295510962682
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c01be3ace57f144c86a649be19665b8, type: 3}
+  m_Name: OpenBoxClip
+  m_EditorClassIdentifier: 
+  Data:
+    FromCurrent: 0
+    AnimateWall: 1
+    FromWall: 0
+    Wall: 1
+    AnimateBottomShort: 0
+    FromBottomShort: 0
+    BottomShort: 1
+    AnimateBottomLong: 0
+    FromBottomLong: 0
+    BottomLong: 1
+    AnimateTopShort: 0
+    FromTopShort: 0
+    TopShort: 1
+    AnimateTopLong: 0
+    FromTopLong: 0
+    TopLong: 1
+    Ease:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    DurationSeconds: 2
+    AutoSyncDuration: 0
+--- !u!114 &-3534888969613582542
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c7efc7fb36be154784da164c25eae81, type: 3}
+  m_Name: BezierCornerClip
+  m_EditorClassIdentifier: 
+  PrevNode:
+    exposedName: 63939b130b8f4c499ee719be4691f5a4
+    defaultValue: {fileID: 0}
+  CornerNode:
+    exposedName: 3d59da49a6af411899170504991e32ab
+    defaultValue: {fileID: 0}
+  NextNode:
+    exposedName: 5abf0063c08644318e9ef3ffa3ebdef0
+    defaultValue: {fileID: 0}
+  Data:
+    EarlyTurnDistance: 1
+    MoveSpeed: 2
+    MoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    ReverseFacing: 0
+    AutoSyncDuration: 1
+--- !u!114 &-3198414589105594710
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e9a4c7b1d834f6aa5c08e3b7f12d946, type: 3}
+  m_Name: ThreePointTurnClip
+  m_EditorClassIdentifier: 
+  Data:
+    Direction: 0
+    ManeuverDistance: 0.8
+    MoveSpeed: 2
+    RotateSpeed: 90
+    MoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    AutoSyncDuration: 1
+--- !u!114 &-3151616795693640032
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2af7d7b075fca2e418e3e67615b92ab4, type: 3}
+  m_Name: StackerForkClip
+  m_EditorClassIdentifier: 
+  Data:
+    Mode: 1
+    ForkTravelOffset: 0
+    ForkPlaceOffset: 0.65
+    ForkLiftOffset: 0.9
+    ForkSpeed: 0.8
+    AutoSyncDuration: 1
+--- !u!114 &-3064617261552321188
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1a7c35d8f6b0284e9c2d5a0b3f4e678, type: 3}
+  m_Name: TeleportClip
+  m_EditorClassIdentifier: 
+  TargetNode:
+    exposedName: 5d51daea848d43de8b5a05f43f815926
+    defaultValue: {fileID: 0}
+  Data:
+    UseWorldPosition: 0
+    WorldPosition: {x: 0, y: 0, z: 0}
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    FacingMode: 2
+    CustomYawDegrees: 90
+    AutoSyncDuration: 0
+--- !u!114 &-2907914903397348717
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a0635af5bd61c94c99e7d15ae5ad929, type: 3}
+  m_Name: ForkliftClip
+  m_EditorClassIdentifier: 
+  Station:
+    exposedName: 2cee4ca056794e59be7758c1cbed172c
+    defaultValue: {fileID: 0}
+  Data:
+    Mode: 0
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    ReverseFacing: 0
+    ForkStartTravelHeight: 0.66498446
+    ForkEndTravelHeight: 0.66498446
+    ForkPlaceHeight: 0.66498446
+    ForkLiftHeight: 1.4411893
+    CargoSwapHoldFrames: 5
+    MoveSpeed: 1.5
+    ForkSpeed: 0.8
+    RotateSpeed: 90
+    ApproachDistance: 1.2
+    AutoSyncDuration: 1
+--- !u!114 &-2787437152401892453
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58495d80d09460a4d92322bd575f53b6, type: 3}
+  m_Name: Stacker
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: 5808137796983378324}
+    m_Duration: 3.8333334922790527
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -2787437152401892453}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "CellA\u2192CellB"
+  - m_Version: 1
+    m_Start: 3.4949493408203125
+    m_ClipIn: 0
+    m_Asset: {fileID: -8181652660710255196}
+    m_Duration: 2.25
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -2787437152401892453}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: PickUp@B
+  - m_Version: 1
+    m_Start: 6.066377878189087
+    m_ClipIn: 0
+    m_Asset: {fileID: -8622277937263407964}
+    m_Duration: 2.8333334922790527
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -2787437152401892453}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "CellB\u2192CellC"
+  - m_Version: 1
+    m_Start: 8.652236461639404
+    m_ClipIn: 0
+    m_Asset: {fileID: -3151616795693640032}
+    m_Duration: 2.25
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -2787437152401892453}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: PutDown@C
+  - m_Version: 1
+    m_Start: 11.223664999008179
+    m_ClipIn: 0
+    m_Asset: {fileID: 4715369829613045895}
+    m_Duration: 5.3333330154418945
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -2787437152401892453}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "CellC\u2192CellA"
+  m_Markers:
+    m_Objects: []
+  m_PostPlaybackState: 0
+  m_MinClipDuration: 0.01
+  m_InstantHoldFrames: 50
+--- !u!114 &-2256470830429996881
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d0a3e94c1f26b8a0e5c7d9f3a2b4c16, type: 3}
+  m_Name: RotateClip
+  m_EditorClassIdentifier: 
+  Data:
+    StartYawDegrees: 90
+    AngleDegrees: 90
+    Direction: 0
+    RotateSpeed: 90
+    RotateCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    AutoSyncDuration: 1
+--- !u!114 &-2061165290640582297
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58495d80d09460a4d92322bd575f53b6, type: 3}
+  m_Name: ScissorLift
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: -2907914903397348717}
+    m_Duration: 3.3005118370056152
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -2061165290640582297}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: Scissor PickUp
+  - m_Version: 1
+    m_Start: 4.91813325881958
+    m_ClipIn: 0
+    m_Asset: {fileID: 9138699902489338569}
+    m_Duration: 3.3005118370056152
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -2061165290640582297}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: Scissor PutDown
+  m_Markers:
+    m_Objects: []
+  m_PostPlaybackState: 0
+  m_MinClipDuration: 0.01
+  m_InstantHoldFrames: 50
+--- !u!114 &-1123336621986049822
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a0635af5bd61c94c99e7d15ae5ad929, type: 3}
+  m_Name: ForkliftClip
+  m_EditorClassIdentifier: 
+  Station:
+    exposedName: a645a23251f949f3b7db958d7e7ec931
+    defaultValue: {fileID: 0}
+  Data:
+    Mode: 1
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    ReverseFacing: 0
+    ForkStartTravelHeight: 0.15
+    ForkEndTravelHeight: 0.15
+    ForkPlaceHeight: 0.15
+    ForkLiftHeight: 0.55
+    CargoSwapHoldFrames: 5
+    MoveSpeed: 1.5
+    ForkSpeed: 0.8
+    RotateSpeed: 90
+    ApproachDistance: 1.2
+    AutoSyncDuration: 1
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bfda56da833e2384a9677cd3c976a436, type: 3}
+  m_Name: ScriptAnimationDemo
+  m_EditorClassIdentifier: 
+  m_Version: 0
+  m_Tracks:
+  - {fileID: 396265782354940286}
+  - {fileID: -2787437152401892453}
+  - {fileID: 5028428556813877186}
+  - {fileID: 1444773968291597502}
+  - {fileID: -2061165290640582297}
+  - {fileID: 3476374340839142399}
+  - {fileID: -8215982895705691696}
+  - {fileID: 4934125189443736629}
+  m_FixedDuration: 0
+  m_EditorSettings:
+    m_Framerate: 60
+    m_ScenePreview: 1
+  m_DurationMode: 0
+  m_MarkerTrack: {fileID: 0}
+--- !u!114 &396265782354940286
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58495d80d09460a4d92322bd575f53b6, type: 3}
+  m_Name: Forklift
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0.8333333730697632
+    m_ClipIn: 0
+    m_Asset: {fileID: 8181938658555824618}
+    m_Duration: 4.5
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 396265782354940286}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "Move N0\u2192N4"
+  - m_Version: 1
+    m_Start: 10.666377782821655
+    m_ClipIn: 0
+    m_Asset: {fileID: 3155289445169437540}
+    m_Duration: 2.426666259765625
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 396265782354940286}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: PickUp
+  - m_Version: 1
+    m_Start: 12.733044147491455
+    m_ClipIn: 0
+    m_Asset: {fileID: -1123336621986049822}
+    m_Duration: 2.426666259765625
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 396265782354940286}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: PutDown
+  - m_Version: 1
+    m_Start: 14.799710512161255
+    m_ClipIn: 0
+    m_Asset: {fileID: -6042290241128872429}
+    m_Duration: 4.5
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 396265782354940286}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "Move N4\u2192N2"
+  - m_Version: 1
+    m_Start: 21.399710416793823
+    m_ClipIn: 0
+    m_Asset: {fileID: 3872168225275152677}
+    m_Duration: 0.8333333730697632
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 396265782354940286}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "Teleport\u2192N0"
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: 6491920140461994891}
+    m_Duration: 0.8333333730697632
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 396265782354940286}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: TeleportClip
+  m_Markers:
+    m_Objects: []
+  m_PostPlaybackState: 0
+  m_MinClipDuration: 0.01
+  m_InstantHoldFrames: 50
+--- !u!114 &1444773968291597502
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd2e93bcc4baeb641ade3521210ebd9e, type: 3}
+  m_Name: RobotArm5
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: 6728131594005138571}
+    m_Duration: 15.293680191040039
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 1444773968291597502}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: Arm5 path (6 pts)
+  m_Markers:
+    m_Objects: []
+  m_PostPlaybackState: 0
+  m_MinClipDuration: 0.01
+  m_InstantHoldFrames: 50
+--- !u!114 &3035380749804837269
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c01be3ace57f144c86a649be19665b8, type: 3}
+  m_Name: OpenBoxClip
+  m_EditorClassIdentifier: 
+  Data:
+    FromCurrent: 1
+    AnimateWall: 0
+    FromWall: 0
+    Wall: 1
+    AnimateBottomShort: 1
+    FromBottomShort: 0
+    BottomShort: 1
+    AnimateBottomLong: 1
+    FromBottomLong: 0
+    BottomLong: 1
+    AnimateTopShort: 0
+    FromTopShort: 0
+    TopShort: 1
+    AnimateTopLong: 0
+    FromTopLong: 0
+    TopLong: 1
+    Ease:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    DurationSeconds: 2
+    AutoSyncDuration: 0
+--- !u!114 &3155289445169437540
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a0635af5bd61c94c99e7d15ae5ad929, type: 3}
+  m_Name: ForkliftClip
+  m_EditorClassIdentifier: 
+  Station:
+    exposedName: 3de4531f73ba4c00b79a3229e158bd50
+    defaultValue: {fileID: 0}
+  Data:
+    Mode: 0
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    ReverseFacing: 0
+    ForkStartTravelHeight: 0.15
+    ForkEndTravelHeight: 0.15
+    ForkPlaceHeight: 0.15
+    ForkLiftHeight: 0.55
+    CargoSwapHoldFrames: 5
+    MoveSpeed: 1.5
+    ForkSpeed: 0.8
+    RotateSpeed: 90
+    ApproachDistance: 1.2
+    AutoSyncDuration: 1
+--- !u!114 &3476374340839142399
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd2e93bcc4baeb641ade3521210ebd9e, type: 3}
+  m_Name: FilmWrap
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: -8174164351256485909}
+    m_Duration: 6
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 3476374340839142399}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u7F20\u819C 0.0\u21921.0"
+  m_Markers:
+    m_Objects: []
+  m_PostPlaybackState: 0
+  m_MinClipDuration: 0.01
+  m_InstantHoldFrames: 50
+--- !u!114 &3872168225275152677
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1a7c35d8f6b0284e9c2d5a0b3f4e678, type: 3}
+  m_Name: TeleportClip
+  m_EditorClassIdentifier: 
+  TargetNode:
+    exposedName: bd94abc67bf842128c6203edfc4ecd6e
+    defaultValue: {fileID: 0}
+  Data:
+    UseWorldPosition: 0
+    WorldPosition: {x: 0, y: 0, z: 0}
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    FacingMode: 2
+    CustomYawDegrees: 90
+    AutoSyncDuration: 0
+--- !u!114 &3944819712605275643
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c01be3ace57f144c86a649be19665b8, type: 3}
+  m_Name: OpenBoxClip
+  m_EditorClassIdentifier: 
+  Data:
+    FromCurrent: 1
+    AnimateWall: 0
+    FromWall: 0
+    Wall: 1
+    AnimateBottomShort: 0
+    FromBottomShort: 0
+    BottomShort: 1
+    AnimateBottomLong: 0
+    FromBottomLong: 0
+    BottomLong: 1
+    AnimateTopShort: 1
+    FromTopShort: 0
+    TopShort: 1
+    AnimateTopLong: 1
+    FromTopLong: 0
+    TopLong: 1
+    Ease:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    DurationSeconds: 2
+    AutoSyncDuration: 0
+--- !u!114 &4715369829613045895
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f6789012345678abcde024, type: 3}
+  m_Name: StackerClip
+  m_EditorClassIdentifier: 
+  Data:
+    HasStartCell: 0
+    StartCell:
+      m_i1: 0
+      m_i2: 0
+      m_i3: 0
+      m_i4: 0
+    EndCell:
+      m_i1: 1
+      m_i2: 0
+      m_i3: 0
+      m_i4: 0
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    TravelSpeed: 2
+    TravelAcceleration: 1.5
+    LiftSpeed: 1.2
+    LiftAcceleration: 1
+    AutoSyncDuration: 1
+--- !u!114 &4934125189443736629
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58495d80d09460a4d92322bd575f53b6, type: 3}
+  m_Name: LatentAgv
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: -2256470830429996881}
+    m_Duration: 1
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 4934125189443736629}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "Rotate 90\xB0"
+  - m_Version: 1
+    m_Start: 0.8999999761581421
+    m_ClipIn: 0
+    m_Asset: {fileID: 8778004664048638496}
+    m_Duration: 0.800000011920929
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 4934125189443736629}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "DirectMove A\u2192B"
+  - m_Version: 1
+    m_Start: 1.6272727251052856
+    m_ClipIn: 0
+    m_Asset: {fileID: -4633807055277359595}
+    m_Duration: 2
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 4934125189443736629}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "Move N1\u2192N2"
+  - m_Version: 1
+    m_Start: 3.445454478263855
+    m_ClipIn: 0
+    m_Asset: {fileID: -3534888969613582542}
+    m_Duration: 1.3112869262695312
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 4934125189443736629}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "Bezier N1\u2192N2\u2192N3"
+  - m_Version: 1
+    m_Start: 4.63753354549408
+    m_ClipIn: 0
+    m_Asset: {fileID: -3198414589105594710}
+    m_Duration: 1.7999999523162842
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 4934125189443736629}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u4E09\u70B9\u8F6C\u5411 \xB7 \u53F3\u8F6C"
+  - m_Version: 1
+    m_Start: 6.264806270599365
+    m_ClipIn: 0
+    m_Asset: {fileID: -4437588850967422312}
+    m_Duration: 1.955468773841858
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 4934125189443736629}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "ReverseUTurn N3\u2192N2\u2192N1"
+  - m_Version: 1
+    m_Start: 9.764806270599365
+    m_ClipIn: 0
+    m_Asset: {fileID: 5833087833129868477}
+    m_Duration: 1.21833336353302
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 4934125189443736629}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: Platform PickUp
+  - m_Version: 1
+    m_Start: 11.143853902816772
+    m_ClipIn: 0
+    m_Asset: {fileID: 8220697072106548843}
+    m_Duration: 1.21833336353302
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 4934125189443736629}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: Platform PutDown
+  - m_Version: 1
+    m_Start: 12.52290153503418
+    m_ClipIn: 0
+    m_Asset: {fileID: -3064617261552321188}
+    m_Duration: 0.8333333730697632
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 4934125189443736629}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "Teleport\u2192N1"
+  m_Markers:
+    m_Objects: []
+  m_PostPlaybackState: 0
+  m_MinClipDuration: 0.01
+  m_InstantHoldFrames: 50
+--- !u!114 &5028428556813877186
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd2e93bcc4baeb641ade3521210ebd9e, type: 3}
+  m_Name: RobotArm
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: 7946200571825181753}
+    m_Duration: 27.23550796508789
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 5028428556813877186}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 0
+    m_BlendOutDuration: 0
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: Arm path (9 pts)
+  m_Markers:
+    m_Objects: []
+  m_PostPlaybackState: 0
+  m_MinClipDuration: 0.01
+  m_InstantHoldFrames: 50
+--- !u!114 &5808137796983378324
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f6789012345678abcde024, type: 3}
+  m_Name: StackerClip
+  m_EditorClassIdentifier: 
+  Data:
+    HasStartCell: 1
+    StartCell:
+      m_i1: 1
+      m_i2: 0
+      m_i3: 0
+      m_i4: 0
+    EndCell:
+      m_i1: 2
+      m_i2: 1
+      m_i3: 2
+      m_i4: 0
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    TravelSpeed: 2
+    TravelAcceleration: 1.5
+    LiftSpeed: 1.2
+    LiftAcceleration: 1
+    AutoSyncDuration: 1
+--- !u!114 &5833087833129868477
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9069635afd1222e49b8bbfa60dbe9bb3, type: 3}
+  m_Name: LatentAgvClip
+  m_EditorClassIdentifier: 
+  Data:
+    Mode: 0
+    PlatformStartTravelHeight: 0
+    PlatformEndTravelHeight: 0
+    PlatformPlaceHeight: 0
+    PlatformLiftHeight: 0.45
+    CargoSwapHoldFrames: 5
+    PlatformSpeed: 0.8
+    AutoSyncDuration: 1
+--- !u!114 &6491920140461994891
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1a7c35d8f6b0284e9c2d5a0b3f4e678, type: 3}
+  m_Name: TeleportClip
+  m_EditorClassIdentifier: 
+  TargetNode:
+    exposedName: 1fe6113073079094a83276ea80de1a07
+    defaultValue: {fileID: 0}
+  Data:
+    UseWorldPosition: 0
+    WorldPosition: {x: 0, y: 0, z: 0}
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    FacingMode: 0
+    CustomYawDegrees: 0
+    AutoSyncDuration: 0
+--- !u!114 &6728131594005138571
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf7bee34e10489a4887142c4b40b2ec1, type: 3}
+  m_Name: RobotArm5Clip
+  m_EditorClassIdentifier: 
+  WaypointTargets:
+  - Target:
+      exposedName: 5596f8ea9e3241eb9a7568151e5afaf2
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: 0f3a876dbc7641049b6974e235e35e80
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: 0256468903ec4992adbc24fdf097da83
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: 3275fab635464383bd569d3f1f6c142b
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: f32a0cfce84f4cee9470cae8143b45df
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: e67d52ce149443019d6fff561dfe43a6
+      defaultValue: {fileID: 0}
+  Data:
+    Waypoints:
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ5Angle: 0
+      J5Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ5Angle: 0
+      J5Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ5Angle: 0
+      J5Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ5Angle: 0
+      J5Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ5Angle: 0
+      J5Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ5Angle: 0
+      J5Angle: 0
+    HasStartPoint: 1
+    JointSpeed: 60
+    JointAcceleration: 90
+    AutoSyncDuration: 1
+    DebugForcePlayback: 0
+--- !u!114 &7946200571825181753
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ad7b6154e111f84a87710ecb55f7751, type: 3}
+  m_Name: RobotArmClip
+  m_EditorClassIdentifier: 
+  WaypointTargets:
+  - Target:
+      exposedName: 8fa64599e0bb4ab99bfd4ac2cc1bf06b
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: 560a47c921f04f059abcd2b1796f2cd2
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: 3acb33f87a834be89a80642fae31ea6e
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: e8b965d361414bb38657b47f05ae90a1
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: 557e05fd2c42457aa7803a234a5d3253
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: 5c6fe0382ac04122b3144aab94d6337c
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: 98547c35e0f24df1abc74c303d168690
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: e6b9b11152834b10a7a979c30305815b
+      defaultValue: {fileID: 0}
+  - Target:
+      exposedName: c0b9ae7562234c76b5536e76c0d47522
+      defaultValue: {fileID: 0}
+  Data:
+    Waypoints:
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ6Angle: 0
+      J6Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ6Angle: 0
+      J6Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ6Angle: 0
+      J6Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ6Angle: 0
+      J6Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ6Angle: 0
+      J6Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ6Angle: 0
+      J6Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ6Angle: 0
+      J6Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ6Angle: 0
+      J6Angle: 0
+    - HasPoint: 0
+      Point: {x: 0, y: 0, z: 0}
+      Euler: {x: 0, y: 0, z: 0}
+      Offset: {x: 0, y: 0, z: 0}
+      UseJ6Angle: 0
+      J6Angle: 0
+    HasStartPoint: 1
+    JointSpeed: 60
+    JointAcceleration: 90
+    AutoSyncDuration: 1
+    DebugForcePlayback: 0
+--- !u!114 &8181938658555824618
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18815a2e8c96b5f4eb8af2fb380f10a9, type: 3}
+  m_Name: PathMoveClip
+  m_EditorClassIdentifier: 
+  Network:
+    exposedName: e978cb5b1449484290b4ede391afdb80
+    defaultValue: {fileID: 0}
+  StartNode:
+    exposedName: 5b031903422b40349a025ee6da0866b4
+    defaultValue: {fileID: 0}
+  EndNode:
+    exposedName: 9d26053dc46f43cf84dd3560cfbcc8b2
+    defaultValue: {fileID: 0}
+  Data:
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    MoveSpeed: 2
+    MoveMode: 0
+    RotateSpeed: 90
+    ReverseFacing: 0
+    MoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    AutoSyncDuration: 1
+--- !u!114 &8220697072106548843
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9069635afd1222e49b8bbfa60dbe9bb3, type: 3}
+  m_Name: LatentAgvClip
+  m_EditorClassIdentifier: 
+  Data:
+    Mode: 1
+    PlatformStartTravelHeight: 0
+    PlatformEndTravelHeight: 0
+    PlatformPlaceHeight: 0
+    PlatformLiftHeight: 0.45
+    CargoSwapHoldFrames: 5
+    PlatformSpeed: 0.8
+    AutoSyncDuration: 1
+--- !u!114 &8778004664048638496
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a78348983ca45348b0abdb94cfaee6f, type: 3}
+  m_Name: DirectMoveClip
+  m_EditorClassIdentifier: 
+  StartNode:
+    exposedName: 386b683392bc4c2181f0695b71189f64
+    defaultValue: {fileID: 0}
+  EndNode:
+    exposedName: d8c14851b7464155a512ddd3ae87bb8f
+    defaultValue: {fileID: 0}
+  Data:
+    UseStartWorldPosition: 0
+    StartWorldPosition: {x: 0, y: 0, z: 0}
+    UseEndWorldPosition: 0
+    EndWorldPosition: {x: 0, y: 0, z: 0}
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    MoveSpeed: 2
+    MoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    AutoSyncDuration: 1
+--- !u!114 &9138699902489338569
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a0635af5bd61c94c99e7d15ae5ad929, type: 3}
+  m_Name: ForkliftClip
+  m_EditorClassIdentifier: 
+  Station:
+    exposedName: 4d13b907ffe6488187f8977fa6efb35a
+    defaultValue: {fileID: 0}
+  Data:
+    Mode: 1
+    DestinationOffset: {x: 0, y: 0, z: 0}
+    ReverseFacing: 0
+    ForkStartTravelHeight: 0.66498446
+    ForkEndTravelHeight: 0.66498446
+    ForkPlaceHeight: 0.66498446
+    ForkLiftHeight: 1.4411893
+    CargoSwapHoldFrames: 5
+    MoveSpeed: 1.5
+    ForkSpeed: 0.8
+    RotateSpeed: 90
+    ApproachDistance: 1.2
+    AutoSyncDuration: 1

@@ -1,0 +1,18 @@
+{
+    "name": "NonsensicalKit.ScriptAnimation.Runtime",
+    "rootNamespace": "NonsensicalKit.ScriptAnimation",
+    "references": [
+        "Unity.Timeline",
+        "NonsensicalKit.Core.Runtime",
+        "NonsensicalKit.DigitalTwin.Warehouse"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

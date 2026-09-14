@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: FilmStretch
+  m_Shader: {fileID: 4800000, guid: f547614e703ba8f4a8521256fef2c79b, type: 3}
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _FresnelPower: 1.46
+    - _ScrollSpeed: 0.15
+    m_Colors:
+    - _BaseColor: {r: 1, g: 0.8044751, b: 0, a: 0.28}
+    - _EdgeColor: {r: 0, g: 1, b: 0.85294104, a: 0.55}
+  m_BuildTextureStacks: []
