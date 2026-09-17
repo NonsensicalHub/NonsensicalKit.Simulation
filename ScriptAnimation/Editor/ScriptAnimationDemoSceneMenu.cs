@@ -226,6 +226,14 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             directPointB.transform.position = new Vector3(1.6f, 0f, -3f);
             directPointB.AddComponent<ScriptAnimPoint>();
 
+            // 取放货移动点：取货抬起后驶离货位；放货先转向再驶入
+            var latentPickMove = new GameObject("LatentPickMove");
+            latentPickMove.transform.position = new Vector3(-0.8f, 0f, -3f);
+            latentPickMove.AddComponent<ScriptAnimPoint>();
+            var latentPutMove = new GameObject("LatentPutMove");
+            latentPutMove.transform.position = new Vector3(0.8f, 0f, -3f);
+            latentPutMove.AddComponent<ScriptAnimPoint>();
+
             var timeline = ScriptableObject.CreateInstance<TimelineAsset>();
             AssetDatabase.CreateAsset(timeline, TimelinePath);
 
@@ -271,8 +279,8 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             var forkAsset = (ForkliftClip)forkClip.asset;
             forkAsset.Data.Mode = ForkliftMode.PickUp;
             forkAsset.Data.AutoSyncDuration = true;
-            forkAsset.Data.ForkStartTravelHeight = 0.15f;
-            forkAsset.Data.ForkEndTravelHeight = 0.15f;
+            forkAsset.Data.ForkEmptyHeight = 0.15f;
+            forkAsset.Data.ForkLoadedTravelHeight = 0.15f;
             forkAsset.Data.ForkPlaceHeight = 0.15f;
             forkAsset.Data.ForkLiftHeight = 0.55f;
             forkAsset.Station = BindExposed(director, EnsurePoint(stationGo.transform));
@@ -290,8 +298,8 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             var putAsset = (ForkliftClip)putClip.asset;
             putAsset.Data.Mode = ForkliftMode.PutDown;
             putAsset.Data.AutoSyncDuration = true;
-            putAsset.Data.ForkStartTravelHeight = 0.15f;
-            putAsset.Data.ForkEndTravelHeight = 0.15f;
+            putAsset.Data.ForkEmptyHeight = 0.15f;
+            putAsset.Data.ForkLoadedTravelHeight = 0.15f;
             putAsset.Data.ForkPlaceHeight = 0.15f;
             putAsset.Data.ForkLiftHeight = 0.55f;
             putAsset.Station = BindExposed(director, EnsurePoint(stationGo.transform));
@@ -405,8 +413,8 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             var scissorPickAsset = (ForkliftClip)scissorPick.asset;
             scissorPickAsset.Data.Mode = ForkliftMode.PickUp;
             scissorPickAsset.Data.AutoSyncDuration = true;
-            scissorPickAsset.Data.ForkStartTravelHeight = scissorRestHeight;
-            scissorPickAsset.Data.ForkEndTravelHeight = scissorRestHeight;
+            scissorPickAsset.Data.ForkEmptyHeight = scissorRestHeight;
+            scissorPickAsset.Data.ForkLoadedTravelHeight = scissorRestHeight;
             scissorPickAsset.Data.ForkPlaceHeight = scissorRestHeight;
             scissorPickAsset.Data.ForkLiftHeight = scissorLiftHeight;
             scissorPickAsset.Station = BindExposed(director, EnsurePoint(scissorStation));
@@ -425,8 +433,8 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             var scissorPutAsset = (ForkliftClip)scissorPut.asset;
             scissorPutAsset.Data.Mode = ForkliftMode.PutDown;
             scissorPutAsset.Data.AutoSyncDuration = true;
-            scissorPutAsset.Data.ForkStartTravelHeight = scissorRestHeight;
-            scissorPutAsset.Data.ForkEndTravelHeight = scissorRestHeight;
+            scissorPutAsset.Data.ForkEmptyHeight = scissorRestHeight;
+            scissorPutAsset.Data.ForkLoadedTravelHeight = scissorRestHeight;
             scissorPutAsset.Data.ForkPlaceHeight = scissorRestHeight;
             scissorPutAsset.Data.ForkLiftHeight = scissorLiftHeight;
             scissorPutAsset.Station = BindExposed(director, EnsurePoint(scissorStation));
@@ -588,7 +596,14 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             latentAgv.ApplyClipDefaults(latentPickAsset.Data);
             latentPickAsset.Data.Mode = ForkliftMode.PickUp;
             latentPickAsset.Data.AutoSyncDuration = true;
-            float latentPickDur = LatentAgvSampler.EstimateDuration(latentAgv, latentPickAsset.Data);
+            latentPickAsset.MovePoint = BindExposed(director, EnsurePoint(latentPickMove.transform));
+            // 前序 ReverseUTurn 结束于 N1；取货不转向，时长估算用开场位姿即可
+            Vector3 latentPickHome = n1.transform.position;
+            Quaternion latentPickHomeRot = latentAgv.LookRotation(
+                n1.transform.position - n2.transform.position, Quaternion.identity);
+            float latentPickDur = LatentAgvSampler.EstimateDuration(
+                latentAgv, latentPickAsset.Data, latentPickMove.transform,
+                latentPickHome, latentPickHomeRot, ForkliftRotateMode.Timed);
             if (latentPickDur > 0f) latentPick.duration = latentPickDur;
             EditorUtility.SetDirty(latentPickAsset);
             latentT = latentPick.end;
@@ -600,7 +615,13 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             latentAgv.ApplyClipDefaults(latentPutAsset.Data);
             latentPutAsset.Data.Mode = ForkliftMode.PutDown;
             latentPutAsset.Data.AutoSyncDuration = true;
-            float latentPutDur = LatentAgvSampler.EstimateDuration(latentAgv, latentPutAsset.Data);
+            latentPutAsset.MovePoint = BindExposed(director, EnsurePoint(latentPutMove.transform));
+            // 前序取货 → Skip 不旋转；开场位姿 = 取货结束（移动点）
+            Vector3 latentPutHome = latentAgv.WithUpHeight(
+                latentPickMove.transform.position, latentPickHome);
+            float latentPutDur = LatentAgvSampler.EstimateDuration(
+                latentAgv, latentPutAsset.Data, latentPutMove.transform,
+                latentPutHome, latentPickHomeRot, ForkliftRotateMode.Skip);
             if (latentPutDur > 0f) latentPut.duration = latentPutDur;
             EditorUtility.SetDirty(latentPutAsset);
             latentT = latentPut.end;
@@ -640,7 +661,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 $"  Scene: {ScenePath}\n" +
                 $"  Timeline: {TimelinePath}\n" +
                 "Play：Forklift 路网取放货；Stacker 货位+伸叉；RobotArm/RobotArm5 Timeline 巡航；" +
-                "ScissorLift 剪叉；FilmWrap 缠膜；OpenBox 开箱；LatentAgv 机动+平台升降。");
+                "ScissorLift 剪叉；FilmWrap 缠膜；OpenBox 开箱；LatentAgv 机动+取放货（移动点）。");
         }
 
         /// <summary>
@@ -819,8 +840,8 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             SetField(anim, "m_moveSpeed", 2.2f);
             SetField(anim, "m_rotateSpeed", 100f);
             SetField(anim, "m_moveMode", PathMoveMode.RotateThenMove);
-            SetField(anim, "m_defaultPlatformStartTravelHeight", 0.0f);
-            SetField(anim, "m_defaultPlatformEndTravelHeight", 0.0f);
+            SetField(anim, "m_defaultPlatformEmptyHeight", 0.0f);
+            SetField(anim, "m_defaultPlatformLoadedTravelHeight", 0.12f);
             SetField(anim, "m_defaultPlatformPlaceHeight", 0.0f);
             SetField(anim, "m_defaultPlatformLiftHeight", 0.45f);
             anim.CaptureHomeFromCurrent();

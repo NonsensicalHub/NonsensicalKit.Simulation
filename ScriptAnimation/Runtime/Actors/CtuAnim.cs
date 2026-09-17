@@ -148,6 +148,16 @@ namespace NonsensicalKit.ScriptAnimation
         public bool DefaultReturnRotateToTravel => m_defaultReturnRotateToTravel;
         public bool DefaultReturnLiftToTravel => m_defaultReturnLiftToTravel;
 
+        /// <summary>首 Clip 之前：车体 Home + 转台/举升/夹爪/拨爪行驶态。</summary>
+        public void ApplyDefaultTravelPose()
+        {
+            ApplyHomePose("CTU 首 Clip 之前");
+            SetRotateAngle(m_rotateTravelAngle);
+            SetLiftHeight(m_defaultLiftTravelHeight);
+            SetClawExtend(m_defaultClawRetracted);
+            SetPaddleAngle(m_paddleOpenAngle);
+        }
+
         /// <summary>将本组件默认值写入 Clip（新增 Clip 时调用）。</summary>
         public void ApplyClipDefaults(CtuClipData data)
         {

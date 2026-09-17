@@ -11,7 +11,8 @@ namespace NonsensicalKit.ScriptAnimation.Editor
         [DrawGizmo(GizmoType.Selected | GizmoType.NonSelected | GizmoType.Active)]
         private static void DrawLabel(ScriptAnimPoint point, GizmoType gizmoType)
         {
-            if (point == null || !point.ShowLabel || !point.ShowGizmo)
+            // PathNode 自管 Scene Gizmo，不套用点位标签。
+            if (point == null || point is PathNode || !point.ShowLabel || !point.ShowGizmo)
                 return;
 
             float height = Mathf.Max(0f, point.LabelHeight);

@@ -45,6 +45,14 @@ namespace NonsensicalKit.ScriptAnimation
 
         public void ClearRest() => m_hasRest = false;
 
+        /// <summary>保持 Rest 缓存并写回 Rest 显隐（首 Clip 之前 seek 用）。</summary>
+        public void ApplyCapturedRest()
+        {
+            if (!m_hasRest)
+                return;
+            SetVisible(m_restVisible);
+        }
+
 #if UNITY_EDITOR
         /// <summary>Timeline GatherProperties 还原 m_visible 后，同步显隐。</summary>
         void OnDidApplyAnimationProperties()

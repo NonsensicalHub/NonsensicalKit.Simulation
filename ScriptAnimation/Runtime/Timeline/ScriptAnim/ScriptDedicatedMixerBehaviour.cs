@@ -118,6 +118,32 @@ namespace NonsensicalKit.ScriptAnimation
 
             if (actor is ObjectSwitchAnim objectSwitch)
                 objectSwitch.SetVisibleIndex(-1);
+
+            // 时间轴在第一个相关 Clip 之前：无已结束 clip 可 hold，回到开场默认态
+            if (actor is PoseChangeAnimMax poseMax)
+                poseMax.ApplyPoses(poseMax.ResolveDefaultStartPoses());
+            else if (actor is IPoseChangeActor poseChange)
+                poseChange.ApplyPose(poseChange.ResolveDefaultStartPose());
+            else if (actor is OpenBoxAnim openBox)
+                OpenBoxSampler.Sample(openBox, openBox.ResolveDefaultStartPose());
+            else if (actor is FadeAnim fade)
+                fade.ApplyCapturedRest();
+            else if (actor is BlinkAnim blink)
+                blink.ApplyCapturedRest();
+            else if (actor is FilmWrapAnim filmWrap)
+                filmWrap.ApplyCapturedRest();
+            else if (actor is SwingFlipAnim swingFlip)
+                swingFlip.ApplyPose(0f, 0f);
+            else if (actor is RobotArmAnim robotArm)
+                robotArm.ApplyHomePose();
+            else if (actor is RobotArm5Anim robotArm5)
+                robotArm5.ApplyHomePose();
+            else if (actor is WorldRotationLockAnim && HasInitialPose)
+            {
+                // 仅首个 Lock Clip 之前：还原开场旋转。
+                // Clip 结束后由 holdEnd 认领且不写入，保留离开瞬间的局部旋转，随后随父节点自然转动。
+                InitialPose.Restore();
+            }
         }
 
         protected override bool TryProcessInput(
@@ -240,15 +266,16 @@ namespace NonsensicalKit.ScriptAnimation
                 return true;
             }
 
+            // 不 hold：Clip 外交给 AfterNoActiveClip 隐藏（与组件文档「播放前/结束后隐藏」一致）
+            if (holdEnd)
+                return false;
+
             var inputPlayable = (ScriptPlayable<SequentialPositionBehaviour>)input;
             SequentialPositionBehaviour behaviour = inputPlayable.GetBehaviour();
             if (behaviour?.Data == null)
                 return true;
 
-            float localTime = holdEnd
-                ? (float)inputPlayable.GetDuration()
-                : (float)inputPlayable.GetTime();
-            SequentialPositionSampler.Sample(anim, localTime);
+            SequentialPositionSampler.Sample(anim, (float)inputPlayable.GetTime());
             return true;
         }
 
@@ -273,7 +300,11 @@ namespace NonsensicalKit.ScriptAnimation
             }
 
             if (!behaviour.EnsureIncomingResolved(timelineClip, actor))
+            {
+                // 目标姿态无效时仍写入确定态，避免 seek 后残留跳转前画面
+                ApplyPoseChangeResolvedOrDefault(actor, timelineClip);
                 return true;
+            }
 
             float normalized = PoseChangeSampler.IsInstant(behaviour.Data)
                 ? 1f
@@ -301,6 +332,29 @@ namespace NonsensicalKit.ScriptAnimation
             return true;
         }
 
+        /// <summary>
+        /// 写入前序 PoseChange 终点；无前序则开场默认姿态。供解析失败或首 Clip 之前使用。
+        /// </summary>
+        static void ApplyPoseChangeResolvedOrDefault(ScriptAnimActor actor, TimelineClip timelineClip)
+        {
+            if (actor is PoseChangeAnimMax maxAnim)
+            {
+                if (PoseChangeSampler.TryResolvePreviousEndPose(maxAnim, timelineClip, out var poses))
+                    maxAnim.ApplyPoses(poses);
+                else
+                    maxAnim.ApplyPoses(maxAnim.ResolveDefaultStartPoses());
+                return;
+            }
+
+            if (actor is IPoseChangeActor anim)
+            {
+                if (PoseChangeSampler.TryResolvePreviousEndPose(anim, timelineClip, out var pose))
+                    anim.ApplyPose(pose);
+                else
+                    anim.ApplyPose(anim.ResolveDefaultStartPose());
+            }
+        }
+
         private bool ProcessOpenBox(
             Playable input, ScriptAnimActor actor, FrameData info, bool holdEnd, TimelineClip timelineClip)
         {
@@ -323,7 +377,10 @@ namespace NonsensicalKit.ScriptAnimation
             }
 
             if (!behaviour.EnsureIncomingResolved(timelineClip, anim))
+            {
+                OpenBoxSampler.Sample(anim, OpenBoxSampler.ResolveStartPose(anim, timelineClip));
                 return true;
+            }
 
             float normalized = OpenBoxSampler.IsInstant(behaviour.Data)
                 ? 1f
@@ -360,12 +417,14 @@ namespace NonsensicalKit.ScriptAnimation
             if (behaviour?.Data == null || !behaviour.Data.Enabled)
                 return false;
 
-            if (!holdEnd &&
-                actor is WorldRotationLockAnim lockAnim &&
-                lockAnim.Target != null)
-            {
+            // 仅覆盖区间内每帧写入世界旋转。
+            // 结束后 hold：认领该帧但不写入——保留离开时的局部旋转，避免继续锁世界角，
+            // 也不要落到 AfterNoActiveClip 把姿态瞬间还原成开场态。
+            if (holdEnd)
+                return true;
+
+            if (actor is WorldRotationLockAnim lockAnim && lockAnim.Target != null)
                 lockAnim.ApplyWorldRotation(Quaternion.Euler(behaviour.Data.LockEulerAngles));
-            }
 
             return true;
         }

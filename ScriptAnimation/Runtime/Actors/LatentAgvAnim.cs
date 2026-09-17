@@ -1,10 +1,11 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace NonsensicalKit.ScriptAnimation
 {
     /// <summary>
     /// 潜伏车（举升 AGV）脚本动画：在 <see cref="PathMoveActor"/> 上增加举升平台。
-    /// 取放货见 <see cref="LatentAgvClip"/>：车体先用 PathMove 移到货下方，本 Clip 只做平台升降（无货点 / 接近距离）。
+    /// 取放货见 <see cref="LatentAgvClip"/>：绑定移动点；取货抬货后驶到移动点，放货先转向再驶入移动点放下。
     /// 普通叉车请用 <see cref="ForkliftAnim"/>。
     /// CTU / 穿梭车请用 <see cref="CtuAnim"/> / <see cref="ShuttleAnim"/>。
     /// 转弯时锁定目标世界旋转请用 <see cref="WorldRotationLockAnim"/>（可挂任意物体）+ 另建绑定它的 <see cref="ScriptDedicatedTrack"/>。
@@ -24,17 +25,19 @@ namespace NonsensicalKit.ScriptAnimation
         [InspectorLabel("平台速度")]
         [SerializeField] private float m_platformSpeed = 0.8f;
 
-        [Tooltip("开场时的平台行驶高度。")]
-        [InspectorLabel("开始行驶平台高度")]
-        [SerializeField] private float m_defaultPlatformStartTravelHeight = 0.15f;
-        [Tooltip("动作结束后回到的平台行驶高度。")]
-        [InspectorLabel("结束行驶平台高度")]
-        [SerializeField] private float m_defaultPlatformEndTravelHeight = 0.15f;
-        [Tooltip("插入货架 / 放货落地时的平台高度。")]
-        [InspectorLabel("放货/插入高度")]
+        [Tooltip("空载时的平台高度（取货开场 / 放货结束）。")]
+        [InspectorLabel("空载高度")]
+        [FormerlySerializedAs("m_defaultPlatformStartTravelHeight")]
+        [SerializeField] private float m_defaultPlatformEmptyHeight = 0.15f;
+        [Tooltip("载货行驶时的平台高度（取货结束 / 放货开场）。")]
+        [InspectorLabel("载货行驶高度")]
+        [FormerlySerializedAs("m_defaultPlatformEndTravelHeight")]
+        [SerializeField] private float m_defaultPlatformLoadedTravelHeight = 0.15f;
+        [Tooltip("货物放置 / 插入货位时的平台高度。")]
+        [InspectorLabel("货物放置高度")]
         [SerializeField] private float m_defaultPlatformPlaceHeight;
-        [Tooltip("载货抬起后的平台高度。")]
-        [InspectorLabel("载货抬起高度")]
+        [Tooltip("货物抬起后的平台高度。")]
+        [InspectorLabel("货物抬起高度")]
         [SerializeField] private float m_defaultPlatformLiftHeight = 0.5f;
         [Tooltip("平台与货位重叠时的停顿帧数（按 60fps）。")]
         [InspectorLabel("货物切换停顿帧数")]
@@ -48,8 +51,8 @@ namespace NonsensicalKit.ScriptAnimation
 
         /// <summary>
         /// 抬升轴在平台父节点空间中的方向（用于改 <see cref="Transform.localPosition"/>）。
-    /// 以平台当前本地旋转变换，使配置轴始终相对平台节点本地坐标。
-    /// </summary>
+        /// 以平台当前本地旋转变换，使配置轴始终相对平台节点本地坐标。
+        /// </summary>
         public Vector3 LiftAxisInParent
         {
             get
@@ -64,11 +67,31 @@ namespace NonsensicalKit.ScriptAnimation
 
         public float PlatformSpeed => m_platformSpeed;
 
-        public float DefaultPlatformStartTravelHeight => m_defaultPlatformStartTravelHeight;
-        public float DefaultPlatformEndTravelHeight => m_defaultPlatformEndTravelHeight;
+        public float DefaultPlatformEmptyHeight => m_defaultPlatformEmptyHeight;
+        public float DefaultPlatformLoadedTravelHeight => m_defaultPlatformLoadedTravelHeight;
         public float DefaultPlatformPlaceHeight => m_defaultPlatformPlaceHeight;
         public float DefaultPlatformLiftHeight => m_defaultPlatformLiftHeight;
         public int DefaultCargoSwapHoldFrames => Mathf.Max(0, m_defaultCargoSwapHoldFrames);
+
+        /// <summary>按抬升轴写入平台高度。</summary>
+        public void ApplyPlatformHeight(float height)
+        {
+            if (m_platform == null)
+                return;
+
+            Vector3 axis = LiftAxisInParent;
+            Vector3 local = m_platform.localPosition;
+            local -= axis * Vector3.Dot(local, axis);
+            local += axis * height;
+            m_platform.localPosition = local;
+        }
+
+        /// <summary>首 Clip 之前：车体 Home + 空载平台高度。</summary>
+        public void ApplyDefaultTravelPose()
+        {
+            ApplyHomePose("潜伏车首 Clip 之前");
+            ApplyPlatformHeight(m_defaultPlatformEmptyHeight);
+        }
 
         /// <summary>将本组件默认值写入 Clip（新增 Clip 时调用）。</summary>
         public void ApplyClipDefaults(LatentAgvClipData data)
@@ -76,12 +99,14 @@ namespace NonsensicalKit.ScriptAnimation
             if (data == null)
                 return;
 
-            data.PlatformStartTravelHeight = m_defaultPlatformStartTravelHeight;
-            data.PlatformEndTravelHeight = m_defaultPlatformEndTravelHeight;
+            data.PlatformEmptyHeight = m_defaultPlatformEmptyHeight;
+            data.PlatformLoadedTravelHeight = m_defaultPlatformLoadedTravelHeight;
             data.PlatformPlaceHeight = m_defaultPlatformPlaceHeight;
             data.PlatformLiftHeight = m_defaultPlatformLiftHeight;
             data.CargoSwapHoldFrames = DefaultCargoSwapHoldFrames;
             data.PlatformSpeed = m_platformSpeed;
+            data.MoveSpeed = MoveSpeed;
+            data.RotateSpeed = RotateSpeed;
         }
     }
 }

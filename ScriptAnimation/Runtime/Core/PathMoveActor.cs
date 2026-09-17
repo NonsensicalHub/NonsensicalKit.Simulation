@@ -22,7 +22,7 @@ namespace NonsensicalKit.ScriptAnimation
         [InspectorLabel("旋转速度")]
         [SerializeField] private float m_rotateSpeed = 90f;
 
-        [Tooltip("新增 BezierCorner / ReverseUTurn Clip 时写入的提前转弯距离。")]
+        [Tooltip("新增 BezierCorner / BezierDualCorner / ReverseUTurn Clip 时写入的提前转弯距离。")]
         [InspectorLabel("提前转弯距离")]
         [SerializeField] private float m_earlyTurnDistance = 1f;
 
@@ -195,6 +195,15 @@ namespace NonsensicalKit.ScriptAnimation
             return Vector3.zero;
         }
 
+        /// <summary>写入组件 Home（或确定性回退），供首 Clip 之前 / 任意 seek 开场使用。</summary>
+        public void ApplyHomePose(string callerLabel = null)
+        {
+            ResolveHomePoseOrFallback(out Vector3 position, out Quaternion rotation, callerLabel ?? "首 Clip 之前");
+            Transform tr = MoverTransform;
+            tr.position = position;
+            tr.rotation = rotation;
+        }
+
         [ContextMenu("从当前位姿捕获 Home")]
         public void CaptureHomeFromCurrent()
         {
@@ -261,6 +270,17 @@ namespace NonsensicalKit.ScriptAnimation
 
         /// <summary>将本组件默认值写入贝塞尔直角弯 Clip（新增 Clip 时调用）。</summary>
         public void ApplyClipDefaults(BezierCornerClipData data)
+        {
+            if (data == null)
+                return;
+
+            data.EarlyTurnDistance = m_earlyTurnDistance;
+            data.MoveSpeed = m_moveSpeed;
+            data.MoveCurve = CopyCurve(MoveCurve);
+        }
+
+        /// <summary>将本组件默认值写入双拐点贝塞尔弯 Clip（新增 Clip 时调用）。</summary>
+        public void ApplyClipDefaults(BezierDualCornerClipData data)
         {
             if (data == null)
                 return;

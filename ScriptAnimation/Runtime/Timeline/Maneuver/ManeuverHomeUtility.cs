@@ -54,6 +54,32 @@ namespace NonsensicalKit.ScriptAnimation
                 out position, out rotation);
         }
 
+        public static bool TryResolveBezierDualCornerExitPose(
+            TimelineClip timelineClip,
+            BezierDualCornerClip clipAsset,
+            IExposedPropertyTable resolver,
+            out Vector3 position,
+            out Quaternion rotation,
+            PathMoveActor actor = null)
+        {
+            position = Vector3.zero;
+            rotation = Quaternion.identity;
+            if (clipAsset?.Data == null || resolver == null)
+                return false;
+
+            PathNode cornerA = clipAsset.CornerNodeA.Resolve(resolver);
+            PathNode cornerB = clipAsset.CornerNodeB.Resolve(resolver);
+            PathNode prev = clipAsset.PrevNode.Resolve(resolver);
+            PathNode next = clipAsset.NextNode.Resolve(resolver);
+
+            if (!TryResolveIncomingPose(timelineClip, actor, resolver, out Vector3 incomingPos, out Quaternion incomingRot))
+                return false;
+
+            return BezierDualCornerSampler.TryGetEndPose(
+                actor, clipAsset.Data, cornerA, cornerB, prev, next, incomingPos, incomingRot,
+                out position, out rotation);
+        }
+
         public static bool TryResolveReverseUTurnExitPose(
             TimelineClip timelineClip,
             ReverseUTurnClip clipAsset,
@@ -100,6 +126,10 @@ namespace NonsensicalKit.ScriptAnimation
                 return TryResolveBezierCornerExitPose(
                     timelineClip, bezier, resolver, out position, out rotation, actor);
 
+            if (timelineClip.asset is BezierDualCornerClip dualBezier)
+                return TryResolveBezierDualCornerExitPose(
+                    timelineClip, dualBezier, resolver, out position, out rotation, actor);
+
             if (timelineClip.asset is ReverseUTurnClip uTurn)
                 return TryResolveReverseUTurnExitPose(
                     timelineClip, uTurn, resolver, out position, out rotation, actor);
@@ -114,6 +144,7 @@ namespace NonsensicalKit.ScriptAnimation
 
             return clip.asset is ThreePointTurnClip
                    || clip.asset is BezierCornerClip
+                   || clip.asset is BezierDualCornerClip
                    || clip.asset is ReverseUTurnClip;
         }
     }

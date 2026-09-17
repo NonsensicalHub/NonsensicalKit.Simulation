@@ -16,6 +16,7 @@ namespace NonsensicalKit.ScriptAnimation
     [TrackClipType(typeof(RotateClip), false)]
     [TrackClipType(typeof(ThreePointTurnClip), false)]
     [TrackClipType(typeof(BezierCornerClip), false)]
+    [TrackClipType(typeof(BezierDualCornerClip), false)]
     [TrackClipType(typeof(ReverseUTurnClip), false)]
     [TrackClipType(typeof(ForkliftClip), false)]
     [TrackClipType(typeof(LatentAgvClip), false)]

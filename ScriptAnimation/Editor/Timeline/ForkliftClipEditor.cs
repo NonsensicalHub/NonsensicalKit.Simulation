@@ -27,7 +27,9 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 "前序 PathMove/DirectMove/Rotate/机动/Teleport→取其结束位姿，按转角÷角速度计入旋转；\n" +
                 "前序 Move（只移不转）→位置取该 Move 终点，朝向沿用更早确立的朝向再计入旋转；\n" +
                 "前序取放货→不旋转。\n" +
-                "时序：开场用开始行驶高度，前进前调货叉，后退后再调到结束行驶高度。\n" +
+                "四高度：空载 / 载货行驶 / 放货插入 / 载货抬起。\n" +
+                "取货：空载→插入(停顿)→抬起→后退→载货行驶高度。\n" +
+                "放货：载货行驶→抬起→前进→放置(停顿)→后退→空载。\n" +
                 "反向行驶：车头背对货点倒车取放（与 PathMove 反向行驶同语义）。\n" +
                 "CargoSwapHoldFrames：到达 Place 时停顿，供货物显隐切换（默认 5 帧 @60fps）。\n" +
                 "锁定目标世界旋转：另建 ScriptDedicatedTrack，绑定任意物体上的 WorldRotationLockAnim（Target 指向要锁的节点），铺 Lock Clip 与移动 Clip 重叠。",

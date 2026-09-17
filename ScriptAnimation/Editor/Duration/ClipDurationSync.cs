@@ -206,6 +206,10 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                     bezierCorner.Data != null &&
                     bezierCorner.Data.AutoSyncDuration)
                     return true;
+                if (clip?.asset is BezierDualCornerClip bezierDual &&
+                    bezierDual.Data != null &&
+                    bezierDual.Data.AutoSyncDuration)
+                    return true;
                 if (clip?.asset is ReverseUTurnClip reverseUTurn &&
                     reverseUTurn.Data != null &&
                     reverseUTurn.Data.AutoSyncDuration)

@@ -8,12 +8,115 @@ namespace NonsensicalKit.ScriptAnimation.Editor
     [CustomEditor(typeof(PathNode))]
     public sealed class PathNodeEditor : UnityEditor.Editor
     {
+        /// <summary>路径编辑对方节点（编辑器会话内共用，切换选中节点时保留）。</summary>
+        private static PathNode s_pairNode;
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
-            DrawPropertiesExcluding(serializedObject, "m_Script", "m_features");
+            DrawPropertiesExcluding(
+                serializedObject,
+                "m_Script",
+                "m_features",
+                "m_showGizmo",
+                "m_showLabel",
+                "m_showForward",
+                "m_gizmoColor",
+                "m_gizmoRadius",
+                "m_forwardLength",
+                "m_labelHeight");
 
-            EditorGUILayout.Space(4);
+            var node = (PathNode)target;
+            DrawNodeActions(node);
+            DrawPathEditWithPair(node);
+            DrawFeatureSection();
+
+            serializedObject.ApplyModifiedProperties();
+        }
+
+        void DrawNodeActions(PathNode node)
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("节点操作", EditorStyles.boldLabel);
+
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUILayout.ObjectField(
+                    new GUIContent("所属路网"),
+                    node.Network,
+                    typeof(PathNetwork),
+                    true);
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("断开本节点全部连线"))
+                PathNetworkEditActions.DisconnectNodeNeighbors(node);
+            if (GUILayout.Button("清除本节点错误邻居"))
+                PathNetworkEditActions.ClearNodeInvalidNeighbors(node);
+            EditorGUILayout.EndHorizontal();
+
+            using (new EditorGUI.DisabledScope(node.Network == null))
+            {
+                if (GUILayout.Button("打开所属路网图", GUILayout.Height(22f)))
+                    PathNetworkGraphWindow.Open(node.Network);
+            }
+        }
+
+        void DrawPathEditWithPair(PathNode node)
+        {
+            EditorGUILayout.Space(6);
+            EditorGUILayout.LabelField("路径编辑（相对另一节点）", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "本节点为一方，再指定对方节点后，可对两点间最短路径做单向改写或断开；若有直接连线，可在中点插入新节点。",
+                MessageType.None);
+
+            s_pairNode = (PathNode)EditorGUILayout.ObjectField(
+                new GUIContent("对方节点"),
+                s_pairNode,
+                typeof(PathNode),
+                true);
+
+            bool canEdit = node.Network != null &&
+                           s_pairNode != null &&
+                           s_pairNode != node;
+
+            using (new EditorGUI.DisabledScope(!canEdit))
+            {
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("本节点 → 对方（单向）", GUILayout.Height(24f)))
+                {
+                    PathNetworkEditActions.ApplyShortestPathOneWay(node.Network, node, s_pairNode);
+                }
+
+                if (GUILayout.Button("对方 → 本节点（单向）", GUILayout.Height(24f)))
+                {
+                    PathNetworkEditActions.ApplyShortestPathOneWay(node.Network, s_pairNode, node);
+                }
+
+                EditorGUILayout.EndHorizontal();
+
+                if (GUILayout.Button("断开最短连线", GUILayout.Height(24f)))
+                {
+                    PathNetworkEditActions.ApplyDisconnectShortestPath(node.Network, node, s_pairNode);
+                }
+
+                if (GUILayout.Button("在两点间插入节点", GUILayout.Height(24f)))
+                {
+                    PathNetworkEditActions.ApplyInsertNodeBetween(node.Network, node, s_pairNode);
+                }
+            }
+
+            if (node.Network == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "本节点尚未绑定所属路网。请在路网图中执行「收集子节点」，或确认层级挂在 PathNetwork 下。",
+                    MessageType.Warning);
+            }
+        }
+
+        void DrawFeatureSection()
+        {
+            EditorGUILayout.Space(6);
             EditorGUILayout.LabelField("扩展模块", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "停留仍用上方「顶升移栽」。这里只放业务扩展模块（点位映射等）。热路径走 PathNetwork.FeatureStore。",
@@ -34,8 +137,6 @@ namespace NonsensicalKit.ScriptAnimation.Editor
 
             EditorGUI.EndDisabledGroup();
             EditorGUILayout.EndHorizontal();
-
-            serializedObject.ApplyModifiedProperties();
         }
 
         void ShowAddFeatureMenu()

@@ -6,28 +6,29 @@ using UnityEngine.Timeline;
 
 namespace NonsensicalKit.ScriptAnimation.Editor
 {
-    [CustomEditor(typeof(BezierCornerClip))]
-    public class BezierCornerClipEditor : UnityEditor.Editor
+    [CustomEditor(typeof(BezierDualCornerClip))]
+    public class BezierDualCornerClipEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
             EditorGUILayout.PropertyField(serializedObject.FindProperty("PrevNode"), new GUIContent("上一节点"), true);
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("CornerNode"), new GUIContent("拐点节点"), true);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("CornerNodeA"), new GUIContent("拐点 A"), true);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("CornerNodeB"), new GUIContent("拐点 B"), true);
             EditorGUILayout.PropertyField(serializedObject.FindProperty("NextNode"), new GUIContent("下一节点"), true);
             ClipDataInspectorGui.DrawChildren(serializedObject.FindProperty("Data"));
             serializedObject.ApplyModifiedProperties();
 
-            var clipAsset = (BezierCornerClip)target;
+            var clipAsset = (BezierDualCornerClip)target;
             Object binding = null;
             TimelineClip timelineClip = FindTimelineClip(clipAsset, out binding);
             var director = TimelineEditor.inspectedDirector;
 
             EditorGUILayout.Space();
             EditorGUILayout.HelpBox(
-                "路网拐点贝塞尔直角弯：Prev →Corner →Next。\n" +
-                "开场位姿取前序 Clip 结束；二次贝塞尔切过 Corner，出弯后直线走到 Next。\n" +
-                "「提前转弯距离」只控制入弯/出弯点离拐点多远，不影响最终到达 Next。",
+                "路网双拐点贝塞尔弯：Prev → CornerA → CornerB → Next。\n" +
+                "开场位姿取前序 Clip 结束；三次贝塞尔以两拐点为控制点，出弯后直线走到 Next。\n" +
+                "「提前转弯距离」控制入弯点离拐点 A、出弯点离拐点 B 多远，不影响最终到达 Next。",
                 MessageType.None);
 
             if (binding is PathMoveActor actor && clipAsset.Data != null && director != null)
@@ -37,26 +38,27 @@ namespace NonsensicalKit.ScriptAnimation.Editor
         }
 
         static void DrawPreview(
-            BezierCornerClip clipAsset,
+            BezierDualCornerClip clipAsset,
             TimelineClip timelineClip,
             PathMoveActor actor,
             PlayableDirector director)
         {
             var prev = clipAsset.PrevNode.Resolve(director);
-            var corner = clipAsset.CornerNode.Resolve(director);
+            var cornerA = clipAsset.CornerNodeA.Resolve(director);
+            var cornerB = clipAsset.CornerNodeB.Resolve(director);
             var next = clipAsset.NextNode.Resolve(director);
-            float early = BezierCornerSampler.ResolveEarlyDistance(clipAsset.Data, actor);
+            float early = BezierDualCornerSampler.ResolveEarlyDistance(clipAsset.Data, actor);
             float est = -1f;
             string endLabel = "-";
 
             if (ManeuverHomeUtility.TryResolveIncomingPose(
                     timelineClip, actor, director, out Vector3 pos, out Quaternion rot) &&
-                BezierCornerSampler.TryBuildPlan(
-                    actor, clipAsset.Data, corner, prev, next, pos, rot, out var plan))
+                BezierDualCornerSampler.TryBuildPlan(
+                    actor, clipAsset.Data, cornerA, cornerB, prev, next, pos, rot, out var plan))
             {
                 endLabel = $"{plan.EndPosition}  yaw≈{YawFromRotation(actor, plan.EndRotation):F1}°";
-                est = BezierCornerSampler.EstimateDuration(
-                    clipAsset.Data, actor, corner, prev, next, pos, rot);
+                est = BezierDualCornerSampler.EstimateDuration(
+                    clipAsset.Data, actor, cornerA, cornerB, prev, next, pos, rot);
             }
 
             EditorGUILayout.HelpBox(
@@ -74,7 +76,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             return Mathf.Atan2(flatFwd.x, flatFwd.z) * Mathf.Rad2Deg;
         }
 
-        static TimelineClip FindTimelineClip(BezierCornerClip asset, out Object binding)
+        static TimelineClip FindTimelineClip(BezierDualCornerClip asset, out Object binding)
         {
             binding = null;
             var director = TimelineEditor.inspectedDirector;
@@ -100,10 +102,10 @@ namespace NonsensicalKit.ScriptAnimation.Editor
         }
     }
 
-    [CustomTimelineEditor(typeof(BezierCornerClip))]
-    public class BezierCornerClipTimelineEditor : ClipEditor
+    [CustomTimelineEditor(typeof(BezierDualCornerClip))]
+    public class BezierDualCornerClipTimelineEditor : ClipEditor
     {
-        static readonly Color s_color = new Color(0.35f, 0.75f, 0.45f, 1f);
+        static readonly Color s_color = new Color(0.25f, 0.7f, 0.55f, 1f);
 
         public override ClipDrawOptions GetClipOptions(TimelineClip clip)
         {
@@ -117,23 +119,23 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             if (clip == null || clonedFrom != null)
                 return;
 
-            if (clip.asset is BezierCornerClip cornerClip && cornerClip.Data != null)
+            if (clip.asset is BezierDualCornerClip dualClip && dualClip.Data != null)
             {
                 var director = TimelineEditor.inspectedDirector;
                 if (director != null && director.GetGenericBinding(track) is PathMoveActor actor)
                 {
-                    Undo.RecordObject(cornerClip, "Seed BezierCornerClip Defaults");
-                    actor.ApplyClipDefaults(cornerClip.Data);
-                    EditorUtility.SetDirty(cornerClip);
+                    Undo.RecordObject(dualClip, "Seed BezierDualCornerClip Defaults");
+                    actor.ApplyClipDefaults(dualClip.Data);
+                    EditorUtility.SetDirty(dualClip);
                 }
             }
 
-            clip.displayName = "贝塞尔直角弯";
+            clip.displayName = "双拐点贝塞尔弯";
         }
 
         public override void OnClipChanged(TimelineClip clip)
         {
-            if (clip?.asset is not BezierCornerClip asset || asset.Data == null)
+            if (clip?.asset is not BezierDualCornerClip asset || asset.Data == null)
                 return;
             if (!asset.Data.AutoSyncDuration)
                 return;

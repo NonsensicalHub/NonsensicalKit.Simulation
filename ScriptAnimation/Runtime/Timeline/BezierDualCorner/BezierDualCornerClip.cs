@@ -5,31 +5,37 @@ using UnityEngine.Timeline;
 namespace NonsensicalKit.ScriptAnimation
 {
     /// <summary>
-    /// 路网拐点贝塞尔直角弯。须 ExposedReference 绑定 PrevNode、CornerNode、NextNode；结束于 NextNode。
+    /// 路网双拐点贝塞尔弯。须 ExposedReference 绑定 PrevNode、CornerNodeA、CornerNodeB、NextNode；结束于 NextNode。
     /// </summary>
     [System.Serializable]
-    public class BezierCornerClip : PlayableAsset, ITimelineClipAsset, IDurationResolvable
+    public class BezierDualCornerClip : PlayableAsset, ITimelineClipAsset, IDurationResolvable
     {
         [HideInInspector]
         public ExposedReference<PathNode> PrevNode;
 
         [HideInInspector]
-        public ExposedReference<PathNode> CornerNode;
+        public ExposedReference<PathNode> CornerNodeA;
+
+        [HideInInspector]
+        public ExposedReference<PathNode> CornerNodeB;
 
         [HideInInspector]
         public ExposedReference<PathNode> NextNode;
 
-        public BezierCornerClipData Data = new BezierCornerClipData();
+        public BezierDualCornerClipData Data = new BezierDualCornerClipData();
 
         public ClipCaps clipCaps => ClipCaps.ClipIn | ClipCaps.SpeedMultiplier;
 
         public override double duration =>
-            Data != null ? BezierCornerSampler.EstimateDuration(Data, null, null, null, null, Vector3.zero, Quaternion.identity) : 1.5;
+            Data != null
+                ? BezierDualCornerSampler.EstimateDuration(
+                    Data, null, null, null, null, null, Vector3.zero, Quaternion.identity)
+                : 2.0;
 
         public override Playable CreatePlayable(PlayableGraph graph, GameObject owner)
         {
-            var playable = ScriptPlayable<BezierCornerBehaviour>.Create(graph);
-            BezierCornerBehaviour behaviour = playable.GetBehaviour();
+            var playable = ScriptPlayable<BezierDualCornerBehaviour>.Create(graph);
+            BezierDualCornerBehaviour behaviour = playable.GetBehaviour();
             behaviour.Data = Data;
             behaviour.ClipAsset = this;
             return playable;
@@ -41,7 +47,8 @@ namespace NonsensicalKit.ScriptAnimation
             if (actor == null || Data == null || context.Resolver == null)
                 return -1f;
 
-            PathNode corner = CornerNode.Resolve(context.Resolver);
+            PathNode cornerA = CornerNodeA.Resolve(context.Resolver);
+            PathNode cornerB = CornerNodeB.Resolve(context.Resolver);
             PathNode prev = PrevNode.Resolve(context.Resolver);
             PathNode next = NextNode.Resolve(context.Resolver);
 
@@ -50,8 +57,8 @@ namespace NonsensicalKit.ScriptAnimation
                     out Vector3 pos, out Quaternion rot))
                 return -1f;
 
-            return BezierCornerSampler.EstimateDuration(
-                Data, actor, corner, prev, next, pos, rot);
+            return BezierDualCornerSampler.EstimateDuration(
+                Data, actor, cornerA, cornerB, prev, next, pos, rot);
         }
     }
 }

@@ -29,7 +29,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
 
             var network = (PathNetwork)target;
             EditorGUILayout.HelpBox(
-                "节点管理、连边、排序命名、路径编辑等操作请在「路网配置」窗口中进行。",
+                "节点管理、连边、排序命名请在「路网图」窗口中进行；单节点连线与路径编辑请在 PathNode 面板中操作。",
                 MessageType.Info);
 
             for (int i = 0; i < BasicPropertyNames.Length; i++)

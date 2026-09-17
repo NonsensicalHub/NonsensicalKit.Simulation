@@ -78,21 +78,9 @@ namespace NonsensicalKit.ScriptAnimation
         [SerializeField] private PoseSpace m_space = PoseSpace.Local;
 
         [Header("姿态")]
-        [Tooltip("可配置任意数量命名姿态，供 Timeline Clip 下拉选择；每项内按控制对象分别配置位姿")]
+        [Tooltip("可配置任意数量命名姿态，供 Timeline Clip 下拉选择；每项内按控制对象分别配置位姿；列表第一项同时作为无前序 Clip 时的开场姿态。")]
         [InspectorLabel("姿态列表")]
         [SerializeField] private MultiTargetPoseDefinition[] m_poses = Array.Empty<MultiTargetPoseDefinition>();
-
-        [Header("默认状态（无前序 Clip 时的开场姿态）")]
-        [Tooltip("同轨无前序 PoseChangeClip 时，插值起点使用此姿态，保证 scrub / 跳播结果确定。")]
-        [InspectorLabel("默认姿态")]
-        [SerializeField] private MultiTargetPoseDefinition m_defaultPose = new MultiTargetPoseDefinition
-        {
-            Name = "Default",
-            Targets = new[] { new PoseDefinition { Name = "Default", Scale = Vector3.one } }
-        };
-
-        [InspectorLabel("已设置默认姿态")]
-        [SerializeField] private bool m_hasDefaultPose;
 
         public Transform[] ControlTargets => m_controlTargets;
 
@@ -102,8 +90,6 @@ namespace NonsensicalKit.ScriptAnimation
 
         public PoseSpace Space => m_space;
         public MultiTargetPoseDefinition[] Poses => m_poses;
-        public bool HasDefaultPose => m_hasDefaultPose;
-        public MultiTargetPoseDefinition DefaultPose => m_defaultPose;
 
         public int PoseCount => m_poses != null ? m_poses.Length : 0;
 
@@ -144,13 +130,10 @@ namespace NonsensicalKit.ScriptAnimation
 
         public void SyncAllPoseTargetCounts()
         {
-            int count = ControlTargetCount;
-            if (m_defaultPose != null)
-                m_defaultPose.EnsureTargetCount(count);
-
             if (m_poses == null)
                 return;
 
+            int count = ControlTargetCount;
             for (int i = 0; i < m_poses.Length; i++)
             {
                 if (m_poses[i] != null)
@@ -348,13 +331,15 @@ namespace NonsensicalKit.ScriptAnimation
             return channels;
         }
 
+        /// <summary>无前序时的开场姿态：取姿态列表第一项；列表为空时回退为零位姿（确定性，不读当前 Transform）。</summary>
         public PoseChangeSampler.PoseTRS[] ResolveDefaultStartPoses()
         {
             int count = ControlTargetCount;
-            if (m_hasDefaultPose && m_defaultPose != null)
+            MultiTargetPoseDefinition first = GetPose(0);
+            if (first != null)
             {
-                m_defaultPose.EnsureTargetCount(count);
-                return MultiTargetPoseDefinition.ToPoseTRSArray(m_defaultPose);
+                first.EnsureTargetCount(count);
+                return MultiTargetPoseDefinition.ToPoseTRSArray(first);
             }
 
             var poses = new PoseChangeSampler.PoseTRS[count];
@@ -369,24 +354,6 @@ namespace NonsensicalKit.ScriptAnimation
             }
 
             return poses;
-        }
-
-        [ContextMenu("添加姿态（捕获当前）")]
-        public void CaptureDefaultPoseFromCurrent()
-        {
-            if (m_defaultPose == null)
-            {
-                m_defaultPose = new MultiTargetPoseDefinition
-                {
-                    Name = "Default",
-                    Targets = new[] { new PoseDefinition { Name = "Default", Scale = Vector3.one } }
-                };
-            }
-
-            CaptureCurrentInto(m_defaultPose);
-            if (string.IsNullOrEmpty(m_defaultPose.Name))
-                m_defaultPose.Name = "Default";
-            m_hasDefaultPose = true;
         }
 
         [ContextMenu("添加姿态（捕获当前）")]

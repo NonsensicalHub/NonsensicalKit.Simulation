@@ -10,6 +10,23 @@ namespace NonsensicalKit.ScriptAnimation
     /// </summary>
     public class ScriptMovementMixerBehaviour : ScriptAnimMixerBase
     {
+        protected override void AfterNoActiveClip(Playable playable, ScriptAnimActor actor, FrameData info)
+        {
+            // 首个 Clip 之前：车体/机构回到组件 Home 与行驶默认态，避免任意 seek 残留
+            if (actor is ForkliftAnim forklift)
+                forklift.ApplyDefaultTravelPose();
+            else if (actor is LatentAgvAnim latent)
+                latent.ApplyDefaultTravelPose();
+            else if (actor is CtuAnim ctu)
+                ctu.ApplyDefaultTravelPose();
+            else if (actor is ShuttleAnim shuttle)
+                shuttle.ApplyDefaultTravelPose();
+            else if (actor is StackerAnim stacker)
+                stacker.ApplyDefaultTravelPose();
+            else if (actor is PathMoveActor rail)
+                rail.ApplyHomePose("首 Clip 之前");
+        }
+
         /// <summary>
         /// 位移后补写：专用轨上的 Lock 可能先于本轨评估；父节点一转，子节点世界旋转会被带偏。
         /// 仅处理 Target 在本 Actor 层级下的 Lock，与 WorldRotationLockAnim 挂在哪无关。
@@ -42,6 +59,8 @@ namespace NonsensicalKit.ScriptAnimation
                 return ProcessThreePointTurn(input, actor, info, holdEnd, timelineClip);
             if (type == typeof(BezierCornerBehaviour))
                 return ProcessBezierCorner(input, actor, info, holdEnd, timelineClip);
+            if (type == typeof(BezierDualCornerBehaviour))
+                return ProcessBezierDualCorner(input, actor, info, holdEnd, timelineClip);
             if (type == typeof(ReverseUTurnBehaviour))
                 return ProcessReverseUTurn(input, actor, info, holdEnd, timelineClip);
             if (type == typeof(TeleportBehaviour))
@@ -57,7 +76,7 @@ namespace NonsensicalKit.ScriptAnimation
             if (type == typeof(StackerBehaviour))
                 return ProcessStacker(input, actor, info, holdEnd, timelineClip);
             if (type == typeof(StackerForkBehaviour))
-                return ProcessStackerFork(input, actor, holdEnd);
+                return ProcessStackerFork(input, actor, holdEnd, timelineClip);
             if (type == typeof(CommentBehaviour))
                 return false;
             return false;
@@ -148,20 +167,14 @@ namespace NonsensicalKit.ScriptAnimation
                 behaviour.PositionResolved = false;
 
             float normalized = NormalizedTime(inputPlayable, holdEnd);
-            if (RotateSampler.HoldsPosition(behaviour.Data))
-            {
-                if (!behaviour.EnsurePositionResolved(timelineClip, rail, resolver))
-                    return true;
-                RotateSampler.Sample(
-                    rail,
-                    behaviour.Data,
-                    behaviour.CachedPosition,
-                    normalized);
-            }
-            else
-            {
-                RotateSampler.Sample(rail, behaviour.Data, normalized);
-            }
+            // 任意 seek 须同时钉住落点；RotationOnly 也不再依赖场景当前位置
+            if (!behaviour.EnsurePositionResolved(timelineClip, rail, resolver))
+                return true;
+            RotateSampler.Sample(
+                rail,
+                behaviour.Data,
+                behaviour.CachedPosition,
+                normalized);
 
             TryApplyWorldRotationLock(rail);
             return true;
@@ -227,6 +240,38 @@ namespace NonsensicalKit.ScriptAnimation
             return true;
         }
 
+        private bool ProcessBezierDualCorner(
+            Playable input, ScriptAnimActor actor, FrameData info, bool holdEnd, TimelineClip timelineClip)
+        {
+            var rail = actor as PathMoveActor;
+            if (rail == null)
+            {
+                Debug.LogWarning("[ScriptAnim] BezierDualCornerClip 需要绑定 PathMoveActor（或 ForkliftAnim）", actor);
+                return true;
+            }
+            var inputPlayable = (ScriptPlayable<BezierDualCornerBehaviour>)input;
+            BezierDualCornerBehaviour behaviour = inputPlayable.GetBehaviour();
+            if (behaviour?.Data == null)
+                return true;
+            IExposedPropertyTable resolver = Director != null ? Director : null;
+            if (info.seekOccurred)
+                behaviour.PoseResolved = false;
+            if (!behaviour.EnsurePoseResolved(timelineClip, rail, resolver))
+                return true;
+            BezierDualCornerSampler.Sample(
+                rail,
+                behaviour.Data,
+                behaviour.CornerNodeA,
+                behaviour.CornerNodeB,
+                behaviour.PrevNode,
+                behaviour.NextNode,
+                behaviour.IncomingPosition,
+                behaviour.IncomingRotation,
+                NormalizedTime(inputPlayable, holdEnd));
+            TryApplyWorldRotationLock(rail);
+            return true;
+        }
+
         private bool ProcessReverseUTurn(
             Playable input, ScriptAnimActor actor, FrameData info, bool holdEnd, TimelineClip timelineClip)
         {
@@ -271,11 +316,7 @@ namespace NonsensicalKit.ScriptAnimation
             TeleportBehaviour behaviour = inputPlayable.GetBehaviour();
             if (behaviour?.Data == null)
                 return true;
-            float frameRate = TeleportSampler.ResolveFrameRate(timelineClip);
-            // Clip 占位 HoldFrames；仅首帧写入，其余帧空跑（seek / 定格终点时补写以支持 scrub）
-            if (!holdEnd &&
-                !TeleportSampler.ShouldApplyPose(inputPlayable.GetTime(), frameRate, info.seekOccurred))
-                return true;
+            // Clip 覆盖区间与 hold 终点均每帧写入落点，保证任意 seek 状态唯一
             IExposedPropertyTable resolver = Director != null
                 ? Director
                 : (IExposedPropertyTable)null;
@@ -349,6 +390,11 @@ namespace NonsensicalKit.ScriptAnimation
             LatentAgvBehaviour behaviour = inputPlayable.GetBehaviour();
             if (behaviour?.Data == null)
                 return true;
+            if (behaviour.MovePoint == null)
+            {
+                Debug.LogWarning("[LatentAgv] MovePoint ExposedReference 未解析到 ScriptAnimPoint", anim);
+                return true;
+            }
             IExposedPropertyTable resolver = Director != null
                 ? Director
                 : (IExposedPropertyTable)null;
@@ -359,8 +405,10 @@ namespace NonsensicalKit.ScriptAnimation
             LatentAgvSampler.Sample(
                 anim,
                 behaviour.Data,
+                ScriptAnimPointUtility.AsTransform(behaviour.MovePoint),
                 behaviour.CachedHomePos,
                 behaviour.CachedHomeRot,
+                behaviour.CachedRotateMode,
                 NormalizedTime(inputPlayable, holdEnd));
             TryApplyWorldRotationLock(anim);
             return true;
@@ -466,7 +514,8 @@ namespace NonsensicalKit.ScriptAnimation
             return true;
         }
 
-        private bool ProcessStackerFork(Playable input, ScriptAnimActor actor, bool holdEnd)
+        private bool ProcessStackerFork(
+            Playable input, ScriptAnimActor actor, bool holdEnd, TimelineClip timelineClip)
         {
             var anim = actor as StackerAnim;
             if (anim == null)
@@ -483,6 +532,14 @@ namespace NonsensicalKit.ScriptAnimation
                 Debug.LogWarning("[StackerFork] StackerAnim 未绑定一级或二级货叉", anim);
                 return true;
             }
+
+            // 货叉 Clip 不改车体；seek 时仍须钉住前序 Stacker 终点或 Home，避免槽位粘滞
+            var fallback = StackerSampler.ResolvePreviousClipEnd(anim, timelineClip);
+            if (fallback.HasValue)
+                anim.ApplySlotPosition(fallback.Value);
+            else if (anim.HasHome)
+                anim.ApplyHomePose();
+
             StackerForkSampler.Sample(anim, behaviour.Data, NormalizedTime(inputPlayable, holdEnd));
             return true;
         }

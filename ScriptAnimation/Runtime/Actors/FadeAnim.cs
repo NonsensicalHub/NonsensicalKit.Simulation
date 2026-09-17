@@ -63,6 +63,14 @@ namespace NonsensicalKit.ScriptAnimation
 
         public void ClearRest() => m_hasRest = false;
 
+        /// <summary>保持 Rest 缓存并写回 Rest 透明度（首 Clip 之前 seek 用）。</summary>
+        public void ApplyCapturedRest()
+        {
+            if (!m_hasRest)
+                return;
+            SetAlpha(m_restAlpha);
+        }
+
         private void Awake()
         {
             RebuildTargets();

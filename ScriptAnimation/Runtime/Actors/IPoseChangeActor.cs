@@ -17,8 +17,6 @@ namespace NonsensicalKit.ScriptAnimation
 
         PoseSpace Space { get; }
         int PoseCount { get; }
-        bool HasDefaultPose { get; }
-        PoseDefinition DefaultPose { get; }
 
         PoseDefinition GetPose(int index);
         int FindPoseIndex(string poseName);
@@ -33,7 +31,6 @@ namespace NonsensicalKit.ScriptAnimation
         PoseChangeSampler.PoseTRS CaptureCurrent();
         PoseChangeSampler.PoseTRS ResolveDefaultStartPose();
 
-        void CaptureDefaultPoseFromCurrent();
         void AddPoseFromCurrent();
     }
 }

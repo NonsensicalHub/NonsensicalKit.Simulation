@@ -11,13 +11,15 @@ namespace NonsensicalKit.ScriptAnimation
         public LatentAgvClipData Data = new LatentAgvClipData();
 
         [NonSerialized] public LatentAgvClip ClipAsset;
+        [NonSerialized] public ScriptAnimPoint MovePoint;
 
         /// <summary>
         /// 开场 Home 只解析一次并缓存（前序结束位姿或组件 Home，不读 Body）。
-    /// </summary>
+        /// </summary>
         [NonSerialized] public bool HomeResolved;
         [NonSerialized] public Vector3 CachedHomePos;
         [NonSerialized] public Quaternion CachedHomeRot;
+        [NonSerialized] public ForkliftRotateMode CachedRotateMode;
 
         public override void OnGraphStart(Playable playable)
         {
@@ -47,7 +49,7 @@ namespace NonsensicalKit.ScriptAnimation
                 resolver,
                 out CachedHomePos,
                 out CachedHomeRot,
-                out _,
+                out CachedRotateMode,
                 out _);
 
             HomeResolved = true;

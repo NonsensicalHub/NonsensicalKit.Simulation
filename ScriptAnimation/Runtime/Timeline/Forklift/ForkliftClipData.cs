@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace NonsensicalKit.ScriptAnimation
 {
@@ -17,13 +18,15 @@ namespace NonsensicalKit.ScriptAnimation
         public bool ReverseFacing;
 
         [Header("货叉高度（沿货叉节点本地抬升轴；新增 Clip 时从 ForkliftAnim 默认值写入）")]
-        [Tooltip("开场/前进前的行驶货叉高度")]
-        [InspectorLabel("开始行驶货叉高度")]
-        public float ForkStartTravelHeight = 0.15f;
+        [Tooltip("空载时的货叉高度（取货开场 / 放货结束）")]
+        [InspectorLabel("空载高度")]
+        [FormerlySerializedAs("ForkStartTravelHeight")]
+        public float ForkEmptyHeight = 0.15f;
 
-        [Tooltip("后退结束后回到的行驶货叉高度")]
-        [InspectorLabel("结束行驶货叉高度")]
-        public float ForkEndTravelHeight = 0.15f;
+        [Tooltip("载货行驶时的货叉高度（取货结束 / 放货开场）")]
+        [InspectorLabel("载货行驶高度")]
+        [FormerlySerializedAs("ForkEndTravelHeight")]
+        public float ForkLoadedTravelHeight = 0.15f;
 
         [Tooltip("插入货架 / 放货落地时的货叉高度")]
         [InspectorLabel("放货/插入高度")]

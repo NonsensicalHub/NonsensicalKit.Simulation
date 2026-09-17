@@ -2,7 +2,10 @@ using UnityEngine;
 
 namespace NonsensicalKit.ScriptAnimation
 {
-    /// <summary>叉车取放货：时长估算与进度采样（支持 scrub）。开场用开始行驶高度，后退后再调到结束行驶高度。</summary>
+    /// <summary>
+    /// 叉车取放货：时长估算与进度采样（支持 scrub）。
+    /// 取货：空载→插入→抬起→后退→载货行驶高度；放货：载货行驶→抬起→放置→后退→空载。
+    /// </summary>
     public static class ForkliftSampler
     {
         private struct PhaseTimes
@@ -54,7 +57,7 @@ namespace NonsensicalKit.ScriptAnimation
 
             Vector3 stationPos = station.position + data.DestinationOffset;
             Vector3 approach = ResolveApproach(anim, homePos, stationPos, GetApproach(anim, data));
-            ResolveForkHeights(data, out float startTravelH, out float endTravelH, out float preH, out float actionH);
+            ResolveForkHeights(data, out float startH, out float endH, out float preH, out float actionH);
 
             float cursor = 0f;
             Transform body = anim.Body;
@@ -73,7 +76,7 @@ namespace NonsensicalKit.ScriptAnimation
             {
                 body.position = homePos;
                 body.rotation = Quaternion.Slerp(flatHome, faceRot, uRot);
-                SetForkHeight(anim, startTravelH);
+                SetForkHeight(anim, startH);
                 return;
             }
 
@@ -83,7 +86,7 @@ namespace NonsensicalKit.ScriptAnimation
             if (TryConsumePhase(elapsed, ref cursor, phases.PreFork, out float uPreHome))
             {
                 body.position = homePos;
-                SetForkHeight(anim, Mathf.Lerp(startTravelH, preH, uPreHome));
+                SetForkHeight(anim, Mathf.Lerp(startH, preH, uPreHome));
                 return;
             }
 
@@ -132,7 +135,7 @@ namespace NonsensicalKit.ScriptAnimation
             float u = phases.PostFork > 1e-5f
                 ? Mathf.Clamp01((elapsed - cursor) / phases.PostFork)
                 : 1f;
-            SetForkHeight(anim, Mathf.Lerp(actionH, endTravelH, u));
+            SetForkHeight(anim, Mathf.Lerp(actionH, endH, u));
         }
 
         private static bool TryConsumePhase(float elapsed, ref float cursor, float duration, out float u)
@@ -174,7 +177,7 @@ namespace NonsensicalKit.ScriptAnimation
             }
             // Instant / Skip：旋转时长为 0（Instant 在采样时瞬间面朝货点）
 
-            ResolveForkHeights(data, out float startTravelH, out float endTravelH, out float preH, out float actionH);
+            ResolveForkHeights(data, out float startH, out float endH, out float preH, out float actionH);
 
             bool pickUp = data.Mode == ForkliftMode.PickUp;
             float hold = DurationUtility.TimeForFrames(data.CargoSwapHoldFrames);
@@ -182,27 +185,29 @@ namespace NonsensicalKit.ScriptAnimation
             return new PhaseTimes
             {
                 Rotate = rotateTime,
-                PreFork = DurationUtility.TimeForDistance(Mathf.Abs(preH - startTravelH), forkSpeed),
+                PreFork = DurationUtility.TimeForDistance(Mathf.Abs(preH - startH), forkSpeed),
                 Forward = DurationUtility.TimeForDistance(Vector3.Distance(homePos, approach), moveSpeed),
                 HoldBeforeLift = pickUp ? hold : 0f,
                 ActionFork = DurationUtility.TimeForDistance(Mathf.Abs(actionH - preH), forkSpeed),
                 HoldBeforeLeave = pickUp ? 0f : hold,
                 Back = DurationUtility.TimeForDistance(Vector3.Distance(approach, homePos), moveSpeed),
-                PostFork = DurationUtility.TimeForDistance(Mathf.Abs(endTravelH - actionH), forkSpeed)
+                PostFork = DurationUtility.TimeForDistance(Mathf.Abs(endH - actionH), forkSpeed)
             };
         }
 
-        /// <summary>取货 Place→Lift，放货 Lift→Place。开场用开始行驶高度，后退后再调到结束行驶高度。</summary>
+        /// <summary>
+        /// 取货：空载开场、载货行驶结束；放货相反。前进前高度取货用 Place、放货用 Lift。
+        /// </summary>
         private static void ResolveForkHeights(
             ForkliftClipData data,
-            out float startTravelH,
-            out float endTravelH,
+            out float startH,
+            out float endH,
             out float preH,
             out float actionH)
         {
-            startTravelH = data.ForkStartTravelHeight;
-            endTravelH = data.ForkEndTravelHeight;
             bool pickUp = data.Mode == ForkliftMode.PickUp;
+            startH = pickUp ? data.ForkEmptyHeight : data.ForkLoadedTravelHeight;
+            endH = pickUp ? data.ForkLoadedTravelHeight : data.ForkEmptyHeight;
             preH = pickUp ? data.ForkPlaceHeight : data.ForkLiftHeight;
             actionH = pickUp ? data.ForkLiftHeight : data.ForkPlaceHeight;
         }

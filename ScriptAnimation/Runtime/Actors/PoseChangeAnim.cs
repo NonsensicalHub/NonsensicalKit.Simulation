@@ -64,17 +64,9 @@ namespace NonsensicalKit.ScriptAnimation
         [SerializeField] private PoseSpace m_space = PoseSpace.Local;
 
         [Header("姿态")]
-        [Tooltip("可配置任意数量命名姿态，供 Timeline Clip 下拉选择")]
+        [Tooltip("可配置任意数量命名姿态，供 Timeline Clip 下拉选择；列表第一项同时作为无前序 Clip 时的开场姿态。")]
         [InspectorLabel("姿态列表")]
         [SerializeField] private PoseDefinition[] m_poses = Array.Empty<PoseDefinition>();
-
-        [Header("默认状态（无前序 Clip 时的开场姿态）")]
-        [Tooltip("同轨无前序 PoseChangeClip 时，插值起点使用此姿态，保证 scrub / 跳播结果确定。")]
-        [InspectorLabel("默认姿态")]
-        [SerializeField] private PoseDefinition m_defaultPose = new PoseDefinition { Name = "Default", Scale = Vector3.one };
-
-        [InspectorLabel("已设置默认姿态")]
-        [SerializeField] private bool m_hasDefaultPose;
 
         /// <summary>控制对象（未指定时为自身）。</summary>
         public Transform ControlTarget => m_controlTarget != null ? m_controlTarget : transform;
@@ -91,8 +83,6 @@ namespace NonsensicalKit.ScriptAnimation
 
         public PoseSpace Space => m_space;
         public PoseDefinition[] Poses => m_poses;
-        public bool HasDefaultPose => m_hasDefaultPose;
-        public PoseDefinition DefaultPose => m_defaultPose;
 
         public int PoseCount => m_poses != null ? m_poses.Length : 0;
 
@@ -233,11 +223,12 @@ namespace NonsensicalKit.ScriptAnimation
         public PoseChangeSampler.PoseTRS CaptureCurrent()
             => PoseChangeSampler.CaptureCurrent(this);
 
-        /// <summary>无前序时的开场姿态；未配置默认姿态时回退为零位姿（确定性，不读当前 Transform）。</summary>
+        /// <summary>无前序时的开场姿态：取姿态列表第一项；列表为空时回退为零位姿（确定性，不读当前 Transform）。</summary>
         public PoseChangeSampler.PoseTRS ResolveDefaultStartPose()
         {
-            if (m_hasDefaultPose && m_defaultPose != null)
-                return PoseChangeSampler.PoseTRS.FromDefinition(m_defaultPose);
+            PoseDefinition first = GetPose(0);
+            if (first != null)
+                return PoseChangeSampler.PoseTRS.FromDefinition(first);
 
             return new PoseChangeSampler.PoseTRS
             {
@@ -245,17 +236,6 @@ namespace NonsensicalKit.ScriptAnimation
                 Rotation = Quaternion.identity,
                 Scale = Vector3.one
             };
-        }
-
-        [ContextMenu("添加姿态（捕获当前）")]
-        public void CaptureDefaultPoseFromCurrent()
-        {
-            if (m_defaultPose == null)
-                m_defaultPose = new PoseDefinition { Name = "Default", Scale = Vector3.one };
-            CaptureCurrentInto(m_defaultPose);
-            if (string.IsNullOrEmpty(m_defaultPose.Name))
-                m_defaultPose.Name = "Default";
-            m_hasDefaultPose = true;
         }
 
         [ContextMenu("添加姿态（捕获当前）")]

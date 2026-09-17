@@ -6,7 +6,8 @@ using UnityEngine;
 namespace NonsensicalKit.ScriptAnimation.Editor
 {
     /// <summary>
-    /// 路网配置窗口：节点连边编辑、排序命名、路径改写，以及正交三视图可视化。
+    /// 路网配置窗口：整网收集/连边/排序命名，以及正交三视图可视化。
+    /// 单节点路径编辑（单向、断开、插点）在 PathNode Inspector 中进行。
     /// </summary>
     public class PathNetworkGraphWindow : EditorWindow
     {
@@ -60,12 +61,19 @@ namespace NonsensicalKit.ScriptAnimation.Editor
         private readonly HashSet<int> _selectedNodeIds = new HashSet<int>();
         private readonly List<GraphEdge> _edges = new List<GraphEdge>(128);
         private readonly List<PathNode> _nodes = new List<PathNode>(128);
+        private readonly List<Vector2> _nodeLocals = new List<Vector2>(128);
+        private readonly Dictionary<int, Vector2> _nodeLocalById = new Dictionary<int, Vector2>(128);
 
         private Rect _canvasRect;
         private PathNode _hoverNode;
         private PathNode _connectFrom;
         private GraphEdge _hoverEdge;
         private bool _hasHoverEdge;
+        private bool _cacheDirty = true;
+        private bool _nodeLocalsValid;
+        private Vector2 _nodeLocalsPan;
+        private float _nodeLocalsZoom;
+        private GraphViewPlane _nodeLocalsPlane;
 
         private enum DragMode
         {
@@ -140,7 +148,8 @@ namespace NonsensicalKit.ScriptAnimation.Editor
 
         private void OnFocus()
         {
-            RebuildCache();
+            InvalidateCache();
+            EnsureCache();
             Repaint();
         }
 
@@ -154,9 +163,25 @@ namespace NonsensicalKit.ScriptAnimation.Editor
         private void OnUndoRedo()
         {
             RefreshSerializedObject();
-            RebuildCache();
-            PruneInvalidSelection();
+            InvalidateCache();
+            EnsureCache();
             Repaint();
+        }
+
+        /// <summary>外部改了路网拓扑时调用，避免画布仍用旧边缓存。</summary>
+        public static void NotifyNetworkChanged(PathNetwork network)
+        {
+            var windows = Resources.FindObjectsOfTypeAll<PathNetworkGraphWindow>();
+            for (int i = 0; i < windows.Length; i++)
+            {
+                var window = windows[i];
+                if (window == null)
+                    continue;
+                if (network != null && window._network != null && window._network != network)
+                    continue;
+                window.InvalidateCache();
+                window.Repaint();
+            }
         }
 
         private void OnGUI()
@@ -186,8 +211,6 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 DrawNodeManagementSection();
                 EditorGUILayout.Space(6f);
                 DrawSortAndRenameSection();
-                EditorGUILayout.Space(6f);
-                DrawPathEditSection();
             }
 
             EditorGUILayout.EndScrollView();
@@ -268,68 +291,6 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             }
         }
 
-        private void DrawPathEditSection()
-        {
-            EditorGUILayout.LabelField("路径编辑", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(
-                "配置起点、终点后，可对两点之间的无向最短路径做单向改写或完全断开；若两点有直接连线，可在中点插入新节点。",
-                MessageType.None);
-
-            if (_networkSO == null)
-                return;
-
-            _networkSO.Update();
-            EditorGUILayout.PropertyField(_networkSO.FindProperty("m_pathEditStart"), new GUIContent("起点"));
-            EditorGUILayout.PropertyField(_networkSO.FindProperty("m_pathEditGoal"), new GUIContent("终点"));
-            _networkSO.ApplyModifiedProperties();
-
-            bool canEditPath = _network.PathEditStart != null &&
-                               _network.PathEditGoal != null &&
-                               _network.PathEditStart != _network.PathEditGoal;
-
-            EditorGUILayout.BeginHorizontal();
-            using (new EditorGUI.DisabledScope(!canEditPath))
-            {
-                if (GUILayout.Button("最短路径设为单向", GUILayout.Height(26f)))
-                {
-                    PathNetworkEditActions.ApplyShortestPathOneWay(
-                        _network, _network.PathEditStart, _network.PathEditGoal);
-                    RebuildCache();
-                    Repaint();
-                }
-
-                if (GUILayout.Button("交换并设为单向", GUILayout.Height(26f)))
-                {
-                    PathNetworkEditActions.SwapPathEditEndpoints(_networkSO);
-                    PathNetworkEditActions.ApplyShortestPathOneWay(
-                        _network, _network.PathEditStart, _network.PathEditGoal);
-                    RebuildCache();
-                    Repaint();
-                }
-            }
-
-            EditorGUILayout.EndHorizontal();
-
-            using (new EditorGUI.DisabledScope(!canEditPath))
-            {
-                if (GUILayout.Button("断开最短连线", GUILayout.Height(26f)))
-                {
-                    PathNetworkEditActions.ApplyDisconnectShortestPath(
-                        _network, _network.PathEditStart, _network.PathEditGoal);
-                    RebuildCache();
-                    Repaint();
-                }
-
-                if (GUILayout.Button("在两点间插入节点", GUILayout.Height(26f)))
-                {
-                    PathNetworkEditActions.ApplyInsertNodeBetween(
-                        _network, _network.PathEditStart, _network.PathEditGoal);
-                    RebuildCache();
-                    Repaint();
-                }
-            }
-        }
-
         private void DrawToolbar()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
@@ -404,6 +365,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             _hasHoverEdge = false;
             _dragMode = DragMode.None;
             _dragMoved = false;
+            InvalidateNodeLocals();
             Repaint();
         }
 
@@ -432,12 +394,13 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 return;
 
             _canvasRect = rect;
-            RebuildCache();
+            EnsureCache();
 
             if (_fitPending && Event.current.type == EventType.Repaint)
             {
                 FitView();
                 _fitPending = false;
+                InvalidateNodeLocals();
             }
 
             HandleCanvasInput();
@@ -455,14 +418,19 @@ namespace NonsensicalKit.ScriptAnimation.Editor
 
             if (e.type == EventType.MouseMove && inside)
             {
+                PathNode prevNode = _hoverNode;
+                long prevEdgeKey = _hasHoverEdge ? _hoverEdge.Key : 0L;
                 UpdateHover(local);
-                Repaint();
+                long nextEdgeKey = _hasHoverEdge ? _hoverEdge.Key : 0L;
+                if (prevNode != _hoverNode || prevEdgeKey != nextEdgeKey)
+                    Repaint();
                 return;
             }
 
             if (e.type == EventType.ScrollWheel && inside)
             {
                 ZoomAt(local, e.delta.y);
+                InvalidateNodeLocals();
                 e.Use();
                 Repaint();
                 return;
@@ -579,7 +547,10 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                     _dragMoved = true;
 
                 if (_dragMode == DragMode.Pan)
+                {
                     _pan += e.delta;
+                    InvalidateNodeLocals();
+                }
 
                 e.Use();
                 Repaint();
@@ -648,6 +619,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
 
         private void PaintCanvas()
         {
+            EnsureNodeLocals();
             EditorGUI.DrawRect(_canvasRect, CanvasBg);
             GUI.BeginClip(_canvasRect);
             Handles.BeginGUI();
@@ -715,15 +687,30 @@ namespace NonsensicalKit.ScriptAnimation.Editor
         private void DrawGrid()
         {
             float step = NiceGridStep();
+            float pixelStep = step * _zoom;
+            if (pixelStep < 1f)
+                return;
+
+            // 避免极端缩放下画出上千条网格线拖慢 Repaint。
+            const int maxLinesPerAxis = 160;
+            float linesX = _canvasRect.width / pixelStep;
+            float linesY = _canvasRect.height / pixelStep;
+            float factor = Mathf.Max(linesX, linesY) / maxLinesPerAxis;
+            if (factor > 1f)
+            {
+                step *= Mathf.Ceil(factor);
+                pixelStep = step * _zoom;
+            }
+
             Vector2 origin = GraphToLocal(Vector2.zero);
             Handles.color = GridColor;
 
-            float startX = origin.x % (step * _zoom);
-            for (float x = startX; x < _canvasRect.width; x += step * _zoom)
+            float startX = origin.x % pixelStep;
+            for (float x = startX; x < _canvasRect.width; x += pixelStep)
                 Handles.DrawLine(new Vector3(x, 0f), new Vector3(x, _canvasRect.height));
 
-            float startY = origin.y % (step * _zoom);
-            for (float y = startY; y < _canvasRect.height; y += step * _zoom)
+            float startY = origin.y % pixelStep;
+            for (float y = startY; y < _canvasRect.height; y += pixelStep)
                 Handles.DrawLine(new Vector3(0f, y), new Vector3(_canvasRect.width, y));
         }
 
@@ -735,8 +722,10 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 if (edge.A == null || edge.B == null)
                     continue;
 
-                Vector2 a = WorldToLocal(edge.A.Position);
-                Vector2 b = WorldToLocal(edge.B.Position);
+                if (!TryGetCachedNodeLocal(edge.A, out Vector2 a) ||
+                    !TryGetCachedNodeLocal(edge.B, out Vector2 b))
+                    continue;
+
                 bool selected = _selectedEdgeKeys.Contains(edge.Key);
                 bool hovered = _hasHoverEdge && _hoverEdge.Key == edge.Key && _dragMode != DragMode.BoxSelect;
 
@@ -769,7 +758,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 if (node == null)
                     continue;
 
-                Vector2 p = WorldToLocal(node.Position);
+                Vector2 p = i < _nodeLocals.Count ? _nodeLocals[i] : WorldToLocal(node.Position);
                 bool selected = _selectedNodeIds.Contains(node.GetInstanceID());
                 bool connectFrom = _connectFrom == node;
                 bool hovered = _hoverNode == node;
@@ -887,6 +876,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
 
         private void UpdateHover(Vector2 local)
         {
+            EnsureNodeLocals();
             _hoverNode = HitTestNode(local);
             _hasHoverEdge = false;
             _hoverEdge = default;
@@ -904,7 +894,8 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 if (node == null)
                     continue;
 
-                float dist = Vector2.Distance(local, WorldToLocal(node.Position));
+                Vector2 p = i < _nodeLocals.Count ? _nodeLocals[i] : WorldToLocal(node.Position);
+                float dist = Vector2.Distance(local, p);
                 if (dist <= bestDist)
                 {
                     bestDist = dist;
@@ -926,8 +917,12 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 if (edge.A == null || edge.B == null)
                     continue;
 
-                float dist = DistancePointToSegment(local, WorldToLocal(edge.A.Position), WorldToLocal(edge.B.Position));
-                if (dist < best)
+                if (!TryGetCachedNodeLocal(edge.A, out Vector2 a) ||
+                    !TryGetCachedNodeLocal(edge.B, out Vector2 b))
+                    continue;
+
+                float dist = DistancePointToSegment(local, a, b);
+                if (dist <= best)
                 {
                     best = dist;
                     hit = edge;
@@ -940,14 +935,17 @@ namespace NonsensicalKit.ScriptAnimation.Editor
 
         private void ApplyBoxSelection(Rect box, bool toggle)
         {
+            EnsureNodeLocals();
             for (int i = 0; i < _edges.Count; i++)
             {
                 var edge = _edges[i];
                 if (edge.A == null || edge.B == null)
                     continue;
 
-                Vector2 a = WorldToLocal(edge.A.Position);
-                Vector2 b = WorldToLocal(edge.B.Position);
+                if (!TryGetCachedNodeLocal(edge.A, out Vector2 a) ||
+                    !TryGetCachedNodeLocal(edge.B, out Vector2 b))
+                    continue;
+
                 if (!SegmentIntersectsRect(a, b, box))
                     continue;
 
@@ -1072,8 +1070,10 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             _selectedEdgeKeys.Clear();
             _selectedNodeIds.Clear();
             _selectedNodeIds.Add(inserted.GetInstanceID());
-            MarkDirty();
+            EditorUtility.SetDirty(a);
+            EditorUtility.SetDirty(b);
             EditorUtility.SetDirty(inserted);
+            MarkDirty();
             RebuildCache();
             Selection.activeGameObject = inserted.gameObject;
             Debug.Log($"[{_network.name}] 插入节点：{a.name} — {inserted.name} — {b.name}。", _network);
@@ -1089,6 +1089,8 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             if (!bidirectional)
                 to.RemoveNeighbor(from);
 
+            EditorUtility.SetDirty(from);
+            EditorUtility.SetDirty(to);
             MarkDirty();
             RebuildCache();
             Debug.Log(
@@ -1108,17 +1110,18 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             else
                 to.Connect(from, false);
 
+            EditorUtility.SetDirty(from);
+            EditorUtility.SetDirty(to);
             MarkDirty();
             RebuildCache();
         }
 
         private void DisconnectNode(PathNode node)
         {
-            if (_network == null || node == null)
+            if (node == null)
                 return;
 
-            Undo.RegisterFullObjectHierarchyUndo(_network.gameObject, "Clear Node Neighbors");
-            node.ClearNeighbors();
+            PathNetworkEditActions.DisconnectNodeNeighbors(node);
             MarkDirty();
             RebuildCache();
             _selectedEdgeKeys.Clear();
@@ -1140,12 +1143,14 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 if (edge.A.IsConnectedTo(edge.B))
                 {
                     edge.A.RemoveNeighbor(edge.B);
+                    EditorUtility.SetDirty(edge.A);
                     removed++;
                 }
 
                 if (edge.B.IsConnectedTo(edge.A))
                 {
                     edge.B.RemoveNeighbor(edge.A);
+                    EditorUtility.SetDirty(edge.B);
                     removed++;
                 }
             }
@@ -1172,19 +1177,34 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 return;
 
             EditorUtility.SetDirty(_network);
-            for (int i = 0; i < _nodes.Count; i++)
-            {
-                if (_nodes[i] != null)
-                    EditorUtility.SetDirty(_nodes[i]);
-            }
-
             SceneView.RepaintAll();
+            InvalidateCache();
+        }
+
+        private void InvalidateCache()
+        {
+            _cacheDirty = true;
+            InvalidateNodeLocals();
+        }
+
+        private void InvalidateNodeLocals()
+        {
+            _nodeLocalsValid = false;
+        }
+
+        private void EnsureCache()
+        {
+            if (!_cacheDirty)
+                return;
+            RebuildCache();
         }
 
         private void RebuildCache()
         {
             _nodes.Clear();
             _edges.Clear();
+            InvalidateNodeLocals();
+            _cacheDirty = false;
             if (_network == null)
                 return;
 
@@ -1222,6 +1242,45 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             }
 
             PruneInvalidSelection();
+        }
+
+        private void EnsureNodeLocals()
+        {
+            if (_nodeLocalsValid &&
+                _nodeLocals.Count == _nodes.Count &&
+                _nodeLocalsPan == _pan &&
+                Mathf.Approximately(_nodeLocalsZoom, _zoom) &&
+                _nodeLocalsPlane == _viewPlane)
+                return;
+
+            _nodeLocals.Clear();
+            _nodeLocalById.Clear();
+            for (int i = 0; i < _nodes.Count; i++)
+            {
+                var node = _nodes[i];
+                Vector2 local = node != null ? WorldToLocal(node.Position) : Vector2.zero;
+                _nodeLocals.Add(local);
+                if (node != null)
+                    _nodeLocalById[node.GetInstanceID()] = local;
+            }
+
+            _nodeLocalsValid = true;
+            _nodeLocalsPan = _pan;
+            _nodeLocalsZoom = _zoom;
+            _nodeLocalsPlane = _viewPlane;
+        }
+
+        private bool TryGetCachedNodeLocal(PathNode node, out Vector2 local)
+        {
+            local = default;
+            if (node == null)
+                return false;
+
+            if (_nodeLocalById.TryGetValue(node.GetInstanceID(), out local))
+                return true;
+
+            local = WorldToLocal(node.Position);
+            return true;
         }
 
         private void PruneInvalidSelection()
@@ -1292,6 +1351,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             {
                 _zoom = 8f;
                 _pan = new Vector2(_canvasRect.width * 0.5f, _canvasRect.height * 0.5f);
+                InvalidateNodeLocals();
                 return;
             }
 
@@ -1324,6 +1384,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
 
             Vector2 center = new Vector2((minU + maxU) * 0.5f, (minV + maxV) * 0.5f);
             _pan = new Vector2(_canvasRect.width * 0.5f, _canvasRect.height * 0.5f) - GraphToOffset(center);
+            InvalidateNodeLocals();
         }
 
         private void ZoomAt(Vector2 local, float scrollDelta)

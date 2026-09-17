@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace NonsensicalKit.ScriptAnimation
 {
@@ -39,12 +40,14 @@ namespace NonsensicalKit.ScriptAnimation
         [Tooltip("取放货时是否倒车朝向（车尾朝前进方向）。")]
         [InspectorLabel("倒车朝向")]
         [SerializeField] private bool m_defaultReverseFacing;
-        [Tooltip("开场时的货叉行驶高度。")]
-        [InspectorLabel("开始行驶货叉高度")]
-        [SerializeField] private float m_defaultForkStartTravelHeight = 0.15f;
-        [Tooltip("动作结束后回到的货叉行驶高度。")]
-        [InspectorLabel("结束行驶货叉高度")]
-        [SerializeField] private float m_defaultForkEndTravelHeight = 0.15f;
+        [Tooltip("空载时的货叉高度（取货开场 / 放货结束）。")]
+        [InspectorLabel("空载高度")]
+        [FormerlySerializedAs("m_defaultForkStartTravelHeight")]
+        [SerializeField] private float m_defaultForkEmptyHeight = 0.15f;
+        [Tooltip("载货行驶时的货叉高度（取货结束 / 放货开场）。")]
+        [InspectorLabel("载货行驶高度")]
+        [FormerlySerializedAs("m_defaultForkEndTravelHeight")]
+        [SerializeField] private float m_defaultForkLoadedTravelHeight = 0.15f;
         [Tooltip("插入货架 / 放货落地时的货叉高度。")]
         [InspectorLabel("放货/插入高度")]
         [SerializeField] private float m_defaultForkPlaceHeight;
@@ -81,11 +84,31 @@ namespace NonsensicalKit.ScriptAnimation
         public float ApproachDistance => m_approachDistance;
 
         public bool DefaultReverseFacing => m_defaultReverseFacing;
-        public float DefaultForkStartTravelHeight => m_defaultForkStartTravelHeight;
-        public float DefaultForkEndTravelHeight => m_defaultForkEndTravelHeight;
+        public float DefaultForkEmptyHeight => m_defaultForkEmptyHeight;
+        public float DefaultForkLoadedTravelHeight => m_defaultForkLoadedTravelHeight;
         public float DefaultForkPlaceHeight => m_defaultForkPlaceHeight;
         public float DefaultForkLiftHeight => m_defaultForkLiftHeight;
         public int DefaultCargoSwapHoldFrames => Mathf.Max(0, m_defaultCargoSwapHoldFrames);
+
+        /// <summary>按抬升轴写入货叉高度（父空间 localPosition）。</summary>
+        public void ApplyForkHeight(float height)
+        {
+            if (m_fork == null)
+                return;
+
+            Vector3 axis = LiftAxisInParent;
+            Vector3 local = m_fork.localPosition;
+            local -= axis * Vector3.Dot(local, axis);
+            local += axis * height;
+            m_fork.localPosition = local;
+        }
+
+        /// <summary>首 Clip 之前：车体 Home + 空载货叉高度。</summary>
+        public void ApplyDefaultTravelPose()
+        {
+            ApplyHomePose("叉车首 Clip 之前");
+            ApplyForkHeight(m_defaultForkEmptyHeight);
+        }
 
         /// <summary>将本组件默认值写入 Clip（新增 Clip 时调用）。</summary>
         public void ApplyClipDefaults(ForkliftClipData data)
@@ -94,8 +117,8 @@ namespace NonsensicalKit.ScriptAnimation
                 return;
 
             data.ReverseFacing = m_defaultReverseFacing;
-            data.ForkStartTravelHeight = m_defaultForkStartTravelHeight;
-            data.ForkEndTravelHeight = m_defaultForkEndTravelHeight;
+            data.ForkEmptyHeight = m_defaultForkEmptyHeight;
+            data.ForkLoadedTravelHeight = m_defaultForkLoadedTravelHeight;
             data.ForkPlaceHeight = m_defaultForkPlaceHeight;
             data.ForkLiftHeight = m_defaultForkLiftHeight;
             data.CargoSwapHoldFrames = DefaultCargoSwapHoldFrames;

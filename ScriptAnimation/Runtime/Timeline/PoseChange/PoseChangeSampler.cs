@@ -5,7 +5,8 @@ using UnityEngine.Timeline;
 namespace NonsensicalKit.ScriptAnimation
 {
     /// <summary>
-    /// 姿态改变采样：从前序 PoseChange 终点（无前序则用组件默认状态）按 Clip 归一化时间插值到命名目标姿态。
+    /// 姿态改变采样：从前序 PoseChange 终点（无前序则用姿态列表第一项）按 Clip 归一化时间插值到命名目标姿态。
+    /// 起点与终点均由 Clip/姿态列表决定，不读运行时 Transform，任意 seek 结果唯一。
     /// DurationSeconds 为0 时瞬间到位；Clip 视觉长度取自所属轨 <see cref="ScriptAnimTrackBase.InstantHoldFrames"/>。
     /// </summary>
     public static class PoseChangeSampler
@@ -141,8 +142,8 @@ namespace NonsensicalKit.ScriptAnimation
         }
 
         /// <summary>
-        /// 取本 Clip 之前最近一个 Clip：若也是姿态改变，则用其目标姿态作为起点（便于 scrub）。
-    /// </summary>
+        /// 取本 Clip 之前最近一个 <see cref="PoseChangeClip"/> 的目标姿态作为起点（跳过注释等非本类 Clip，便于任意 seek）。
+        /// </summary>
         public static bool TryResolvePreviousEndPose(
             IPoseChangeActor anim,
             TimelineClip timelineClip,
@@ -152,17 +153,30 @@ namespace NonsensicalKit.ScriptAnimation
             if (anim == null || timelineClip == null)
                 return false;
 
-            TrackAsset track = timelineClip.GetParentTrack();
+            if (!TryFindPreviousPoseChangeClip(timelineClip, out TimelineClip previous) ||
+                previous.asset is not PoseChangeClip prevClip ||
+                prevClip.Data == null)
+                return false;
+
+            return TryResolveEndPose(anim, prevClip.Data.PoseName, out pose);
+        }
+
+        /// <summary>
+        /// 在同轨上查找 <paramref name="clip"/> 之前最近的 <see cref="PoseChangeClip"/>（忽略注释等其它类型）。
+        /// </summary>
+        public static bool TryFindPreviousPoseChangeClip(TimelineClip clip, out TimelineClip previous)
+        {
+            previous = null;
+            TrackAsset track = clip?.GetParentTrack();
             if (track == null)
                 return false;
 
             double bestStart = double.NegativeInfinity;
-            TimelineClip previous = null;
             foreach (TimelineClip other in track.GetClips())
             {
-                if (other == null || other == timelineClip)
+                if (other == null || other == clip || other.asset is not PoseChangeClip)
                     continue;
-                if (other.start >= timelineClip.start)
+                if (other.start >= clip.start)
                     continue;
                 if (other.start > bestStart)
                 {
@@ -171,10 +185,7 @@ namespace NonsensicalKit.ScriptAnimation
                 }
             }
 
-            if (previous?.asset is not PoseChangeClip prevClip || prevClip.Data == null)
-                return false;
-
-            return TryResolveEndPose(anim, prevClip.Data.PoseName, out pose);
+            return previous != null;
         }
 
         /// <summary>
@@ -240,26 +251,9 @@ namespace NonsensicalKit.ScriptAnimation
             if (anim == null || timelineClip == null)
                 return false;
 
-            TrackAsset track = timelineClip.GetParentTrack();
-            if (track == null)
-                return false;
-
-            double bestStart = double.NegativeInfinity;
-            TimelineClip previous = null;
-            foreach (TimelineClip other in track.GetClips())
-            {
-                if (other == null || other == timelineClip)
-                    continue;
-                if (other.start >= timelineClip.start)
-                    continue;
-                if (other.start > bestStart)
-                {
-                    bestStart = other.start;
-                    previous = other;
-                }
-            }
-
-            if (previous?.asset is not PoseChangeClip prevClip || prevClip.Data == null)
+            if (!TryFindPreviousPoseChangeClip(timelineClip, out TimelineClip previous) ||
+                previous.asset is not PoseChangeClip prevClip ||
+                prevClip.Data == null)
                 return false;
 
             return TryResolveEndPose(anim, prevClip.Data.PoseName, out poses);

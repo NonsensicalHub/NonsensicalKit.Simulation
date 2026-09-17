@@ -4,14 +4,14 @@ using UnityEngine;
 namespace NonsensicalKit.ScriptAnimation
 {
     /// <summary>
-    /// 贝塞尔直角弯：沿 Prev→Corner 入弯、二次贝塞尔切 Corner，再直线到达 Next。
+    /// 双拐点贝塞尔弯：沿 Prev→CornerA 入弯，三次贝塞尔经 CornerA/CornerB，再直线到达 Next。
     /// </summary>
-    public static class BezierCornerSampler
+    public static class BezierDualCornerSampler
     {
         enum PhaseKind
         {
             Line,
-            Bezier,
+            CubicBezier,
         }
 
         struct Phase
@@ -19,7 +19,8 @@ namespace NonsensicalKit.ScriptAnimation
             public PhaseKind kind;
             public Vector3 p0;
             public Vector3 p1;
-            public Vector3 control;
+            public Vector3 controlA;
+            public Vector3 controlB;
             public Quaternion rotStart;
             public Quaternion rotEnd;
             public float length;
@@ -35,7 +36,7 @@ namespace NonsensicalKit.ScriptAnimation
             public Quaternion EndRotation;
         }
 
-        public static float ResolveEarlyDistance(BezierCornerClipData data, PathMoveActor actor)
+        public static float ResolveEarlyDistance(BezierDualCornerClipData data, PathMoveActor actor)
         {
             _ = actor;
             if (data != null)
@@ -44,7 +45,7 @@ namespace NonsensicalKit.ScriptAnimation
             return 1f;
         }
 
-        public static float ResolveMoveSpeed(BezierCornerClipData data, PathMoveActor actor)
+        public static float ResolveMoveSpeed(BezierDualCornerClipData data, PathMoveActor actor)
         {
             _ = actor;
             if (data != null)
@@ -55,8 +56,9 @@ namespace NonsensicalKit.ScriptAnimation
 
         public static bool TryBuildPlan(
             PathMoveActor actor,
-            BezierCornerClipData data,
-            PathNode corner,
+            BezierDualCornerClipData data,
+            PathNode cornerA,
+            PathNode cornerB,
             PathNode prev,
             PathNode next,
             Vector3 incomingPos,
@@ -66,20 +68,37 @@ namespace NonsensicalKit.ScriptAnimation
             plan = default;
             if (data == null || actor == null)
                 return false;
+            if (cornerA == null || cornerB == null || prev == null || next == null)
+                return false;
 
             Vector3 pathOffset = actor.PathOffset;
-            if (!CornerManeuverUtility.TryResolveAxes(
-                    actor, corner, prev, next, pathOffset,
-                    out Vector3 pivot, out Vector3 dirIn, out Vector3 dirOut,
-                    out float lenIn, out float lenOut))
+            Vector3 prevPos = prev.transform.position + pathOffset;
+            Vector3 pivotA = cornerA.transform.position + pathOffset;
+            Vector3 pivotB = cornerB.transform.position + pathOffset;
+            Vector3 nextPos = next.transform.position + pathOffset;
+
+            prevPos = actor.WithUpHeight(prevPos, pivotA);
+            pivotA = actor.WithUpHeight(pivotA, pivotA);
+            pivotB = actor.WithUpHeight(pivotB, pivotA);
+            nextPos = actor.WithUpHeight(nextPos, pivotA);
+
+            Vector3 inVec = actor.Flatten(pivotA - prevPos);
+            Vector3 midVec = actor.Flatten(pivotB - pivotA);
+            Vector3 outVec = actor.Flatten(nextPos - pivotB);
+            if (inVec.sqrMagnitude < 1e-8f || midVec.sqrMagnitude < 1e-8f || outVec.sqrMagnitude < 1e-8f)
                 return false;
+
+            float lenIn = inVec.magnitude;
+            float lenOut = outVec.magnitude;
+            Vector3 dirIn = inVec / lenIn;
+            Vector3 dirOut = outVec / lenOut;
 
             float early = ResolveEarlyDistance(data, actor);
             float trimIn = ManeuverGeometry.TrimDistance(lenIn, early);
             float trimOut = ManeuverGeometry.TrimDistance(lenOut, early);
-            Vector3 entry = pivot - dirIn * trimIn;
-            Vector3 exit = pivot + dirOut * trimOut;
-            Vector3 nextTarget = pivot + dirOut * lenOut;
+            Vector3 entry = pivotA - dirIn * trimIn;
+            Vector3 exit = pivotB + dirOut * trimOut;
+            Vector3 nextTarget = pivotB + dirOut * lenOut;
 
             bool reverse = data.ReverseFacing;
             Vector3 faceOut = PathMoveSampler.FacingDirection(dirOut, reverse);
@@ -87,11 +106,10 @@ namespace NonsensicalKit.ScriptAnimation
             Quaternion rotEnd = actor.LookRotation(faceOut, rotStart);
 
             s_phases.Clear();
-            Vector3 cur = actor.WithUpHeight(incomingPos, pivot);
-            entry = actor.WithUpHeight(entry, pivot);
-            exit = actor.WithUpHeight(exit, pivot);
-            nextTarget = actor.WithUpHeight(nextTarget, pivot);
-            pivot = actor.WithUpHeight(pivot, pivot);
+            Vector3 cur = actor.WithUpHeight(incomingPos, pivotA);
+            entry = actor.WithUpHeight(entry, pivotA);
+            exit = actor.WithUpHeight(exit, pivotA);
+            nextTarget = actor.WithUpHeight(nextTarget, pivotA);
 
             if (Vector3.Distance(cur, entry) > 1e-4f)
             {
@@ -106,19 +124,19 @@ namespace NonsensicalKit.ScriptAnimation
                 });
             }
 
-            float bezierLen = ManeuverGeometry.QuadBezierLength(entry, pivot, exit);
+            float bezierLen = ManeuverGeometry.CubicBezierLength(entry, pivotA, pivotB, exit);
             s_phases.Add(new Phase
             {
-                kind = PhaseKind.Bezier,
+                kind = PhaseKind.CubicBezier,
                 p0 = entry,
                 p1 = exit,
-                control = pivot,
+                controlA = pivotA,
+                controlB = pivotB,
                 rotStart = rotStart,
                 rotEnd = rotEnd,
                 length = bezierLen,
             });
 
-            // 出弯提前点之后沿出弯方向直线走到 Next，否则 Clip 永远到不了配置的下一节点。
             if (Vector3.Distance(exit, nextTarget) > 1e-4f)
             {
                 s_phases.Add(new Phase
@@ -143,8 +161,9 @@ namespace NonsensicalKit.ScriptAnimation
 
         public static bool TryGetEndPose(
             PathMoveActor actor,
-            BezierCornerClipData data,
-            PathNode corner,
+            BezierDualCornerClipData data,
+            PathNode cornerA,
+            PathNode cornerB,
             PathNode prev,
             PathNode next,
             Vector3 incomingPos,
@@ -155,7 +174,7 @@ namespace NonsensicalKit.ScriptAnimation
             position = Vector3.zero;
             rotation = Quaternion.identity;
             if (!TryBuildPlan(
-                    actor, data, corner, prev, next, incomingPos, incomingRot, out Plan plan))
+                    actor, data, cornerA, cornerB, prev, next, incomingPos, incomingRot, out Plan plan))
                 return false;
 
             position = plan.EndPosition;
@@ -164,16 +183,17 @@ namespace NonsensicalKit.ScriptAnimation
         }
 
         public static float EstimateDuration(
-            BezierCornerClipData data,
+            BezierDualCornerClipData data,
             PathMoveActor actor,
-            PathNode corner,
+            PathNode cornerA,
+            PathNode cornerB,
             PathNode prev,
             PathNode next,
             Vector3 incomingPos,
             Quaternion incomingRot)
         {
             if (!TryBuildPlan(
-                    actor, data, corner, prev, next, incomingPos, incomingRot, out _))
+                    actor, data, cornerA, cornerB, prev, next, incomingPos, incomingRot, out _))
                 return -1f;
 
             float speed = ResolveMoveSpeed(data, actor);
@@ -191,8 +211,9 @@ namespace NonsensicalKit.ScriptAnimation
 
         public static void Sample(
             PathMoveActor actor,
-            BezierCornerClipData data,
-            PathNode corner,
+            BezierDualCornerClipData data,
+            PathNode cornerA,
+            PathNode cornerB,
             PathNode prev,
             PathNode next,
             Vector3 incomingPos,
@@ -203,7 +224,7 @@ namespace NonsensicalKit.ScriptAnimation
                 return;
 
             if (!TryBuildPlan(
-                    actor, data, corner, prev, next, incomingPos, incomingRot, out _))
+                    actor, data, cornerA, cornerB, prev, next, incomingPos, incomingRot, out _))
                 return;
 
             float speed = ResolveMoveSpeed(data, actor);
@@ -242,8 +263,10 @@ namespace NonsensicalKit.ScriptAnimation
                     }
                     else
                     {
-                        tr.position = ManeuverGeometry.QuadBezierPoint(p.p0, p.control, p.p1, local);
-                        Vector3 tangent = ManeuverGeometry.QuadBezierTangent(p.p0, p.control, p.p1, local);
+                        tr.position = ManeuverGeometry.CubicBezierPoint(
+                            p.p0, p.controlA, p.controlB, p.p1, local);
+                        Vector3 tangent = ManeuverGeometry.CubicBezierTangent(
+                            p.p0, p.controlA, p.controlB, p.p1, local);
                         Vector3 faceDir = PathMoveSampler.FacingDirection(tangent, reverse);
                         if (faceDir.sqrMagnitude > 1e-8f)
                             tr.rotation = actor.LookRotation(faceDir, p.rotStart);

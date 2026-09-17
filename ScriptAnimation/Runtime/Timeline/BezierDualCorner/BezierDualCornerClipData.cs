@@ -4,13 +4,13 @@ using UnityEngine;
 namespace NonsensicalKit.ScriptAnimation
 {
     /// <summary>
-    /// 贝塞尔直角弯：在路网拐点处二次贝塞尔切弯，结束后直线到达 NextNode 并朝向下一段。
-    /// 须配置 PrevNode →CornerNode →NextNode；开场位姿取前序 Clip 结束。
+    /// 双拐点贝塞尔弯：Prev → CornerA → CornerB → Next，以两拐点为控制点做三次贝塞尔切弯，
+    /// 结束后直线到达 NextNode 并朝向下一段。
     /// </summary>
     [Serializable]
-    public class BezierCornerClipData
+    public class BezierDualCornerClipData
     {
-        [Tooltip("入弯/出弯点距拐点的最大距离；出弯后仍会直线走到 Next。")]
+        [Tooltip("入弯/出弯点距首/末拐点的最大距离；出弯后仍会直线走到 Next。")]
         [InspectorLabel("提前转弯距离")]
         public float EarlyTurnDistance = 1f;
 

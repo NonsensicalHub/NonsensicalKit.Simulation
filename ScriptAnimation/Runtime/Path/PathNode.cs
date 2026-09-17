@@ -6,7 +6,7 @@ namespace NonsensicalKit.ScriptAnimation
 {
     /// <summary>路网节点。可手动连 Neighbors，或由 PathNetwork 自动连边。</summary>
     [AddComponentMenu("ScriptAnimation/路网节点 (PathNode)")]
-    public class PathNode : MonoBehaviour
+    public class PathNode : ScriptAnimPoint
     {
         [InspectorLabel("邻接节点")]
         [SerializeField] private List<PathNode> m_neighbors = new List<PathNode>();
@@ -26,7 +26,6 @@ namespace NonsensicalKit.ScriptAnimation
 
         private PathNetwork _network;
 
-        public Vector3 Position => transform.position;
         public IReadOnlyList<PathNode> Neighbors => m_neighbors;
         public IReadOnlyList<IPathNodeFeature> Features => m_features;
 
@@ -176,7 +175,7 @@ namespace NonsensicalKit.ScriptAnimation
             return false;
         }
 
-        private void OnDrawGizmos()
+        protected override void OnDrawGizmos()
         {
             var network = Network;
             if (network != null && !network.ShowNodeGizmos)

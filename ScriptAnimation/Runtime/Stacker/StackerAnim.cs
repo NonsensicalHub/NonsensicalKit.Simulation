@@ -169,6 +169,41 @@ namespace NonsensicalKit.ScriptAnimation
         public bool HasHome => m_hasHome;
         public Vector3 HomePosition => m_homePosition;
 
+        /// <summary>写入 Home 货位（未配置时不改 Transform）。</summary>
+        public void ApplyHomePose()
+        {
+            if (!m_hasHome)
+                return;
+            ApplySlotPosition(m_homePosition);
+        }
+
+        /// <summary>首 Clip 之前：Home 货位 + 货叉行驶偏移。</summary>
+        public void ApplyDefaultTravelPose()
+        {
+            ApplyHomePose();
+            ApplyForkTravelOffsets(
+                m_defaultPrimaryForkTravelOffset,
+                m_defaultSecondaryForkTravelOffset);
+        }
+
+        public void ApplyForkTravelOffsets(float primaryTravel, float secondaryTravel)
+        {
+            SetForkOffset(m_primaryFork, PrimaryForkAxisLocal, primaryTravel);
+            SetForkOffset(m_secondaryFork, SecondaryForkAxisLocal, secondaryTravel);
+        }
+
+        static void SetForkOffset(Transform fork, Vector3 axisLocal, float offset)
+        {
+            if (fork == null)
+                return;
+
+            Vector3 axis = axisLocal.sqrMagnitude > 1e-6f ? axisLocal.normalized : Vector3.forward;
+            Vector3 local = fork.localPosition;
+            local -= axis * Vector3.Dot(local, axis);
+            local += axis * offset;
+            fork.localPosition = local;
+        }
+
         /// <summary>将本组件默认值写入堆垛机行走 Clip（新增 Clip 时调用）。</summary>
         public void ApplyClipDefaults(StackerClipData data)
         {

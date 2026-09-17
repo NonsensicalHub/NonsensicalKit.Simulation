@@ -420,6 +420,25 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 });
     }
 
+    [MenuEntry("添加双拐点贝塞尔弯 Clip", MenuPriority.AddItem.addCustomClip + 5)]
+    class AddBezierDualCornerClipAction : TrackAction
+    {
+        public override ActionValidity Validate(IEnumerable<TrackAsset> tracks) =>
+            ScriptAnimAddClipUtility.ValidateMovement(tracks, typeof(PathMoveActor));
+
+        public override bool Execute(IEnumerable<TrackAsset> tracks) =>
+            ScriptAnimAddClipUtility.ExecuteMovement<BezierDualCornerClip, PathMoveActor>(
+                tracks,
+                (anim, clip) =>
+                {
+                    if (clip?.Data == null || anim == null)
+                        return;
+                    Undo.RecordObject(clip, "Seed BezierDualCornerClip From Actor");
+                    anim.ApplyClipDefaults(clip.Data);
+                    EditorUtility.SetDirty(clip);
+                });
+    }
+
     [MenuEntry("添加倒车掉头 Clip", MenuPriority.AddItem.addCustomClip + 6)]
     class AddReverseUTurnClipAction : TrackAction
     {

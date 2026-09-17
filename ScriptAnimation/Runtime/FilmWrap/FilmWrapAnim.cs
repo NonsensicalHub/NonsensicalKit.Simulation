@@ -135,6 +135,14 @@ namespace NonsensicalKit.ScriptAnimation
 
         public void ClearRest() => m_hasRest = false;
 
+        /// <summary>保持 Rest 缓存并写回 Rest 进度（首 Clip 之前 seek 用）。</summary>
+        public void ApplyCapturedRest()
+        {
+            if (!m_hasRest)
+                return;
+            SetProgress(m_restProgress);
+        }
+
 #if UNITY_EDITOR
         /// <summary>Timeline GatherProperties 还原 m_currentProgress 后，同步缠膜 Shader 参数。</summary>
         void OnDidApplyAnimationProperties()

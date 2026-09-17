@@ -12,6 +12,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             Undo.RecordObject(network, "Collect Path Nodes");
             network.CollectNodesFromChildren();
             EditorUtility.SetDirty(network);
+            PathNetworkGraphWindow.NotifyNetworkChanged(network);
         }
 
         public static void AutoLinkNeighbors(PathNetwork network)
@@ -36,6 +37,53 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             network.ClearInvalidNeighbors();
             EditorUtility.SetDirty(network);
             MarkNodesDirty(network);
+        }
+
+        public static void DisconnectNodeNeighbors(PathNode node)
+        {
+            if (node == null)
+                return;
+
+            var network = node.Network;
+            if (network != null)
+                Undo.RegisterFullObjectHierarchyUndo(network.gameObject, "Clear Node Neighbors");
+            else
+                Undo.RecordObject(node, "Clear Node Neighbors");
+
+            node.ClearNeighbors();
+            EditorUtility.SetDirty(node);
+            if (network != null)
+            {
+                EditorUtility.SetDirty(network);
+                MarkNodesDirty(network);
+            }
+
+            SceneView.RepaintAll();
+        }
+
+        public static void ClearNodeInvalidNeighbors(PathNode node)
+        {
+            if (node == null)
+                return;
+
+            var network = node.Network;
+            if (network != null)
+                Undo.RegisterFullObjectHierarchyUndo(network.gameObject, "Clear Invalid Node Neighbors");
+            else
+                Undo.RecordObject(node, "Clear Invalid Node Neighbors");
+
+            int removed = node.RemoveInvalidNeighbors(network);
+            EditorUtility.SetDirty(node);
+            if (network != null)
+            {
+                EditorUtility.SetDirty(network);
+                MarkNodesDirty(network);
+            }
+
+            SceneView.RepaintAll();
+            Debug.Log(
+                $"[{(network != null ? network.name : node.name)}] 清除错误邻居：节点 {node.name}，移除 {removed}。",
+                node);
         }
 
         public static bool CheckReachabilityHealth(PathNetwork network)
@@ -170,24 +218,18 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 network);
         }
 
-        public static void SwapPathEditEndpoints(SerializedObject serializedObject)
-        {
-            serializedObject.Update();
-            var startProp = serializedObject.FindProperty("m_pathEditStart");
-            var goalProp = serializedObject.FindProperty("m_pathEditGoal");
-            var tmp = startProp.objectReferenceValue;
-            startProp.objectReferenceValue = goalProp.objectReferenceValue;
-            goalProp.objectReferenceValue = tmp;
-            serializedObject.ApplyModifiedProperties();
-        }
-
         public static void MarkNodesDirty(PathNetwork network)
         {
+            if (network == null)
+                return;
+
             foreach (var node in network.Nodes)
             {
                 if (node != null)
                     EditorUtility.SetDirty(node);
             }
+
+            PathNetworkGraphWindow.NotifyNetworkChanged(network);
         }
     }
 }

@@ -159,15 +159,6 @@ namespace NonsensicalKit.ScriptAnimation.Editor
             return 0;
         }
 
-        public static bool HasDefaultPose(Object binding)
-        {
-            if (binding is IPoseChangeActor single)
-                return single.HasDefaultPose;
-            if (binding is PoseChangeAnimMax max)
-                return max.HasDefaultPose;
-            return false;
-        }
-
         public static PoseSpace GetSpace(Object binding)
         {
             if (binding is IPoseChangeActor single)
@@ -422,7 +413,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
 
             EditorGUILayout.Space();
             EditorGUILayout.HelpBox(
-                "驱动 PoseChangeAnim / PoseChangeAnimMax：从前序 PoseChange 终点（无前序则用组件「默认状态」）插值到所选命名姿态。\n" +
+                "驱动 PoseChangeAnim / PoseChangeAnimMax：从前序 PoseChange 终点（无前序则用姿态列表第一项）插值到所选命名姿态。\n" +
                 "默认可在 Timeline 上拖拽 Clip 长度来控制插值时长。\n" +
                 $"目标用时为0 表示瞬间改变；此时 Clip 仍占轨配置的 {ScriptAnimTrackBase.ResolveInstantHoldFrames(timelineClip)} 帧，避免长度为0 无法选中。\n" +
                 "勾选「自动同步时长」后，「按速度刷新全轨时长」会按目标用时（或轨瞬间占位帧数）回写。",
@@ -452,9 +443,9 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 }
                 sb.AppendLine($"姿态空间 {(PoseChangeEditorUtility.GetSpace(binding) == PoseSpace.World ? "世界" : "本地")}");
                 sb.AppendLine($"已配置姿态 {PoseChangeEditorUtility.GetPoseCount(binding)}");
-                sb.AppendLine(PoseChangeEditorUtility.HasDefaultPose(binding)
-                    ? "默认状态 已设置（无前序时作开场）"
-                    : "默认状态 未设置（无前序时用零位姿）");
+                sb.AppendLine(PoseChangeEditorUtility.GetPoseCount(binding) > 0
+                    ? "无前序时开场：姿态列表第一项"
+                    : "姿态列表为空（无前序时用零位姿）");
                 sb.AppendLine(instant
                     ? $"用时: 瞬间（Clip 占位 {holdFrames} 帧）"
                     : $"插值时长: {clipDur:F3} s（由 Clip 长度决定）");
@@ -684,7 +675,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 "挂到 Timeline 绑定用。\n" +
                 "「详细控制」可分别开关位置、旋转、大小；取消勾选则不写入对应属性。\n" +
                 "在姿态列表中命名任意数量姿态，可用「捕获当前」写入当前 Transform。\n" +
-                "「默认状态」用于同轨无前序 PoseChangeClip 时的开场姿态（确定性，不读运行时当前位置）。\n" +
+                "姿态列表第一项同时作为同轨无前序 PoseChangeClip 时的开场姿态（确定性，不读运行时当前位置）。\n" +
                 "Timeline Clip 用下拉框选择目标姿态；默认可拖拽 Clip 长度控制插值时长，目标用时 0 为瞬间改变。",
                 MessageType.Info);
 
@@ -694,15 +685,9 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 $"{(anim.ControlPosition ? "位置 " : "")}{(anim.ControlRotation ? "旋转 " : "")}{(anim.ControlScale ? "大小" : "")}".Trim());
             EditorGUILayout.LabelField("姿态数", anim.PoseCount.ToString());
             EditorGUILayout.LabelField("空间", anim.Space == PoseSpace.World ? "世界" : "本地");
-            EditorGUILayout.LabelField("默认状态", anim.HasDefaultPose ? "已设置" : "未设置");
-
-            if (GUILayout.Button("从当前姿态捕获默认状态"))
-            {
-                Undo.RecordObject(anim, "Capture Default Pose");
-                anim.CaptureDefaultPoseFromCurrent();
-                EditorUtility.SetDirty(anim);
-                serializedObject.Update();
-            }
+            EditorGUILayout.LabelField(
+                "开场姿态",
+                anim.PoseCount > 0 ? "姿态列表第一项" : "未配置（零位姿）");
 
             if (GUILayout.Button("添加姿态（捕获当前）"))
             {
@@ -757,7 +742,7 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 "每个命名姿态内，按「控制对象」列表分别为各目标配置位姿；展开姿态项可看到各目标的位姿数据。\n" +
                 "「捕获当前全部」会一次性从各控制对象读取位姿；「预览全部」会写回场景。\n" +
                 "「详细控制」可分别开关位置、旋转、大小；取消勾选则不写入对应属性。\n" +
-                "「默认状态」用于同轨无前序 PoseChangeClip 时的开场姿态（确定性，不读运行时当前位置）。\n" +
+                "姿态列表第一项同时作为同轨无前序 PoseChangeClip 时的开场姿态（确定性，不读运行时当前位置）。\n" +
                 "Timeline Clip 用下拉框选择目标姿态；默认可拖拽 Clip 长度控制插值时长，目标用时 0 为瞬间改变。",
                 MessageType.Info);
 
@@ -785,15 +770,9 @@ namespace NonsensicalKit.ScriptAnimation.Editor
                 $"{(anim.ControlPosition ? "位置 " : "")}{(anim.ControlRotation ? "旋转 " : "")}{(anim.ControlScale ? "大小" : "")}".Trim());
             EditorGUILayout.LabelField("姿态数", anim.PoseCount.ToString());
             EditorGUILayout.LabelField("空间", anim.Space == PoseSpace.World ? "世界" : "本地");
-            EditorGUILayout.LabelField("默认状态", anim.HasDefaultPose ? "已设置" : "未设置");
-
-            if (GUILayout.Button("从当前姿态捕获默认状态"))
-            {
-                Undo.RecordObject(anim, "Capture Default Pose");
-                anim.CaptureDefaultPoseFromCurrent();
-                EditorUtility.SetDirty(anim);
-                serializedObject.Update();
-            }
+            EditorGUILayout.LabelField(
+                "开场姿态",
+                anim.PoseCount > 0 ? "姿态列表第一项" : "未配置（零位姿）");
 
             if (GUILayout.Button("添加姿态（捕获当前）"))
             {

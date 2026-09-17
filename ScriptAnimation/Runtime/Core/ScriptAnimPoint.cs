@@ -27,7 +27,7 @@ namespace NonsensicalKit.ScriptAnimation
         public float GizmoRadius => m_gizmoRadius;
         public float LabelHeight => m_labelHeight;
 
-        private void OnDrawGizmos()
+        protected virtual void OnDrawGizmos()
         {
             if (!m_showGizmo)
                 return;

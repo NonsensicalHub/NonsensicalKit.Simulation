@@ -20,6 +20,7 @@ namespace NonsensicalKit.ScriptAnimation
         PreviousLatentAgv = 10,
         PreviousBezierCorner = 11,
         PreviousReverseUTurn = 12,
+        PreviousBezierDualCorner = 14,
         /// <summary>无前序 / 未知前序：组件上配置的默认 Home。</summary>
         ComponentHome = 13,
     }
@@ -137,6 +138,8 @@ namespace NonsensicalKit.ScriptAnimation
                     return ScriptAnimHomeSource.PreviousThreePointTurn;
                 if (previous.asset is BezierCornerClip)
                     return ScriptAnimHomeSource.PreviousBezierCorner;
+                if (previous.asset is BezierDualCornerClip)
+                    return ScriptAnimHomeSource.PreviousBezierDualCorner;
                 return ScriptAnimHomeSource.PreviousReverseUTurn;
             }
 
@@ -205,9 +208,9 @@ namespace NonsensicalKit.ScriptAnimation
 
         /// <summary>
         /// 潜伏车开场位姿：看同轨「开场更早且 start 最大」的前一个 Clip（允许时间重叠）。
-    /// 无前序时用组件 Home（调用方须缓存）。
-    /// 潜伏车已到货下方再取放，本 Clip 不转向（<paramref name="rotateMode"/> 恒为 Skip）。
-    /// </summary>
+        /// 无前序时用组件 Home（调用方须缓存）。
+        /// 放货开场可按 <paramref name="rotateMode"/> 转向移动点；取货不转向。
+        /// </summary>
         public static ScriptAnimHomeSource Resolve(
             TimelineClip latentTimelineClip,
             LatentAgvClip latentAsset,
@@ -220,16 +223,16 @@ namespace NonsensicalKit.ScriptAnimation
         {
             homePos = Vector3.zero;
             homeRot = Quaternion.identity;
-            // 潜伏车取放货不配置货点、不转向，仅保持开场位姿做平台升降
-            rotateMode = ForkliftRotateMode.Skip;
+            rotateMode = ForkliftRotateMode.Instant;
             sourceLabel = "Failed";
 
             if (!TryFindPreviousClip(latentTimelineClip, out TimelineClip previous))
             {
+                rotateMode = ForkliftRotateMode.Instant;
                 var src = ApplyComponentHome(
                     anim, out homePos, out homeRot, out sourceLabel, "无前序 Clip");
                 if (src == ScriptAnimHomeSource.ComponentHome)
-                    sourceLabel += "，不旋转（已在货下）";
+                    sourceLabel += "，瞬间转向（放货）/ 不转向（取货）";
                 return src;
             }
 
@@ -240,9 +243,10 @@ namespace NonsensicalKit.ScriptAnimation
                         out bool facingFromEarlier, anim))
                     return ScriptAnimHomeSource.Failed;
 
+                rotateMode = ForkliftRotateMode.Timed;
                 sourceLabel = facingFromEarlier
-                    ? $"前序 PathMove「{previous.displayName}」终点（未改朝向前进，沿用更早确立朝向），不旋转"
-                    : $"前序 PathMove「{previous.displayName}」终点，不旋转";
+                    ? $"前序 PathMove「{previous.displayName}」终点（未改朝向前进，沿用更早确立朝向），计入旋转"
+                    : $"前序 PathMove「{previous.displayName}」终点，计入旋转";
                 return ScriptAnimHomeSource.PreviousPathMove;
             }
 
@@ -252,7 +256,8 @@ namespace NonsensicalKit.ScriptAnimation
                         previous, directAsset, resolver, out homePos, out homeRot, anim))
                     return ScriptAnimHomeSource.Failed;
 
-                sourceLabel = $"前序 DirectMove「{previous.displayName}」终点，不旋转";
+                rotateMode = ForkliftRotateMode.Timed;
+                sourceLabel = $"前序 DirectMove「{previous.displayName}」终点，计入旋转";
                 return ScriptAnimHomeSource.PreviousDirectMove;
             }
 
@@ -262,18 +267,22 @@ namespace NonsensicalKit.ScriptAnimation
                         previous, rotateAsset, resolver, out homePos, out homeRot, anim))
                     return ScriptAnimHomeSource.Failed;
 
-                sourceLabel = $"前序「{previous.displayName}」类型未知，当前位姿瞬间转向";
+                rotateMode = ForkliftRotateMode.Timed;
+                sourceLabel = $"前序原地旋转「{previous.displayName}」结束朝向，计入旋转";
                 return ScriptAnimHomeSource.PreviousRotate;
             }
 
             if (ManeuverHomeUtility.TryResolvePathManeuverExitPose(
                     previous, anim, resolver, out homePos, out homeRot))
             {
-                sourceLabel = $"前序机动「{previous.displayName}」结束朝向，不旋转";
+                rotateMode = ForkliftRotateMode.Timed;
+                sourceLabel = $"前序机动「{previous.displayName}」结束朝向，计入旋转";
                 if (previous.asset is ThreePointTurnClip)
                     return ScriptAnimHomeSource.PreviousThreePointTurn;
                 if (previous.asset is BezierCornerClip)
                     return ScriptAnimHomeSource.PreviousBezierCorner;
+                if (previous.asset is BezierDualCornerClip)
+                    return ScriptAnimHomeSource.PreviousBezierDualCorner;
                 return ScriptAnimHomeSource.PreviousReverseUTurn;
             }
 
@@ -283,7 +292,8 @@ namespace NonsensicalKit.ScriptAnimation
                         previous, teleportAsset, anim, resolver, out homePos, out homeRot))
                     return ScriptAnimHomeSource.Failed;
 
-                sourceLabel = $"前序 Teleport「{previous.displayName}」落点，不旋转";
+                rotateMode = ForkliftRotateMode.Timed;
+                sourceLabel = $"前序 Teleport「{previous.displayName}」落点，计入旋转";
                 return ScriptAnimHomeSource.PreviousTeleport;
             }
 
@@ -293,12 +303,14 @@ namespace NonsensicalKit.ScriptAnimation
                         previous, prevLatent, anim, resolver, out homePos, out homeRot))
                     return ScriptAnimHomeSource.Failed;
 
+                rotateMode = ForkliftRotateMode.Skip;
                 sourceLabel = $"前序取放货「{previous.displayName}」结束位姿，不旋转";
                 return ScriptAnimHomeSource.PreviousLatentAgv;
             }
 
             if (previous.asset is ForkliftClip)
             {
+                rotateMode = ForkliftRotateMode.Skip;
                 var src = ApplyComponentHome(
                     anim, out homePos, out homeRot, out sourceLabel,
                     $"前序「{previous.displayName}」为叉车");
@@ -312,6 +324,7 @@ namespace NonsensicalKit.ScriptAnimation
                 if (!TryGetCtuExitPose(previous, anim, resolver, out homePos, out homeRot))
                     return ScriptAnimHomeSource.Failed;
 
+                rotateMode = ForkliftRotateMode.Skip;
                 sourceLabel = $"前序 CTU「{previous.displayName}」车体结束位姿，不旋转";
                 return ScriptAnimHomeSource.PreviousCtu;
             }
@@ -321,15 +334,17 @@ namespace NonsensicalKit.ScriptAnimation
                 if (!TryGetShuttleExitPose(previous, anim, resolver, out homePos, out homeRot))
                     return ScriptAnimHomeSource.Failed;
 
+                rotateMode = ForkliftRotateMode.Skip;
                 sourceLabel = $"前序穿梭车「{previous.displayName}」车体结束位姿，不旋转";
                 return ScriptAnimHomeSource.PreviousShuttle;
             }
 
+            rotateMode = ForkliftRotateMode.Instant;
             var latentUnknown = ApplyComponentHome(
                 anim, out homePos, out homeRot, out sourceLabel,
                 $"前序「{previous.displayName}」类型未知");
             if (latentUnknown == ScriptAnimHomeSource.ComponentHome)
-                sourceLabel += "，不旋转";
+                sourceLabel += "，瞬间转向";
             return latentUnknown;
         }
 
@@ -398,6 +413,8 @@ namespace NonsensicalKit.ScriptAnimation
                     return ScriptAnimHomeSource.PreviousThreePointTurn;
                 if (previous.asset is BezierCornerClip)
                     return ScriptAnimHomeSource.PreviousBezierCorner;
+                if (previous.asset is BezierDualCornerClip)
+                    return ScriptAnimHomeSource.PreviousBezierDualCorner;
                 return ScriptAnimHomeSource.PreviousReverseUTurn;
             }
 
@@ -527,6 +544,8 @@ namespace NonsensicalKit.ScriptAnimation
                     return ScriptAnimHomeSource.PreviousThreePointTurn;
                 if (previous.asset is BezierCornerClip)
                     return ScriptAnimHomeSource.PreviousBezierCorner;
+                if (previous.asset is BezierDualCornerClip)
+                    return ScriptAnimHomeSource.PreviousBezierDualCorner;
                 return ScriptAnimHomeSource.PreviousReverseUTurn;
             }
 
@@ -1086,7 +1105,10 @@ namespace NonsensicalKit.ScriptAnimation
             return true;
         }
 
-        /// <summary>上一潜伏车取放货结束位姿：车体未移动，即其开场位姿。</summary>
+        /// <summary>
+        /// 上一潜伏车取放货结束位姿：停在移动点。
+        /// 取货保持开场朝向；放货在 Instant/Timed 下朝向移动点，Skip 保持开场朝向。
+        /// </summary>
         private static bool TryGetLatentAgvExitPose(
             TimelineClip prevTimelineClip,
             LatentAgvClip prevAsset,
@@ -1100,15 +1122,38 @@ namespace NonsensicalKit.ScriptAnimation
             if (prevAsset?.Data == null || anim == null)
                 return false;
 
+            Transform movePoint = null;
+            if (resolver != null)
+                movePoint = ScriptAnimPointUtility.AsTransform(
+                    ScriptAnimPointUtility.Resolve(prevAsset.MovePoint, resolver));
+
             Resolve(
                 prevTimelineClip,
                 prevAsset,
                 anim,
                 resolver,
-                out position,
-                out rotation,
-                out _,
+                out Vector3 homePos,
+                out Quaternion homeRot,
+                out ForkliftRotateMode rotateMode,
                 out _);
+
+            if (movePoint == null)
+            {
+                position = homePos;
+                rotation = homeRot;
+                return true;
+            }
+
+            position = anim.WithUpHeight(movePoint.position, homePos);
+
+            bool pickUp = prevAsset.Data.Mode == ForkliftMode.PickUp;
+            if (pickUp || rotateMode == ForkliftRotateMode.Skip)
+            {
+                rotation = homeRot;
+                return true;
+            }
+
+            rotation = GetFlatFacing(anim, homePos, position, homeRot);
             return true;
         }
 

@@ -156,6 +156,15 @@ namespace NonsensicalKit.ScriptAnimation
         public float ClampSpeed => m_clampSpeed;
         public float PaddleSpeed => m_paddleSpeed;
 
+        /// <summary>首 Clip 之前：车体 Home + 夹爪收回 / 夹紧松开 / 拨爪开位。</summary>
+        public void ApplyDefaultTravelPose()
+        {
+            ApplyHomePose("穿梭车首 Clip 之前");
+            SetClawExtend(m_defaultClawRetracted, m_defaultClawRetracted);
+            SetClampOffset(m_defaultClampReleased, m_defaultClampReleased);
+            SetPaddleAngle(m_paddleOpenAngle);
+        }
+
         /// <summary>将本组件默认值写入 Clip（新增 Clip 时调用）。</summary>
         public void ApplyClipDefaults(ShuttleClipData data)
         {

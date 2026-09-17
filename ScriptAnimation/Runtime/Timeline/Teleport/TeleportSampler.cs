@@ -103,7 +103,11 @@ namespace NonsensicalKit.ScriptAnimation
         public static float EstimateDuration(TimelineAsset timeline)
             => EstimateDuration(ResolveFrameRate(timeline));
 
-        /// <summary>是否应在本评估帧写入瞬移位姿（仅首帧；seek 时补一次保证 scrub）。</summary>
+        /// <summary>
+        /// 是否应在本评估帧写入瞬移位姿。
+        /// 历史：仅首帧写入；现 Mixer 在 Clip 覆盖区间每帧 Sample，本方法保留供编辑器/旧调用兼容。
+        /// seek 或 hold 时恒为 true。
+        /// </summary>
         public static bool ShouldApplyPose(double localTime, float frameRate, bool seekOccurred)
         {
             if (seekOccurred)
