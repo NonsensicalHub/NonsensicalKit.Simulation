@@ -9,8 +9,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 {
     public sealed class ConveyorMapNodeView : Node
     {
-        public const float DefaultWidth = 120f;
-        public const float DefaultHeight = 44f;
+        public const float DefaultWidth = 88f;
+        public const float DefaultHeight = 28f;
 
         private static readonly Color InfeedColor = new(0.35f, 0.75f, 0.45f, 1f);
         private static readonly Color JunctionColor = new(0.95f, 0.78f, 0.25f, 1f);
@@ -242,8 +242,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 s_TitleStyle = new GUIStyle
                 {
                     alignment = TextAnchor.UpperLeft,
-                    fontSize = 14,
-                    fontStyle = FontStyle.Bold,
+                    fontSize = 10,
+                    fontStyle = FontStyle.Normal,
                     clipping = TextClipping.Overflow,
                     wordWrap = false,
                     border = new RectOffset(0, 0, 0, 0),
@@ -310,10 +310,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             style.minHeight = DefaultHeight;
             style.width = DefaultWidth;
             style.height = DefaultHeight;
-            style.borderTopLeftRadius = 6;
-            style.borderTopRightRadius = 6;
-            style.borderBottomLeftRadius = 6;
-            style.borderBottomRightRadius = 6;
+            style.borderTopLeftRadius = 4;
+            style.borderTopRightRadius = 4;
+            style.borderBottomLeftRadius = 4;
+            style.borderBottomRightRadius = 4;
             style.borderTopWidth = 1;
             style.borderBottomWidth = 1;
             style.borderLeftWidth = 1;

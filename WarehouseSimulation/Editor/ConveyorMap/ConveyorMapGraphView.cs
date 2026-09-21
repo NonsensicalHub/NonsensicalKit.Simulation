@@ -28,7 +28,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             this.AddManipulator(new SelectionDragger());
             this.AddManipulator(new RectangleSelector());
 
-            SetupZoom(ContentZoomer.DefaultMinScale, ContentZoomer.DefaultMaxScale);
+            // 默认上限仅 1x，密集地图看不清；放宽到 4x 便于放大细看。
+            SetupZoom(ContentZoomer.DefaultMinScale, 4f);
 
             graphViewChanged += OnGraphChanged;
 

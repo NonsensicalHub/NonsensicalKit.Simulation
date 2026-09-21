@@ -32,11 +32,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             _segmentLabel = new Label($"{direction} {data.DistanceMeters:0.#}m");
             _segmentLabel.pickingMode = PickingMode.Ignore;
             _segmentLabel.style.position = Position.Absolute;
-            _segmentLabel.style.fontSize = 9;
+            _segmentLabel.style.fontSize = 8;
             _segmentLabel.style.color = new Color(0.85f, 0.85f, 0.85f);
             _segmentLabel.style.backgroundColor = new Color(0.12f, 0.12f, 0.12f, 0.75f);
-            _segmentLabel.style.paddingLeft = 3;
-            _segmentLabel.style.paddingRight = 3;
+            _segmentLabel.style.paddingLeft = 2;
+            _segmentLabel.style.paddingRight = 2;
+            _segmentLabel.style.paddingTop = 0;
+            _segmentLabel.style.paddingBottom = 0;
             _segmentLabel.style.borderTopLeftRadius = 2;
             _segmentLabel.style.borderTopRightRadius = 2;
             _segmentLabel.style.borderBottomLeftRadius = 2;
