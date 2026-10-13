@@ -20,9 +20,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         public static (StackerWarehouseSimulator Simulator, SimRunResult Result) Run(
             WarehouseSimScenario scenario,
             ISlotAllocator slotAllocator,
-            SimRunOptions? runOptions = null)
+            SimRunOptions? runOptions = null) =>
+            Run(scenario, slotAllocator, runOptions, liveProgress: null);
+
+        internal static (StackerWarehouseSimulator Simulator, SimRunResult Result) Run(
+            WarehouseSimScenario scenario,
+            ISlotAllocator slotAllocator,
+            SimRunOptions? runOptions,
+            SimRunLiveProgress liveProgress)
         {
             var simulator = new StackerWarehouseSimulator(slotAllocator);
+            simulator.UseLiveProgress(liveProgress);
             return (simulator, simulator.Run(scenario, runOptions));
         }
 
@@ -30,12 +38,19 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         public static (StackerWarehouseSimulator Simulator, SimRunResult Result) RunOnBackgroundThread(
             WarehouseSimScenario scenario,
             ISlotAllocator slotAllocator,
-            SimRunOptions? runOptions = null)
+            SimRunOptions? runOptions = null) =>
+            RunOnBackgroundThread(scenario, slotAllocator, runOptions, liveProgress: null);
+
+        internal static (StackerWarehouseSimulator Simulator, SimRunResult Result) RunOnBackgroundThread(
+            WarehouseSimScenario scenario,
+            ISlotAllocator slotAllocator,
+            SimRunOptions? runOptions,
+            SimRunLiveProgress liveProgress)
         {
             WarehouseSimLog.EnterBackgroundThread();
             try
             {
-                return Run(scenario, slotAllocator, runOptions);
+                return Run(scenario, slotAllocator, runOptions, liveProgress);
             }
             finally
             {
@@ -96,6 +111,25 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     $"\n{head}");
             }
 
+            if (result.SegmentCoOccupancies != null && result.SegmentCoOccupancies.Count > 0)
+            {
+                var head = SimSegmentCoOccupancyChecker.FormatSummary(
+                    result.SegmentCoOccupancies.Count > 20
+                        ? result.SegmentCoOccupancies.GetRange(0, 20)
+                        : result.SegmentCoOccupancies);
+                SimSegmentCoOccupancyChecker.CountByDirection(
+                    result.SegmentCoOccupancies,
+                    out var opposite,
+                    out var sameDirection);
+                Debug.LogWarning(
+                    $"[WarehouseSimulation] 路段同时占用自检 {result.SegmentCoOccupancies.Count} 处" +
+                    $"（对向 {opposite}，同向 {sameDirection}）。" +
+                    (result.SegmentCoOccupancies.Count > 20
+                        ? " 以下仅前 20 条，完整明细请导出调试 Markdown 报告。"
+                        : string.Empty) +
+                    $"\n{head}");
+            }
+
             if (result.SubTaskTimelineIssues != null && result.SubTaskTimelineIssues.Count > 0)
             {
                 var head = SimSubTaskTimelineChecker.FormatSummary(
@@ -112,6 +146,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             if (!string.IsNullOrEmpty(result.DebugReportPath)
                 && ((result.OccupancyConflicts != null && result.OccupancyConflicts.Count > 0)
+                    || (result.SegmentCoOccupancies != null && result.SegmentCoOccupancies.Count > 0)
                     || (result.SubTaskTimelineIssues != null && result.SubTaskTimelineIssues.Count > 0)))
             {
                 Debug.LogWarning($"[WarehouseSimulation] 调试报告：{result.DebugReportPath}");

@@ -69,7 +69,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 return false;
             }
 
-            var zones = SlotGridUtility.BuildEffectiveExclusionZones(grid, bindings);
+            var zones = SlotGridUtility.BuildEffectiveExclusionZones(
+                grid, bindings, warehouseId: 0, restrictToWarehouse: true);
             var bins = new List<BinData>();
 
             for (var row = 0; row < grid.RowCount; row++)

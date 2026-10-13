@@ -38,5 +38,26 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
         public double DesiredArriveSimTime;
         public double ArriveSimTime;
         public double LeaveSimTime;
+
+        /// <summary>路段入口槽占用的方向令牌。同一物理路段同向可并行到容量上限，对向互斥。</summary>
+        public string LaneResourceId;
+        public double LaneReserveStart;
+        public double LaneReserveEnd;
+
+        /// <summary>
+        /// 这条路靠近下游路口的直线占用。
+        /// 同一路口、同一条直线上，别的路段车身靠近时不能重叠。
+        /// </summary>
+        public string AxisResourceId;
+        public double AxisReserveStart;
+        public double AxisReserveEnd;
+
+        /// <summary>
+        /// 预先占住下一段的方向令牌，直到本段车尾离开。
+        /// 这样还没驶入下一段，对向车也不能先开进来把出口堵住。
+        /// </summary>
+        public string ExitLaneResourceId;
+        public double ExitLaneReserveStart;
+        public double ExitLaneReserveEnd;
     }
 }

@@ -8,7 +8,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 {
     /// <summary>
     /// 根据输送路段预约表与非输送子任务，检测资源占用冲突。
-    /// 路口/停留点以预约语义为准，不使用 <see cref="SimSubTaskKind.JunctionExit"/> 等回放子任务的完整时间窗。
+    /// 路口以到达中心到开始驶出为准，来向驶入不计入路口锁；不使用 <see cref="SimSubTaskKind.JunctionExit"/> 的完整时间窗。
     /// 取货点/入库口允许多任务并行（见 <see cref="ISimResourcePolicy.MaxPickupReservationsPerPoint"/> 等），
     /// 仅当并发数超过配置上限时才记为冲突。
     /// 加工站与垂直提升机从 <see cref="SimSubTaskKind.ProcessStationService"/> /
@@ -405,7 +405,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     continue;
                 }
 
-                ConveyorSegmentScheduleEntry? nextSeg = i + 1 < schedule.Length ? schedule[i + 1] : null;
+                ConveyorSegmentScheduleEntry? nextSeg = null;
+                if (ConveyorSegmentScheduleNavigation.TryGetDownstreamIndex(schedule, i, out var downstreamIndex))
+                {
+                    nextSeg = schedule[downstreamIndex];
+                }
                 if (!JunctionSubTaskTiming.TryGetJunctionHoldWindow(
                         seg,
                         nextSeg,
@@ -498,6 +502,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     && task.Kind is SimSubTaskKind.SegmentTransit
                         or SimSubTaskKind.SegmentHopMove
                         or SimSubTaskKind.SegmentStopDwell
+                        or SimSubTaskKind.SegmentGateWait
                         or SimSubTaskKind.SegmentQueue)
                 {
                     if (!holdEndByJob.TryGetValue(task.JobId, out var end) || task.EndSimTime > end)

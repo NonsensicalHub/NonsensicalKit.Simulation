@@ -67,6 +67,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var total = plan.TotalSeconds;
             var resources = BuildStackerResources(job, stackerId, job.TargetSlot.Column);
             var pickupNode = _conveyorTopology.GetNode(job.PickupPointIndex);
+            var pickupForkDepth = SimConveyorNodeBinding.HasForkDepth(in pickupNode);
             var poses = StackerSubTaskPoseBuilder.Build(
                 _bindings, _conveyorTopology, job, pickupNode);
             var desired = _clock.Now;
@@ -115,7 +116,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             job.StackerResourceId = SimEntityNaming.StackerResourceId(stackerId);
-            job.AisleResourceId = _bindings.UseAisleColumnReservation ? AisleId(job.TargetSlot.Column) : null;
+            job.AisleResourceId = _bindings.UseAisleColumnReservation
+                ? SimEntityNaming.AisleResourceId(job.TargetSlot.WarehouseId, job.TargetSlot.Column)
+                : null;
             job.StackerReserveStart = actualStart;
             job.StackerReserveEnd = actualStart + total;
             job.PhaseStartTime = actualStart;
@@ -174,7 +177,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 stackerFromSlot: pickFrom,
                 stackerToSlot: poses.PickTo,
                 stackerRailColumn: poses.RailColumn,
-                hasStackerPose: true);
+                hasStackerPose: true,
+                stackerToUsesForkDepth: pickupForkDepth && job.Direction != SimFlowDirection.Outbound,
+                stackerToForkDepthMeters: pickupNode.ForkDepthMeters);
             _queue.Enqueue(new ScheduledSimEvent(pickEnd, SimEventType.StackerPickComplete, job.JobId));
 
             job.ServiceTimeAccum += plan.MoveSeconds;
@@ -204,7 +209,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 stackerFromSlot: poses.PlaceFrom,
                 stackerToSlot: poses.PlaceTo,
                 stackerRailColumn: poses.RailColumn,
-                hasStackerPose: true);
+                hasStackerPose: true,
+                stackerToUsesForkDepth: pickupForkDepth && job.Direction == SimFlowDirection.Outbound,
+                stackerToForkDepthMeters: pickupNode.ForkDepthMeters);
             _queue.Enqueue(new ScheduledSimEvent(placeEnd, SimEventType.StackerPlaceComplete, job.JobId));
 
             if (commitCarriageBooking)
@@ -217,9 +224,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         {
             var useStacker = _bindings.UseStackerReservation;
             var useAisle = _bindings.UseAisleColumnReservation;
+            var aisleId = SimEntityNaming.AisleResourceId(job.TargetSlot.WarehouseId, column);
             if (useStacker && useAisle)
             {
-                return new[] { SimEntityNaming.StackerResourceId(stackerId), AisleId(column) };
+                return new[] { SimEntityNaming.StackerResourceId(stackerId), aisleId };
             }
 
             if (useStacker)
@@ -229,7 +237,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             if (useAisle)
             {
-                return new[] { AisleId(column) };
+                return new[] { aisleId };
             }
 
             return Array.Empty<string>();
@@ -250,8 +258,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             return Math.Abs(job.StackerReserveEnd - job.StackerReserveStart - workDuration) <= 0.05;
         }
 
-        private static string AisleId(int column) => $"aisle-col-{column}";
-
         private void OnStackerApproachComplete(WarehouseJob job)
         {
             job.State = WarehouseJobState.StackerPick;
@@ -266,6 +272,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     job.TargetSlot.Row,
                     job.TargetSlot.Level);
             }
+            else if (job.Direction == SimFlowDirection.Inbound)
+            {
+                MarkCorridorLeftConveyor(job);
+            }
+
             job.State = WarehouseJobState.StackerMove;
             RecordPlayback(job, SimPlaybackPhase.StackerPick, job.AssignedStackerId, job.TargetSlot);
         }

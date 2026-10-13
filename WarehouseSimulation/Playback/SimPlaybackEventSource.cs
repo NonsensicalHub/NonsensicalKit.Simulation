@@ -10,9 +10,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
     /// <summary>场景中存放回放事件与子任务时间轴，可由仿真运行器写入。</summary>
     public sealed class SimPlaybackEventSource : MonoBehaviour
     {
-        [SerializeField] private List<SimPlaybackEvent> m_events = new();
-        [SerializeField] private List<SimSubTask> m_subTasks = new();
-        [SerializeField] private List<GridIndex> m_initialOccupiedSlots = new();
+        [SerializeField, HideInInspector] private List<SimPlaybackEvent> m_events = new();
+        [SerializeField, HideInInspector] private List<SimSubTask> m_subTasks = new();
+        [SerializeField, HideInInspector] private List<GridIndex> m_initialOccupiedSlots = new();
         [SerializeField] private double m_totalSimSeconds;
 
         private WarehouseGridConfig _gridConfig;

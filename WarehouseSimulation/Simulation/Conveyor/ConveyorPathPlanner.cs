@@ -65,7 +65,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
                 var pt = topology.GetNode(pickupNode);
                 if (!StackerColumnReachUtility.TryGetDefinition(bindings, topology, pt.StackerId, out var stackerDef)
-                    || !StackerColumnReachUtility.CanReachSlot(stackerDef, targetSlot.Column))
+                    || !StackerColumnReachUtility.ServesSlot(in stackerDef, targetSlot))
                 {
                     continue;
                 }
@@ -153,7 +153,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             ConveyorMapTopology topology,
             IWarehouseSimulationBindings bindings,
             int infeedPortIndex,
-            int[] pickupReservationCounts)
+            int[] pickupReservationCounts,
+            ConveyorRouteAccess access = default)
         {
             if (topology == null
                 || bindings == null
@@ -164,8 +165,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             var infeedNode = topology.InfeedNodeIndices[infeedPortIndex];
-            var reachablePickups = topology.GetReachablePickupNodes(infeedNode);
-            for (var i = 0; i < reachablePickups.Count; i++)
+            var reachablePickups = topology.GetAccessiblePickupNodeIndices(infeedNode, access);
+            for (var i = 0; i < reachablePickups.Length; i++)
             {
                 if (IsPickupAvailable(topology, bindings, pickupReservationCounts, reachablePickups[i]))
                 {
@@ -180,7 +181,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         public static bool HasOpenPickupRouteFromAnyInfeed(
             ConveyorMapTopology topology,
             IWarehouseSimulationBindings bindings,
-            int[] pickupReservationCounts)
+            int[] pickupReservationCounts,
+            ConveyorRouteAccess access = default)
         {
             if (topology?.InfeedNodeIndices == null)
             {
@@ -189,7 +191,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             for (var port = 0; port < topology.InfeedNodeIndices.Count; port++)
             {
-                if (HasOpenPickupRouteFromInfeed(topology, bindings, port, pickupReservationCounts))
+                if (HasOpenPickupRouteFromInfeed(topology, bindings, port, pickupReservationCounts, access))
                 {
                     return true;
                 }
@@ -204,7 +206,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             IWarehouseSimulationBindings bindings,
             int infeedPortIndex,
             GridIndex targetSlot,
-            int[] pickupReservationCounts = null)
+            int[] pickupReservationCounts = null,
+            ConveyorRouteAccess access = default)
         {
             if (topology == null || bindings == null || infeedPortIndex < 0
                 || infeedPortIndex >= topology.InfeedNodeIndices.Count)
@@ -229,12 +232,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
                 var pt = topology.GetNode(pickupNode);
                 if (!StackerColumnReachUtility.TryGetDefinition(bindings, topology, pt.StackerId, out var stackerDef)
-                    || !StackerColumnReachUtility.CanReachSlot(stackerDef, targetSlot.Column))
+                    || !StackerColumnReachUtility.ServesSlot(in stackerDef, targetSlot))
                 {
                     continue;
                 }
 
-                if (topology.TryFindShortestPathByTransit(infeedNode, pickupNode, out var path)
+                if (topology.TryFindAccessiblePathByTransit(infeedNode, pickupNode, access, out var path)
                     && path != null
                     && path.Count >= 2)
                 {
@@ -250,8 +253,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             ConveyorMapTopology topology,
             IWarehouseSimulationBindings bindings,
             int infeedPortIndex,
-            GridIndex targetSlot) =>
-            CanRouteFromInfeed(topology, bindings, infeedPortIndex, targetSlot);
+            GridIndex targetSlot,
+            ConveyorRouteAccess access = default) =>
+            CanRouteFromInfeed(topology, bindings, infeedPortIndex, targetSlot, null, access);
 
         /// <summary>从指定取货点出发：在可达出库口中按策略选最优路径。</summary>
         public static bool TrySelectBestOutboundPath(
@@ -353,17 +357,19 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// <summary>是否存在从取货点到任一出库口的路径。</summary>
         public static bool CanRouteToOutfeed(
             ConveyorMapTopology topology,
-            int pickupPointIndex) =>
+            int pickupPointIndex,
+            ConveyorRouteAccess access = default) =>
             topology != null
             && topology.OutfeedNodeIndices != null
             && topology.OutfeedNodeIndices.Count > 0
-            && TryFindFirstRoutableOutfeedPort(topology, pickupPointIndex, out _);
+            && TryFindFirstRoutableOutfeedPort(topology, pickupPointIndex, access, out _);
 
         /// <summary>是否存在从取货点到指定出库口的路径。</summary>
         public static bool CanRouteFromPickupToOutfeed(
             ConveyorMapTopology topology,
             int pickupPointIndex,
-            int outfeedPortIndex)
+            int outfeedPortIndex,
+            ConveyorRouteAccess access = default)
         {
             if (topology == null
                 || pickupPointIndex < 0
@@ -381,7 +387,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             var outfeedNode = topology.OutfeedNodeIndices[outfeedPortIndex];
-            return topology.TryFindShortestPathByTransit(pickupPointIndex, outfeedNode, out var path)
+            return topology.TryFindAccessiblePathByTransit(pickupPointIndex, outfeedNode, access, out var path)
                    && path != null
                    && path.Count >= 2;
         }
@@ -389,6 +395,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private static bool TryFindFirstRoutableOutfeedPort(
             ConveyorMapTopology topology,
             int pickupPointIndex,
+            ConveyorRouteAccess access,
             out int outfeedPortIndex)
         {
             outfeedPortIndex = -1;
@@ -408,7 +415,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             for (var port = 0; port < topology.OutfeedNodeIndices.Count; port++)
             {
-                if (!CanRouteFromPickupToOutfeed(topology, pickupPointIndex, port))
+                if (!CanRouteFromPickupToOutfeed(topology, pickupPointIndex, port, access))
                 {
                     continue;
                 }
@@ -429,7 +436,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             int fromNodeIndex,
             int toNodeIndex,
             double atTime,
-            out List<int> pathNodeIndices)
+            out List<int> pathNodeIndices,
+            ConveyorRouteAccess access = default)
         {
             pathNodeIndices = null;
             if (topology == null || bindings == null || reservations == null)
@@ -440,7 +448,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             return topology.TryFindLowestWeightPath(
                 fromNodeIndex,
                 toNodeIndex,
-                (from, to) => ComputeEdgeWeight(topology, bindings, strategy, reservations, from, to, atTime),
+                (from, to) => ComputeEdgeWeight(
+                    topology,
+                    bindings,
+                    strategy,
+                    reservations,
+                    from,
+                    to,
+                    atTime,
+                    applyAccess: true,
+                    access,
+                    toNodeIndex),
                 out pathNodeIndices,
                 out _);
         }
@@ -482,6 +500,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             WarehouseJob job,
             out List<int> pathNodeIndices)
         {
+            var access = ConveyorRouteAccess.FromJob(job);
             if (ConveyorProcessStationUtility.HasRequiredProcessTags(job))
             {
                 return TryFindPathViaRequiredProcessStations(
@@ -493,9 +512,36 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     toNodeIndex,
                     atTime,
                     job,
+                    access,
                     out pathNodeIndices);
             }
 
+            return TryFindDirectPath(
+                topology,
+                bindings,
+                strategy,
+                reservations,
+                fromNodeIndex,
+                toNodeIndex,
+                atTime,
+                job,
+                access,
+                out pathNodeIndices);
+        }
+
+        /// <summary>两点之间的直接最短路。加工专用路段和无关加工站不参与。</summary>
+        private static bool TryFindDirectPath(
+            ConveyorMapTopology topology,
+            IWarehouseSimulationBindings bindings,
+            WarehouseSimStrategyProfile strategy,
+            ReservationTable reservations,
+            int fromNodeIndex,
+            int toNodeIndex,
+            double atTime,
+            WarehouseJob job,
+            ConveyorRouteAccess access,
+            out List<int> pathNodeIndices)
+        {
             if (strategy.ConveyorRoutingStrategy == ConveyorRoutingStrategy.LeastCongestion
                 && reservations != null)
             {
@@ -507,19 +553,24 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     fromNodeIndex,
                     toNodeIndex,
                     atTime,
-                    out pathNodeIndices);
+                    out pathNodeIndices,
+                    access);
             }
 
             pathNodeIndices = null;
-            if (!topology.TryFindShortestPathByEffectiveTransit(
+            var hasProcessTags = ConveyorProcessStationUtility.HasRequiredProcessTags(job);
+            if (!topology.TryFindShortestPathByEffectiveTransitCached(
                     fromNodeIndex,
                     toNodeIndex,
                     nodeIndex => ConveyorVerticalTransferUtility.GetNodeArrivalExtraSeconds(
                         topology,
                         nodeIndex,
                         bindings,
-                        job),
-                    out pathNodeIndices)
+                        hasProcessTags ? job : null),
+                    out pathNodeIndices,
+                    restrictAccess: true,
+                    access: access,
+                    cacheStableExtras: !hasProcessTags)
                 || pathNodeIndices == null
                 || pathNodeIndices.Count < 2)
             {
@@ -539,6 +590,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             int toNodeIndex,
             double atTime,
             WarehouseJob job,
+            ConveyorRouteAccess access,
             out List<int> pathNodeIndices)
         {
             pathNodeIndices = null;
@@ -560,7 +612,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 var candidates = ConveyorProcessStationUtility.GetDwellStationsWithTag(topology, tag);
                 if (candidates.Count == 0)
                 {
-                    return false;
+                    continue;
                 }
 
                 var bestStation = -1;
@@ -569,7 +621,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 for (var c = 0; c < candidates.Count; c++)
                 {
                     var station = candidates[c];
-                    if (!TryFindDirectPathForStrategy(
+                    if (!TryFindDirectPath(
                             topology,
                             bindings,
                             strategy,
@@ -577,6 +629,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                             current,
                             station,
                             atTime,
+                            job,
+                            access,
                             out var legToStation)
                         || legToStation == null
                         || legToStation.Count < 2)
@@ -584,7 +638,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         continue;
                     }
 
-                    if (!TryFindDirectPathForStrategy(
+                    if (!TryFindDirectPath(
                             topology,
                             bindings,
                             strategy,
@@ -592,6 +646,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                             station,
                             toNodeIndex,
                             atTime,
+                            job,
+                            access,
                             out var legToDest)
                         || legToDest == null
                         || legToDest.Count < 2)
@@ -629,28 +685,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 waypoints,
                 toNodeIndex,
                 atTime,
+                job,
+                access,
                 out pathNodeIndices);
         }
-
-        private static bool TryFindDirectPathForStrategy(
-            ConveyorMapTopology topology,
-            IWarehouseSimulationBindings bindings,
-            WarehouseSimStrategyProfile strategy,
-            ReservationTable reservations,
-            int fromNodeIndex,
-            int toNodeIndex,
-            double atTime,
-            out List<int> pathNodeIndices) =>
-            TryFindPathForStrategy(
-                topology,
-                bindings,
-                strategy,
-                reservations,
-                fromNodeIndex,
-                toNodeIndex,
-                atTime,
-                job: null,
-                out pathNodeIndices);
 
         private static bool TryStitchPath(
             ConveyorMapTopology topology,
@@ -661,6 +699,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             IReadOnlyList<int> waypoints,
             int toNodeIndex,
             double atTime,
+            WarehouseJob job,
+            ConveyorRouteAccess access,
             out List<int> pathNodeIndices)
         {
             pathNodeIndices = new List<int> { fromNodeIndex };
@@ -676,7 +716,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         continue;
                     }
 
-                    if (!TryFindDirectPathForStrategy(
+                    if (!TryFindDirectPath(
                             topology,
                             bindings,
                             strategy,
@@ -684,6 +724,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                             current,
                             waypoint,
                             atTime,
+                            job,
+                            access,
                             out var segment)
                         || segment == null
                         || segment.Count < 2)
@@ -706,7 +748,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return pathNodeIndices.Count >= 1;
             }
 
-            if (!TryFindDirectPathForStrategy(
+            if (!TryFindDirectPath(
                     topology,
                     bindings,
                     strategy,
@@ -714,6 +756,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     current,
                     toNodeIndex,
                     atTime,
+                    job,
+                    access,
                     out var finalSegment)
                 || finalSegment == null
                 || finalSegment.Count < 2)
@@ -729,26 +773,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             return pathNodeIndices.Count >= 2;
         }
-
-        private static bool TryFindPathForStrategy(
-            ConveyorMapTopology topology,
-            IWarehouseSimulationBindings bindings,
-            WarehouseSimStrategyProfile strategy,
-            ReservationTable reservations,
-            int fromNodeIndex,
-            int toNodeIndex,
-            double atTime,
-            out List<int> pathNodeIndices) =>
-            TryFindPathForStrategy(
-                topology,
-                bindings,
-                strategy,
-                reservations,
-                fromNodeIndex,
-                toNodeIndex,
-                atTime,
-                job: null,
-                out pathNodeIndices);
 
         private static float ScorePath(
             ConveyorMapTopology topology,
@@ -867,8 +891,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             ReservationTable reservations,
             int fromNode,
             int toNode,
-            double atTime)
+            double atTime,
+            bool applyAccess = false,
+            ConveyorRouteAccess access = default,
+            int searchTarget = -1)
         {
+            if (applyAccess
+                && !ConveyorProcessStationUtility.CanTraverse(topology, fromNode, toNode, access, searchTarget))
+            {
+                return float.MaxValue;
+            }
+
             if (!topology.TryGetEdge(fromNode, toNode, out var edge))
             {
                 return float.MaxValue;

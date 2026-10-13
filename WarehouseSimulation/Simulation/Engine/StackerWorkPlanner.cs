@@ -47,7 +47,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var railColumn = SimConveyorNodeBinding.ResolvePickupAisleLeftColumn(
                 pickupNode, bindings, topology);
             var pickupCol = SimConveyorNodeBinding.ResolvePickupColumn(pickupNode, bindings, topology);
-            var pickupAnchor = new GridIndex(0, pickupCol, pickupNode.PickupRow, 0);
+            var pickupAnchor = PickupAnchor(bindings, topology, stackerId, pickupCol, pickupNode.PickupRow);
 
             var (fromRow, fromLevel) = carriage?.GetCarriageAt(stackerId) ?? (0, 0);
             var approach = ComputeMoveSeconds(
@@ -76,7 +76,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var railColumn = SimConveyorNodeBinding.ResolvePickupAisleLeftColumn(
                 pickupNode, bindings, topology);
             var pickupCol = SimConveyorNodeBinding.ResolvePickupColumn(pickupNode, bindings, topology);
-            var pickupAnchor = new GridIndex(0, pickupCol, pickupNode.PickupRow, 0);
+            var pickupAnchor = PickupAnchor(bindings, topology, stackerId, pickupCol, pickupNode.PickupRow);
 
             var (fromRow, fromLevel) = carriage?.GetCarriageAt(stackerId) ?? (0, 0);
             var approach = ComputeMoveSeconds(
@@ -91,6 +91,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 kinematics.PlaceSeconds,
                 pickupNode.PickupRow,
                 0);
+        }
+
+        private static GridIndex PickupAnchor(
+            IWarehouseSimulationBindings bindings,
+            ConveyorMapTopology topology,
+            int stackerId,
+            int column,
+            int row)
+        {
+            var warehouseId = StackerColumnReachUtility.GetWarehouseId(bindings, topology, stackerId);
+            return new GridIndex(0, column, row, 0, warehouseId);
         }
 
         private static float ComputeMoveSeconds(

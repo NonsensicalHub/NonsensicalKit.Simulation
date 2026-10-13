@@ -56,15 +56,22 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                     nextSeg.Value.ToNodeIndex,
                     out var nextEdge))
             {
-                nextHop = ConveyorMapMath.GetEdgeTerminalHopSeconds(map, nextEdge);
+                // 单槽路段的停留点靠近下一路口，不能只用端部留白，否则驶离后的行程会被算进路口占用。
+                nextHop = ConveyorMapMath.GetEdgeEntrySlotHopSeconds(map, nextEdge);
                 if (nextHop <= 1e-9f)
                 {
                     nextHop = approachHop;
                 }
             }
 
-            // 驶入路口：从路段 ExitSimTime（末停留点）再经端部留白距离至路口中心。
+            // 驶入路口：从路段 ExitSimTime（末停留点离开）再经端部留白至路口中心。
+            // 退出时刻若早于末停留点到达，说明快照还没跟上槽位时刻，不能把驶入提前到货还没到的时候。
             enterStart = junctionSeg.ExitSimTime;
+            if (stops[0] > enterStart)
+            {
+                enterStart = stops[0];
+            }
+
             enterEnd = enterStart + approachHop;
 
             // 驶出移动最早可开始时刻：到达路口中心即可驶出；仅当下一段入口停留点被占时推迟。
@@ -85,7 +92,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return exitEnd > enterStart + TimeEpsilon;
         }
 
-        /// <summary>路口停留点互斥占用窗（驶入 hop + 路口等待；驶出 hop 占用下一段入口停留点）。</summary>
+        /// <summary>
+        /// 路口互斥占用窗：到达路口中心之后、开始驶出之前。
+        /// 驶入 hop 还在来向边的端部，不同来向可以同时靠近；驶出 hop 占用下一段入口停留点。
+        /// </summary>
         public static bool TryGetJunctionHoldWindow(
             in ConveyorSegmentScheduleEntry junctionSeg,
             ConveyorSegmentScheduleEntry? nextSeg,
@@ -102,8 +112,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                     topology,
                     map,
                     hop,
-                    out var enterStart,
                     out _,
+                    out var enterEnd,
                     out _,
                     out _,
                     out var exitMoveStart,
@@ -112,7 +122,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 return false;
             }
 
-            holdStart = enterStart;
+            holdStart = enterEnd;
             holdEnd = exitMoveStart;
             return holdEnd > holdStart + TimeEpsilon;
         }
@@ -135,7 +145,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             {
                 if (nextHop <= 1e-9f)
                 {
-                    nextHop = ConveyorMapMath.GetEdgeTerminalHopSeconds(map, nextEdge);
+                    nextHop = ConveyorMapMath.GetEdgeEntrySlotHopSeconds(map, nextEdge);
                     if (nextHop <= 1e-9f)
                     {
                         nextHop = hop;

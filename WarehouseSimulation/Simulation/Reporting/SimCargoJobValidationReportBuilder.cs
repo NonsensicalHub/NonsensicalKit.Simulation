@@ -248,6 +248,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 case SimSubTaskKind.SegmentStopDwell:
                     return
                         $"停留在{FormatSegmentStopLabel(ctx, task.FromNodeIndex, task.ToNodeIndex, task.SegmentSlotIndex)}等待下游放行";
+                case SimSubTaskKind.SegmentGateWait:
+                    return
+                        $"停在{FormatSegmentStopLabel(ctx, task.FromNodeIndex, task.ToNodeIndex, task.SegmentSlotIndex)}等待中间门打开";
                 case SimSubTaskKind.JunctionEnter:
                     return FormatJunctionEnterDetail(ctx, task);
                 case SimSubTaskKind.JunctionWait:
@@ -513,7 +516,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private static string FormatJunctionExitDetail(in FormatContext ctx, in SimSubTask task)
         {
             var junctionNode = FormatNode(ctx, task.ToNodeIndex);
-            if (TryFindNextSegmentSchedule(ctx, task.FromNodeIndex, task.ToNodeIndex, out var nextSeg))
+            if (TryFindNextSegmentSchedule(ctx, task.FromNodeIndex, task.ToNodeIndex, task.StartSimTime, out var nextSeg))
             {
                 var nextStops = nextSeg.StopArriveSimTimes;
                 if (nextStops != null && nextStops.Length > 0)
@@ -530,6 +533,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             in FormatContext ctx,
             int fromNodeIndex,
             int toNodeIndex,
+            double atTime,
             out ConveyorSegmentScheduleEntry segment)
         {
             segment = default;
@@ -538,17 +542,37 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return false;
             }
 
-            for (var i = 0; i < ctx.SegmentSchedule.Length - 1; i++)
+            var approachIndex = -1;
+            var bestDistance = double.MaxValue;
+            for (var i = 0; i < ctx.SegmentSchedule.Length; i++)
             {
-                var current = ctx.SegmentSchedule[i];
-                if (current.FromNodeIndex == fromNodeIndex && current.ToNodeIndex == toNodeIndex)
+                var seg = ctx.SegmentSchedule[i];
+                if (seg.FromNodeIndex != fromNodeIndex || seg.ToNodeIndex != toNodeIndex)
                 {
-                    segment = ctx.SegmentSchedule[i + 1];
-                    return true;
+                    continue;
                 }
+
+                var distance = Math.Abs(seg.ExitSimTime - atTime);
+                if (distance >= bestDistance)
+                {
+                    continue;
+                }
+
+                bestDistance = distance;
+                approachIndex = i;
             }
 
-            return false;
+            if (approachIndex < 0
+                || !ConveyorSegmentScheduleNavigation.TryGetDownstreamIndex(
+                    ctx.SegmentSchedule,
+                    approachIndex,
+                    out var downstreamIndex))
+            {
+                return false;
+            }
+
+            segment = ctx.SegmentSchedule[downstreamIndex];
+            return true;
         }
 
         private static string FormatSegmentStopLabel(

@@ -13,6 +13,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 
         public static string StackerResourceId(int stackerIndex) => FormatStacker(stackerIndex);
 
+        /// <summary>巷道列互斥资源。0 号库保持 <c>aisle-col-{列}</c>，其他仓库带仓库号以免列号相撞。</summary>
+        public static string AisleResourceId(int warehouseId, int column) =>
+            warehouseId == 0 ? $"aisle-col-{column}" : $"aisle-{warehouseId}-col-{column}";
+
         /// <summary>编辑器新建节点时的 GUID。</summary>
         public static string NewNodeGuid() => Guid.NewGuid().ToString("D");
 

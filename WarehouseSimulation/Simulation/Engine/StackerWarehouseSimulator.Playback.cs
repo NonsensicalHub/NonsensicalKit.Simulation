@@ -54,6 +54,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private void OnJobCompleted(WarehouseJob job)
         {
             _completedCount++;
+            ForgetJobZoneResources(job);
+            MarkCorridorLeftConveyor(job);
+            if (job.Direction == SimFlowDirection.Inbound)
+            {
+                _inboundCompletedCount++;
+            }
+
+            ReportLiveProgress();
             if (job.Direction != SimFlowDirection.Outbound)
             {
                 DecrementStackerActiveJobCount(job.AssignedStackerId);
@@ -89,7 +97,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 endTime,
                 endTime,
                 job.AssignedStackerId,
-                job.TargetSlot);
+                job.TargetSlot,
+                attachPathContext: true);
             WarehouseSimLog.Info(() =>
                 $"任务完成 job={job.JobId} 耗时={duration:F1}s 服务={job.ServiceTimeAccum:F1}s " +
                 $"等待={job.WaitTimeAccum:F1}s slot={job.TargetSlot}");
@@ -132,13 +141,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
-            var scheduleCount = job.ConveyorSegmentSchedule.Count;
-            if (job.PlaybackScheduleSnapshot != null
-                && job.PlaybackScheduleSnapshot.Length >= scheduleCount)
-            {
-                return;
-            }
-
+            // 路口校正和重排会改已有路段的时刻，段数不一定增加。每次附带上下文都拷当前表。
+            // 补记会把中间段放到表尾，先按路径排好，回放和自检才不会把下一条当成反向的下一段。
+            ConveyorSegmentScheduleNavigation.SortByPath(
+                job.ConveyorSegmentSchedule,
+                job.ConveyorPathNodeIndices);
             job.PlaybackScheduleSnapshot = job.ConveyorSegmentSchedule.ToArray();
         }
 
@@ -225,8 +232,211 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
+            NormalizeConveyorSubTaskTimeline();
             RunOccupancySelfCheck(result);
+            RunSegmentCoOccupancySelfCheck(result);
             RunSubTaskTimelineSelfCheck(result);
+        }
+
+        /// <summary>
+        /// 同一箱货的输送子任务收成一条时间轴。
+        /// 后记下的窗口若盖住先记下的，裁掉重叠的那段；裁完后相邻子任务之间的空白补到前一段上，避免箱子在时间轴上消失。
+        /// </summary>
+        private void NormalizeConveyorSubTaskTimeline()
+        {
+            if (_subTasks.Count == 0)
+            {
+                return;
+            }
+
+            TrimOverlappingConveyorSubTasks();
+            CloseConveyorTimelineGaps();
+        }
+
+        private void TrimOverlappingConveyorSubTasks()
+        {
+            var indicesByJob = GroupConveyorSubTaskIndices();
+            var removeIds = new HashSet<int>();
+            foreach (var indices in indicesByJob.Values)
+            {
+                indices.Sort(CompareConveyorSubTaskIndices);
+                for (var i = 0; i < indices.Count; i++)
+                {
+                    if (removeIds.Contains(_subTasks[indices[i]].SubTaskId))
+                    {
+                        continue;
+                    }
+
+                    var anchor = _subTasks[indices[i]];
+                    for (var j = i + 1; j < indices.Count; j++)
+                    {
+                        if (removeIds.Contains(_subTasks[indices[j]].SubTaskId))
+                        {
+                            continue;
+                        }
+
+                        var other = _subTasks[indices[j]];
+                        if (other.StartSimTime >= anchor.EndSimTime - 1e-6)
+                        {
+                            break;
+                        }
+
+                        if (other.EndSimTime - Math.Max(anchor.StartSimTime, other.StartSimTime) <= 1e-6)
+                        {
+                            continue;
+                        }
+
+                        if (other.SubTaskId > anchor.SubTaskId)
+                        {
+                            if (other.StartSimTime < anchor.StartSimTime)
+                            {
+                                other.EndSimTime = anchor.StartSimTime;
+                            }
+                            else
+                            {
+                                other.StartSimTime = anchor.EndSimTime;
+                            }
+
+                            if (other.EndSimTime <= other.StartSimTime + 1e-6)
+                            {
+                                removeIds.Add(other.SubTaskId);
+                            }
+                            else
+                            {
+                                _subTasks[indices[j]] = other;
+                            }
+                        }
+                        else
+                        {
+                            if (anchor.StartSimTime < other.StartSimTime)
+                            {
+                                anchor.EndSimTime = other.StartSimTime;
+                            }
+                            else
+                            {
+                                anchor.StartSimTime = other.EndSimTime;
+                            }
+
+                            if (anchor.EndSimTime <= anchor.StartSimTime + 1e-6)
+                            {
+                                removeIds.Add(anchor.SubTaskId);
+                                break;
+                            }
+
+                            _subTasks[indices[i]] = anchor;
+                        }
+                    }
+                }
+            }
+
+            if (removeIds.Count > 0)
+            {
+                _subTasks.RemoveAll(task => removeIds.Contains(task.SubTaskId));
+            }
+        }
+
+        private void CloseConveyorTimelineGaps()
+        {
+            var indicesByJob = GroupConveyorSubTaskIndices();
+            var inserts = new List<SimSubTask>();
+            foreach (var indices in indicesByJob.Values)
+            {
+                indices.Sort(CompareConveyorSubTaskIndices);
+                for (var i = 0; i < indices.Count - 1; i++)
+                {
+                    var prev = _subTasks[indices[i]];
+                    var next = _subTasks[indices[i + 1]];
+                    if (next.StartSimTime <= prev.EndSimTime + 1e-6
+                        || GapContainsOtherSubTask(prev.JobId, prev.EndSimTime, next.StartSimTime, prev.SubTaskId, next.SubTaskId))
+                    {
+                        continue;
+                    }
+
+                    if (next.Kind == SimSubTaskKind.JunctionEnter
+                        && !(prev.Kind == SimSubTaskKind.SegmentStopDwell
+                             && prev.FromNodeIndex == next.FromNodeIndex
+                             && prev.ToNodeIndex == next.ToNodeIndex))
+                    {
+                        var dwell = next;
+                        dwell.SubTaskId = _nextSubTaskId++;
+                        dwell.Kind = SimSubTaskKind.SegmentStopDwell;
+                        dwell.StartSimTime = prev.EndSimTime;
+                        dwell.EndSimTime = next.StartSimTime;
+                        dwell.SegmentSlotIndex = 0;
+                        inserts.Add(dwell);
+                        continue;
+                    }
+
+                    prev.EndSimTime = next.StartSimTime;
+                    _subTasks[indices[i]] = prev;
+                }
+            }
+
+            if (inserts.Count > 0)
+            {
+                _subTasks.AddRange(inserts);
+            }
+        }
+
+        private bool GapContainsOtherSubTask(
+            int jobId,
+            double gapStart,
+            double gapEnd,
+            int subTaskIdA,
+            int subTaskIdB)
+        {
+            for (var i = 0; i < _subTasks.Count; i++)
+            {
+                var task = _subTasks[i];
+                if (task.JobId != jobId
+                    || task.SubTaskId == subTaskIdA
+                    || task.SubTaskId == subTaskIdB
+                    || task.Kind == SimSubTaskKind.Completed)
+                {
+                    continue;
+                }
+
+                if (task.EndSimTime > gapStart + 1e-6 && task.StartSimTime < gapEnd - 1e-6)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private Dictionary<int, List<int>> GroupConveyorSubTaskIndices()
+        {
+            var indicesByJob = new Dictionary<int, List<int>>();
+            for (var i = 0; i < _subTasks.Count; i++)
+            {
+                if (!SimSubTaskKinds.ExtendsConveyorTimeline(_subTasks[i].Kind))
+                {
+                    continue;
+                }
+
+                var jobId = _subTasks[i].JobId;
+                if (!indicesByJob.TryGetValue(jobId, out var indices))
+                {
+                    indices = new List<int>();
+                    indicesByJob[jobId] = indices;
+                }
+
+                indices.Add(i);
+            }
+
+            return indicesByJob;
+        }
+
+        private int CompareConveyorSubTaskIndices(int left, int right)
+        {
+            var startCompare = _subTasks[left].StartSimTime.CompareTo(_subTasks[right].StartSimTime);
+            if (startCompare != 0)
+            {
+                return startCompare;
+            }
+
+            return _subTasks[left].SubTaskId.CompareTo(_subTasks[right].SubTaskId);
         }
 
         private void RunOccupancySelfCheck(SimRunResult result)
@@ -258,6 +468,31 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             MarkSelfCheckFailed(
                 result,
                 $"自检：节点占用冲突 {result.OccupancyConflicts.Count} 处。");
+        }
+
+        private void RunSegmentCoOccupancySelfCheck(SimRunResult result)
+        {
+            if (result == null || _conveyorTopology == null || _bindings?.ConveyorMap == null)
+            {
+                return;
+            }
+
+            var overlaps = SimSegmentCoOccupancyChecker.FindOverlaps(
+                _subTasks,
+                _bindings.ConveyorMap,
+                _conveyorTopology);
+            result.SegmentCoOccupancies = overlaps;
+            if (overlaps.Count == 0)
+            {
+                return;
+            }
+
+            SimSegmentCoOccupancyChecker.CountByDirection(overlaps, out var opposite, out var sameDirection);
+            WarehouseSimLog.Error(
+                $"仿真后自检发现 {overlaps.Count} 处路段同时占用（对向 {opposite}，同向 {sameDirection}；导出调试 Markdown 报告查看明细）。");
+            MarkSelfCheckFailed(
+                result,
+                $"自检：路段同时占用 {overlaps.Count} 处（对向 {opposite}，同向 {sameDirection}）。");
         }
 
         private void RunSubTaskTimelineSelfCheck(SimRunResult result)
@@ -298,6 +533,32 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 : $"{result.Message} {fragment}";
         }
 
+        private List<SimSubTask> MutableJobSubTasks(int jobId)
+        {
+            if (!_subTasksByJob.TryGetValue(jobId, out var list))
+            {
+                list = new List<SimSubTask>(24);
+                _subTasksByJob[jobId] = list;
+            }
+
+            return list;
+        }
+
+        private bool TryGetJobSubTasks(int jobId, out List<SimSubTask> list) =>
+            _subTasksByJob.TryGetValue(jobId, out list) && list != null && list.Count > 0;
+
+        private void FlattenSubTasks()
+        {
+            _subTasks.Clear();
+            foreach (var pair in _subTasksByJob)
+            {
+                if (pair.Value != null && pair.Value.Count > 0)
+                {
+                    _subTasks.AddRange(pair.Value);
+                }
+            }
+        }
+
         private void RecordSubTask(
             WarehouseJob job,
             SimSubTaskKind kind,
@@ -312,7 +573,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             GridIndex stackerFromSlot = default,
             GridIndex stackerToSlot = default,
             int stackerRailColumn = -1,
-            bool hasStackerPose = false)
+            bool hasStackerPose = false,
+            bool stackerToUsesForkDepth = false,
+            float stackerToForkDepthMeters = 0f)
         {
             if (!_recordPlayback)
             {
@@ -323,7 +586,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             {
                 CopyConveyorContext(job, attachPathContext, out var pathCopy, out var scheduleCopy);
 
-                _subTasks.Add(new SimSubTask
+                MutableJobSubTasks(job.JobId).Add(new SimSubTask
                 {
                     SubTaskId = _nextSubTaskId++,
                     JobId = job.JobId,
@@ -341,6 +604,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     StackerFromSlot = stackerFromSlot,
                     StackerToSlot = stackerToSlot,
                     StackerRailColumn = stackerRailColumn,
+                    StackerToUsesForkDepth = stackerToUsesForkDepth,
+                    StackerToForkDepthMeters = stackerToForkDepthMeters,
                     HasStackerPose = hasStackerPose,
                     PathNodeIndices = pathCopy,
                     SegmentSchedule = scheduleCopy,

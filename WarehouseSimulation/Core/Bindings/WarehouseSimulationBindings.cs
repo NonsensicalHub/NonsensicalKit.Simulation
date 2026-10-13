@@ -9,12 +9,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             WarehouseConveyorMap conveyorMap,
             ISlotPositionIndex slotPositions = null,
             StackerFleetConfig fleet = null,
-            SimResourcePolicyConfig resourcePolicy = null)
+            SimResourcePolicyConfig resourcePolicy = null,
+            SimWarehouseDefinition[] warehouses = null)
         {
             ConveyorMap = conveyorMap;
             SlotPositions = slotPositions ?? new SlotPositionIndex();
             Fleet = fleet ?? StackerFleetConfig.CreateDefault();
             ResourcePolicy = resourcePolicy ?? SimResourcePolicyConfig.CreateDefault();
+            Warehouses = warehouses;
         }
 
         public WarehouseConveyorMap ConveyorMap { get; }
@@ -24,6 +26,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         public StackerFleetConfig Fleet { get; }
 
         public SimResourcePolicyConfig ResourcePolicy { get; }
+
+        public SimWarehouseDefinition[] Warehouses { get; }
 
         public void EnsureSlotPositionsLoaded()
         {
@@ -46,5 +50,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         bool ISimResourcePolicy.UseAisleColumnReservation => ResourcePolicy.UseAisleColumnReservation;
         bool ISimResourcePolicy.UseStackerReservation => ResourcePolicy.UseStackerReservation;
         int ISimResourcePolicy.MaxSimEvents => ResourcePolicy.MaxSimEvents;
+        SimWarehouseDefinition[] IWarehouseSimulationBindings.Warehouses => Warehouses;
     }
 }

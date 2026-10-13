@@ -29,19 +29,28 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 serializedObject.Update();
             }
 
-            DrawDefaultInspector();
+            serializedObject.Update();
+            EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("DefaultSpeedMetersPerSecond"),
+                new GUIContent("默认速度 (m/s)"));
+            EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("CargoUnitLengthMeters"),
+                new GUIContent("单箱长度 (m)"));
+            EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("DefaultEdgeDistanceMeters"),
+                new GUIContent("新建路段距离 (m)"));
+            serializedObject.ApplyModifiedProperties();
+
+            var nodeCount = map.Nodes?.Length ?? 0;
+            var edgeCount = map.Edges?.Length ?? 0;
+            EditorGUILayout.HelpBox(
+                $"节点 {nodeCount}，路段 {edgeCount}。节点和路段请在俯视地图编辑器里改，不要在 Inspector 展开整表。",
+                MessageType.Info);
 
             EditorGUILayout.Space(8);
             if (GUILayout.Button("打开可视化地图编辑器", GUILayout.Height(28)))
             {
                 ConveyorMapEditorWindow.Open(map);
-            }
-
-            if (map.Nodes != null && map.Nodes.Length > 0)
-            {
-                EditorGUILayout.HelpBox(
-                    "双击资源可打开地图编辑器；在 GraphView 中编辑拓扑与画布位置，路段物理参数在侧栏配置。",
-                    MessageType.Info);
             }
         }
     }

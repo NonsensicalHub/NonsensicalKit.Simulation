@@ -92,6 +92,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 case SimConveyorNodeKind.PickupPoint:
                     height += PropertyHeight(property, "StackerInteractionMode");
                     height += PropertyHeight(property, "StackerId");
+                    height += PropertyHeight(property, "ForkDepthMeters");
                     height += PropertyHeight(property, "PickupColumn");
                     height += PropertyHeight(property, "PickupRow");
                     break;
@@ -132,6 +133,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 case SimConveyorNodeKind.PickupPoint:
                     y = DrawField(x, y, width, line, property, "StackerInteractionMode");
                     y = DrawField(x, y, width, line, property, "StackerId");
+                    y = DrawField(x, y, width, line, property, "ForkDepthMeters");
                     y = DrawField(x, y, width, line, property, "PickupColumn");
                     y = DrawField(x, y, width, line, property, "PickupRow");
                     break;

@@ -261,7 +261,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var sec = map.GetEdgeTransitSeconds(edge);
             var fromId = edge.FromNodeId?.Trim() ?? string.Empty;
             var toId = edge.ToNodeId?.Trim() ?? string.Empty;
-            var label = $"{SimEntityNaming.FormatSegmentLabel(map, fromId, toId)} · {edge.DistanceMeters:0.#}m · {cap}? · {sec:0.#}s";
+            var gateLabel = edge.GateWaitSeconds > 1e-4f ? $" · 门{edge.GateWaitSeconds:0.#}s" : string.Empty;
+            var processTag = edge.ProcessTag?.Trim();
+            var processLabel = string.IsNullOrEmpty(processTag) ? string.Empty : $" · 加工 {processTag}";
+            var label = $"{SimEntityNaming.FormatSegmentLabel(map, fromId, toId)} · {edge.DistanceMeters:0.#}m · {cap}? · {sec:0.#}s{gateLabel}{processLabel}";
             var textWidth = label.Length * 5.6f + 10f;
             var textHeight = 14f;
             var rectX = x - textWidth * 0.5f;
@@ -338,7 +341,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             sb.AppendLine("<h4>路段列表</h4>");
             SimReportHtml.AppendTableStart(sb);
-            SimReportHtml.AppendTableHead(sb, "路段", "起点", "终点", "距离(m)", "输送时间(s)", "容量");
+            SimReportHtml.AppendTableHead(sb, "路段", "起点", "终点", "距离(m)", "输送时间(s)", "容量", "中间门");
             sb.AppendLine("<tbody>");
 
             for (var i = 0; i < map.Edges.Length; i++)
@@ -353,6 +356,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 AppendTd(sb, edge.DistanceMeters.ToString("F1"), numeric: true);
                 AppendTd(sb, map.GetEdgeTransitSeconds(edge).ToString("F2"), numeric: true);
                 AppendTd(sb, map.GetEdgeCapacity(edge).ToString(), numeric: true);
+                AppendTd(sb, DescribeEdgeGate(edge));
                 sb.AppendLine("</tr>");
             }
 
@@ -360,11 +364,24 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             SimReportHtml.AppendTableEnd(sb);
         }
 
+        private static string DescribeEdgeGate(in SimConveyorMapEdge edge)
+        {
+            if (edge.GateWaitSeconds <= 1e-4f)
+            {
+                return "—";
+            }
+
+            var percent = ConveyorMapMath.ResolveGateNormalizedPosition(in edge) * 100f;
+            return $"{edge.GateWaitSeconds:0.#}s @ {percent:0.#}%";
+        }
+
         private static string DescribeNode(SimConveyorMapNode node) => node.Kind switch
         {
             SimConveyorNodeKind.InfeedPort => "输送入口",
             SimConveyorNodeKind.PickupPoint =>
-                $"堆垛机{SimEntityNaming.FormatStacker(node.StackerId)} · 列{node.PickupColumn} · 排{node.PickupRow}",
+                SimConveyorNodeBinding.HasForkDepth(in node)
+                    ? $"堆垛机{SimEntityNaming.FormatStacker(node.StackerId)} · 伸叉 {node.ForkDepthMeters:0.##} m · 排{node.PickupRow}"
+                    : $"堆垛机{SimEntityNaming.FormatStacker(node.StackerId)} · 列{node.PickupColumn} · 排{node.PickupRow}",
             SimConveyorNodeKind.ProcessStation =>
                 $"{node.ProcessMode} · 标签 {node.ProcessTag?.Trim() ?? "—"} · 服务 {node.ProcessServiceSeconds:F0}s",
             SimConveyorNodeKind.VerticalTransfer =>

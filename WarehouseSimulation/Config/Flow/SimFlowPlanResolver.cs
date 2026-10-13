@@ -27,6 +27,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
             return total;
         }
 
+        public static int CountInboundQuantity(IReadOnlyList<SimFlowPlanEntry> plan)
+        {
+            var total = 0;
+            for (var i = 0; i < plan.Count; i++)
+            {
+                if (plan[i].Direction == SimFlowDirection.Inbound)
+                {
+                    total += Math.Max(0, plan[i].Quantity);
+                }
+            }
+
+            return total;
+        }
+
         public static bool RequiresOutboundPorts(IReadOnlyList<SimFlowPlanEntry> plan)
         {
             for (var i = 0; i < plan.Count; i++)

@@ -190,11 +190,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             {
                 var task = contextTask.Value;
                 var segIndex = FindSegmentIndexForSubTask(schedule, task);
-                if (task.Kind == SimSubTaskKind.SegmentQueue && segIndex > 0)
+                if (task.Kind == SimSubTaskKind.SegmentQueue
+                    && ConveyorSegmentScheduleNavigation.TryGetUpstreamIndex(schedule, segIndex, out var queueUpstream))
                 {
                     return TryEvaluateScheduleSegment(
                         schedule,
-                        segIndex - 1,
+                        queueUpstream,
                         simTime,
                         subTasks,
                         jobId,
@@ -269,9 +270,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             ConveyorSegmentScheduleEntry? prevSeg = null;
             Vector3? prevFrom = null;
             Vector3? prevTo = null;
-            if (segIndex > 0)
+            if (ConveyorSegmentScheduleNavigation.TryGetUpstreamIndex(schedule, segIndex, out var upstreamIndex))
             {
-                prevSeg = schedule[segIndex - 1];
+                prevSeg = schedule[upstreamIndex];
                 if (TryGetAnchor(prevSeg.Value.FromNodeIndex, out var prevFromTf)
                     && TryGetAnchor(prevSeg.Value.ToNodeIndex, out var prevToTf))
                 {
@@ -282,9 +283,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             ConveyorSegmentScheduleEntry? nextSeg = null;
             Vector3? nextFrom = null;
             Vector3? nextTo = null;
-            if (segIndex + 1 < schedule.Length)
+            if (ConveyorSegmentScheduleNavigation.TryGetDownstreamIndex(schedule, segIndex, out var downstreamIndex))
             {
-                nextSeg = schedule[segIndex + 1];
+                nextSeg = schedule[downstreamIndex];
                 if (TryGetAnchor(nextSeg.Value.FromNodeIndex, out var nextFromTf)
                     && TryGetAnchor(nextSeg.Value.ToNodeIndex, out var nextToTf))
                 {
@@ -435,11 +436,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 return;
             }
 
+            // 只允许更长或同样长的后写入表替换。截短的重排快照不能盖掉仍含中间路段的完整表。
             if (!_scheduleByJob.TryGetValue(jobId, out var existing)
                 || existing == null
                 || existing.Length == 0
-                || schedule.Length > existing.Length
-                || schedule[^1].OccupancyEndSimTime > existing[^1].OccupancyEndSimTime + 1e-9)
+                || schedule.Length >= existing.Length)
             {
                 _scheduleByJob[jobId] = schedule;
             }
@@ -464,22 +465,48 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             ConveyorSegmentScheduleEntry[] schedule,
             double simTime)
         {
-            for (var i = schedule.Length - 1; i >= 0; i--)
-            {
-                if (simTime + 1e-9 >= schedule[i].DesiredEntrySimTime
-                    && simTime < schedule[i].OccupancyEndSimTime + 1e-9)
-                {
-                    return i;
-                }
-            }
-            var fallback = 0;
+            var best = -1;
+            var bestEntry = double.NegativeInfinity;
             for (var i = 0; i < schedule.Length; i++)
             {
-                if (simTime + 1e-9 >= schedule[i].DesiredEntrySimTime)
+                if (simTime + 1e-9 < schedule[i].DesiredEntrySimTime
+                    || simTime >= schedule[i].OccupancyEndSimTime + 1e-9)
                 {
-                    fallback = i;
+                    continue;
                 }
+
+                if (best >= 0 && schedule[i].EntrySimTime < bestEntry)
+                {
+                    continue;
+                }
+
+                best = i;
+                bestEntry = schedule[i].EntrySimTime;
             }
+
+            if (best >= 0)
+            {
+                return best;
+            }
+
+            var fallback = 0;
+            var fallbackDesired = double.NegativeInfinity;
+            for (var i = 0; i < schedule.Length; i++)
+            {
+                if (simTime + 1e-9 < schedule[i].DesiredEntrySimTime)
+                {
+                    continue;
+                }
+
+                if (schedule[i].DesiredEntrySimTime < fallbackDesired)
+                {
+                    continue;
+                }
+
+                fallback = i;
+                fallbackDesired = schedule[i].DesiredEntrySimTime;
+            }
+
             return fallback;
         }
         private static int FindSegmentIndexForSubTask(
@@ -488,13 +515,36 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         {
             if (task.FromNodeIndex >= 0 && task.ToNodeIndex >= 0)
             {
+                var best = -1;
+                var bestDistance = double.MaxValue;
                 for (var i = 0; i < schedule.Length; i++)
                 {
-                    if (schedule[i].FromNodeIndex == task.FromNodeIndex
-                        && schedule[i].ToNodeIndex == task.ToNodeIndex)
+                    if (schedule[i].FromNodeIndex != task.FromNodeIndex
+                        || schedule[i].ToNodeIndex != task.ToNodeIndex)
+                    {
+                        continue;
+                    }
+
+                    var seg = schedule[i];
+                    var end = seg.OccupancyEndSimTime > seg.ExitSimTime
+                        ? seg.OccupancyEndSimTime
+                        : seg.ExitSimTime;
+                    if (task.StartSimTime + 1e-6 >= seg.EntrySimTime && task.StartSimTime <= end + 1e-6)
                     {
                         return i;
                     }
+
+                    var distance = Math.Abs(task.StartSimTime - seg.EntrySimTime);
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        best = i;
+                    }
+                }
+
+                if (best >= 0)
+                {
+                    return best;
                 }
             }
             return FindSegmentIndexForSimTime(schedule, task.StartSimTime);
@@ -526,9 +576,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 return false;
             }
             var segIndex = FindSegmentIndexForSubTask(schedule, task);
-            if (task.Kind == SimSubTaskKind.SegmentQueue && segIndex > 0)
+            if (task.Kind == SimSubTaskKind.SegmentQueue
+                && ConveyorSegmentScheduleNavigation.TryGetUpstreamIndex(schedule, segIndex, out var queueUpstream))
             {
-                segIndex -= 1;
+                segIndex = queueUpstream;
             }
             var seg = schedule[segIndex];
             if (!TryGetAnchor(seg.FromNodeIndex, out var fromTf)
@@ -622,6 +673,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     return true;
                 }
                 case SimSubTaskKind.SegmentStopDwell:
+                case SimSubTaskKind.SegmentGateWait:
                 {
                     if (capacity <= 0 || task.SegmentSlotIndex < 0)
                     {

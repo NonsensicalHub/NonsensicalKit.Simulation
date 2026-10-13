@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
 
@@ -17,7 +16,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         public SimFlowPlanScheduler(IReadOnlyList<SimFlowPlanEntry> plan, int randomSeed)
         {
-            _entries = plan?.Count > 0 ? plan.ToArray() : Array.Empty<SimFlowPlanEntry>();
+            // 拷贝一份，避免运行中改任务配置时后台线程读到半更新的字段。
+            _entries = CloneEntries(plan);
             _remaining = new int[_entries.Length];
             _rng = new Random(randomSeed);
             var total = 0;
@@ -131,6 +131,50 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var min = Math.Max(0.01, entry.RandomIntervalMinSeconds);
             var max = Math.Max(min, entry.RandomIntervalMaxSeconds);
             return min + _rng.NextDouble() * (max - min);
+        }
+
+        private static SimFlowPlanEntry[] CloneEntries(IReadOnlyList<SimFlowPlanEntry> plan)
+        {
+            if (plan == null || plan.Count == 0)
+            {
+                return Array.Empty<SimFlowPlanEntry>();
+            }
+
+            var copy = new SimFlowPlanEntry[plan.Count];
+            for (var i = 0; i < plan.Count; i++)
+            {
+                copy[i] = CloneEntry(plan[i]);
+            }
+
+            return copy;
+        }
+
+        private static SimFlowPlanEntry CloneEntry(SimFlowPlanEntry source)
+        {
+            if (source == null)
+            {
+                return new SimFlowPlanEntry();
+            }
+
+            string[] tags = null;
+            if (source.RequiredProcessTags != null)
+            {
+                tags = new string[source.RequiredProcessTags.Length];
+                Array.Copy(source.RequiredProcessTags, tags, tags.Length);
+            }
+
+            return new SimFlowPlanEntry
+            {
+                Direction = source.Direction,
+                Quantity = source.Quantity,
+                StartDelaySeconds = source.StartDelaySeconds,
+                ScheduleMode = source.ScheduleMode,
+                RandomQuantityMin = source.RandomQuantityMin,
+                RandomQuantityMax = source.RandomQuantityMax,
+                RandomIntervalMinSeconds = source.RandomIntervalMinSeconds,
+                RandomIntervalMaxSeconds = source.RandomIntervalMaxSeconds,
+                RequiredProcessTags = tags,
+            };
         }
     }
 }

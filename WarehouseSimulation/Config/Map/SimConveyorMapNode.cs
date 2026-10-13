@@ -63,14 +63,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         [Min(0)]
         [Label("堆垛机编号")]
         public int StackerId;
-        [Tooltip("堆垛机旁货位列号（输送终点 / 伸叉取货列）。双向堆垛机可左右各配 1 个交互点；单向堆垛机通常仅 1 个，且列号须落在该堆垛机伸叉列域内")]
-        [Label("交互列")]
+        [Tooltip("堆垛机旁参考货位列，用于货位距离和底层排除。交互点可以不落在某一列中心，货叉伸出不由该列决定。")]
+        [Label("参考列")]
         public int PickupColumn;
+        [Tooltip("相对巷道中心的货叉伸出距离（米）。正方向朝列号增大的一侧，负方向朝列号减小的一侧。0 表示仍按参考列的货位坐标伸叉。")]
+        [Label("伸叉深度（米）")]
+        public float ForkDepthMeters;
         [Label("交互排")]
         public int PickupRow;
 
         [Header("编辑器")]
-        [Tooltip("节点在 GraphView 中的排版坐标，仅用于可视化，不参与仿真")]
+        [Tooltip("节点在俯视编辑器画布中的排版坐标，仅用于可视化，不参与仿真")]
         [Label("画布位置")]
         public Vector2 EditorPosition;
     }

@@ -16,6 +16,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
                 or SimSubTaskKind.SegmentTransit
                 or SimSubTaskKind.SegmentHopMove
                 or SimSubTaskKind.SegmentStopDwell
+                or SimSubTaskKind.SegmentGateWait
                 or SimSubTaskKind.JunctionEnter
                 or SimSubTaskKind.JunctionWait
                 or SimSubTaskKind.JunctionExit
@@ -38,6 +39,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
                 or SimSubTaskKind.SegmentTransit
                 or SimSubTaskKind.SegmentHopMove
                 or SimSubTaskKind.SegmentStopDwell
+                or SimSubTaskKind.SegmentGateWait
                 or SimSubTaskKind.JunctionEnter
                 or SimSubTaskKind.JunctionWait
                 or SimSubTaskKind.JunctionExit
@@ -49,7 +51,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
             kind is SimSubTaskKind.InfeedMove
                 or SimSubTaskKind.OutboundMove
                 or SimSubTaskKind.SegmentHopMove
-                or SimSubTaskKind.SegmentStopDwell;
+                or SimSubTaskKind.SegmentStopDwell
+                or SimSubTaskKind.SegmentGateWait;
 
         /// <summary>SegmentHopMove 的末段：从路段 slot-0 驶入取货点（<see cref="SimSubTask.SegmentSlotIndex"/> = -1）。</summary>
         public static bool IsPickupArrivalHop(in SimSubTask task) =>

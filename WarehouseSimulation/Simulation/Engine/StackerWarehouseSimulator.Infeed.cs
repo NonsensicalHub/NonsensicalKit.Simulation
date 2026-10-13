@@ -102,6 +102,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private bool TryPlaceOneInboundFromQueue(int maxReservations)
         {
             var portCount = _conveyorTopology.InfeedNodeIndices.Count;
+            var access = ConveyorRouteAccess.FromTags(PeekInboundProcessTags());
             var candidateCount = InfeedPortSelector.FillCandidateInfeedPorts(
                 _conveyorTopology,
                 _strategy,
@@ -123,7 +124,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         _conveyorTopology,
                         _bindings,
                         portIndex,
-                        _pickupReservationCounts))
+                        _pickupReservationCounts,
+                        access))
                 {
                     continue;
                 }
@@ -137,19 +139,23 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         portIndex,
                         out var slot,
                         out var stackerId,
-                        skipPickupCapacityPrecheck: true))
+                        skipPickupCapacityPrecheck: true,
+                        access: access))
                 {
                     continue;
                 }
 
                 _inboundWaitingCount--;
-                var flowEntryIndex = _inboundWaitingFlowEntryIndices.Count > 0
-                    ? _inboundWaitingFlowEntryIndices.Dequeue()
-                    : -1;
+                var processTags = PeekInboundProcessTags();
+                if (_inboundWaitingFlowEntryIndices.Count > 0)
+                {
+                    _inboundWaitingFlowEntryIndices.Dequeue();
+                }
+
                 var job = new WarehouseJob(_nextJobId++, _clock.Now)
                 {
                     Direction = SimFlowDirection.Inbound,
-                    RequiredProcessTags = CopyProcessTags(_flowPlanScheduler?.GetRequiredProcessTags(flowEntryIndex)),
+                    RequiredProcessTags = CopyProcessTags(processTags),
                 };
                 job.State = WarehouseJobState.PendingArrival;
                 _jobs[job.JobId] = job;
@@ -161,7 +167,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (!ConveyorPathPlanner.HasOpenPickupRouteFromAnyInfeed(
                     _conveyorTopology,
                     _bindings,
-                    _pickupReservationCounts))
+                    _pickupReservationCounts,
+                    access))
             {
                 WarehouseSimLog.Detail(
                     $"入库等候 {_inboundWaitingCount} 箱：取货点预定已满（库内仍有空货位），" +
@@ -277,6 +284,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
             }
 
+            ReleaseAllCorridorLocks(job);
             job.State = WarehouseJobState.FailedNoSlot;
             _failedNoSlot++;
             RecordFailure(reason);
@@ -422,6 +430,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return true;
             }
 
+            if (IsConveyorTransitCommitted(job))
+            {
+                var next = job.NextConveyorZoneIndex;
+                var chain = job.ConveyorPathZones;
+                var blockingResource = chain != null && next >= 0 && next < chain.Count
+                    ? chain[next].ResourceId
+                    : null;
+                MarkConveyorRoutePending(job, blockingResource);
+                return false;
+            }
+
             if (job.Direction == SimFlowDirection.Outbound)
             {
                 if (job.PickupPointIndex < 0
@@ -439,14 +458,19 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return false;
             }
 
-            if (!ConveyorPathPlanner.CanRouteFromInfeedIgnoringPickupCapacity(
-                    _conveyorTopology,
-                    _bindings,
-                    job.InfeedPortIndex,
-                    job.TargetSlot))
+            if (!job.InboundRouteReachableChecked)
             {
-                FailJobNoSlot(job, SimJobFailureReason.InboundConveyorRouteUnreachable, releaseResources: true);
-                return false;
+                job.InboundRouteReachableChecked = true;
+                if (!ConveyorPathPlanner.CanRouteFromInfeedIgnoringPickupCapacity(
+                        _conveyorTopology,
+                        _bindings,
+                        job.InfeedPortIndex,
+                        job.TargetSlot,
+                        ConveyorRouteAccess.FromJob(job)))
+                {
+                    FailJobNoSlot(job, SimJobFailureReason.InboundConveyorRouteUnreachable, releaseResources: true);
+                    return false;
+                }
             }
 
             MarkConveyorRoutePending(job);
@@ -496,6 +520,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             return copy;
+        }
+
+        private string[] PeekInboundProcessTags()
+        {
+            if (_inboundWaitingFlowEntryIndices.Count == 0 || _flowPlanScheduler == null)
+            {
+                return null;
+            }
+
+            return _flowPlanScheduler.GetRequiredProcessTags(_inboundWaitingFlowEntryIndices.Peek());
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
+using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 {
@@ -269,6 +270,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         public static bool CanReachSlot(in SimStackerDefinition def, int slotColumn) =>
             CanReachColumn(in def, slotColumn);
 
+        /// <summary>堆垛机与货位属于同一仓库，且列落在伸叉范围内。</summary>
+        public static bool ServesSlot(in SimStackerDefinition def, in GridIndex slot) =>
+            def.WarehouseId == slot.WarehouseId && CanReachColumn(in def, slot.Column);
+
+        public static int GetWarehouseId(
+            IStackerFleetDescriptor fleet,
+            ConveyorMapTopology topology,
+            int stackerId) =>
+            TryGetDefinition(fleet, topology, stackerId, out var definition)
+                ? definition.WarehouseId
+                : 0;
+
         public static bool TryGetDefinition(
             IStackerFleetDescriptor fleet,
             ConveyorMapTopology topology,
@@ -294,15 +307,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 return true;
             }
 
-            definition = new SimStackerDefinition
-            {
-                StackerId = stackerId,
-                AisleLeftColumn = 0,
-                ColumnReach = fleet != null
-                    ? fleet.DefaultStackerColumnReach
-                    : SimStackerColumnReach.TwoColumns,
-            };
-            return true;
+            definition = default;
+            return false;
         }
 
         public static bool TryDeriveFromMap(

@@ -16,6 +16,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private readonly ReservationTable _reservations;
         private readonly IWarehouseSimulationBindings _bindings;
         private readonly StackerCarriageBookkeeper _stackerCarriage;
+        private readonly Dictionary<(int From, int To, int Sign), string[]> _laneTokenCache = new();
+        private readonly Dictionary<(int From, int To), int> _laneSignCache = new();
 
         public ConveyorTransitScheduler(
             ConveyorMapTopology topology,
@@ -44,7 +46,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return exitHopStart;
             }
 
-            var nextHop = ConveyorMapMath.GetEdgeTerminalHopSeconds(_topology.Map, nextEdge);
+            var nextHop = ConveyorMapMath.GetEdgeEntrySlotHopSeconds(_topology.Map, nextEdge);
             if (nextHop <= 1e-9f)
             {
                 nextHop = hop;
@@ -74,7 +76,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             return Math.Max(exitHopStart, nextEntryHopStart);
         }
 
-        /// <summary>按整段路口占用（非仅驶入 hop）反推可进入时刻。</summary>
+        /// <summary>按路口中心占用（到达中心到开始驶出）反推可进入时刻。</summary>
         private double ResolveJunctionDownstreamEnter(
             string junctionStopId,
             double s0Arrive,
@@ -90,24 +92,22 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     nextNodeIndex,
                     downstreamEnter,
                     hop);
-                var holdEnd = exitHopStart;
-                var holdDuration = holdEnd - s0Arrive;
-                if (holdDuration < hop - 1e-9)
-                {
-                    holdDuration = hop;
-                }
-
-                var holdStart = _reservations.GetEarliestFreeTimeForDuration(
-                    junctionStopId,
-                    s0Arrive,
-                    holdDuration);
-                var nextEnter = holdStart + hop;
-                if (Math.Abs(nextEnter - downstreamEnter) <= 1e-9)
+                var holdDuration = exitHopStart - downstreamEnter;
+                if (holdDuration <= 1e-9)
                 {
                     return downstreamEnter;
                 }
 
-                downstreamEnter = nextEnter;
+                var holdStart = _reservations.GetEarliestFreeTimeForDuration(
+                    junctionStopId,
+                    downstreamEnter,
+                    holdDuration);
+                if (Math.Abs(holdStart - downstreamEnter) <= 1e-9)
+                {
+                    return downstreamEnter;
+                }
+
+                downstreamEnter = holdStart;
             }
 
             return downstreamEnter;
@@ -224,7 +224,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 plan.EndLevel);
         }
 
-        private string[] BuildStackerResourceIds(int stackerId, int targetColumn)
+        private string[] BuildStackerResourceIds(int stackerId, int targetColumn, int warehouseId)
         {
             if (_bindings == null)
             {
@@ -239,7 +239,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             if (_bindings.UseAisleColumnReservation)
             {
-                list.Add($"aisle-col-{targetColumn}");
+                list.Add(SimEntityNaming.AisleResourceId(warehouseId, targetColumn));
             }
 
             return list.ToArray();

@@ -69,11 +69,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
         /// <summary>出库时堆垛机在取货点放货完成时刻（反向输送规划起点）。</summary>
         public double PickupCompleteSimTime { get; set; }
 
+        /// <summary>已确认入库口到目标货位拓扑可达（忽略取货点容量），避免每次重试再扫一遍。</summary>
+        public bool InboundRouteReachableChecked { get; set; }
+
         #endregion
 
         #region 资源预约（堆垛机 / 巷道）
 
-        /// <summary>巷道列互斥资源 ID（<c>aisle-col-{列}</c>），未启用巷道预约时为 null。</summary>
+        /// <summary>巷道列互斥资源 ID。0 号库为 <c>aisle-col-{列}</c>，其他仓库带仓库号。</summary>
         public string AisleResourceId { get; set; }
         public double AisleReserveStart { get; set; }
         public double AisleReserveEnd { get; set; }

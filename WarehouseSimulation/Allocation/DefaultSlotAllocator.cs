@@ -8,9 +8,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
     /// <summary>
     /// 默认货位分配器：基于规则网格的 <c>bool[]</c> 占用位图。
     /// </summary>
-    public sealed class DefaultSlotAllocator : ISlotAllocator
+    public sealed class DefaultSlotAllocator : ISlotAllocator, IWarehouseGridLookup
     {
         private WarehouseGridConfig _grid;
+        private int _warehouseId;
         private IWarehouseSimulationBindings _bindings;
         private SimSlotExclusionZone[] _exclusionZones = Array.Empty<SimSlotExclusionZone>();
         private bool[] _occupied;
@@ -33,7 +34,23 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
         public StackerSlotPlacementStrategy PlacementStrategy { get; private set; } =
             StackerSlotPlacementStrategy.NearestToPickup;
 
-        public void Configure(WarehouseGridConfig grid) => _grid = grid;
+        public void Configure(WarehouseGridConfig grid, int warehouseId = 0)
+        {
+            _grid = grid;
+            _warehouseId = warehouseId;
+        }
+
+        public bool TryGetGrid(int warehouseId, out WarehouseGridConfig grid)
+        {
+            if (warehouseId == _warehouseId && _grid != null)
+            {
+                grid = _grid;
+                return true;
+            }
+
+            grid = null;
+            return false;
+        }
 
         public void Reset(
             IWarehouseSimulationBindings bindings,
@@ -47,9 +64,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
             _bindings = bindings;
             PlacementStrategy = placementStrategy;
-            _exclusionZones = SlotGridUtility.BuildEffectiveExclusionZones(_grid, bindings);
+            _exclusionZones = SlotGridUtility.BuildEffectiveExclusionZones(
+                _grid, bindings, _warehouseId, restrictToWarehouse: true);
             PhysicalSlotCount = SlotGridUtility.CountPhysicalSlots(_grid);
-            StorageSlotCount = SlotGridUtility.CountStorageSlots(_grid, bindings);
+            StorageSlotCount = SlotGridUtility.CountStorageSlots(_grid, _exclusionZones);
             _occupied = initialOccupied != null && initialOccupied.Length == PhysicalSlotCount
                 ? (bool[])initialOccupied.Clone()
                 : new bool[PhysicalSlotCount];
@@ -59,7 +77,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
         }
 
         public int CountOccupiedStorageSlots(bool[] occupied) =>
-            SlotGridUtility.CountOccupiedStorageSlots(_grid, occupied, _bindings);
+            SlotGridUtility.CountOccupiedStorageSlots(_grid, occupied, _exclusionZones);
 
         /// <summary>按占用率生成初始占用位图；占用率为 0 时返回 null。</summary>
         public static bool[] BuildInitialOccupancy(
@@ -67,7 +85,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             IWarehouseSimulationBindings hardware,
             float ratio,
             bool random,
-            int randomSeed = 42)
+            int randomSeed = 42,
+            int warehouseId = 0)
         {
             if (ratio <= 0f)
             {
@@ -76,7 +95,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
             ratio = Math.Min(1f, ratio);
             var occupied = new bool[SlotGridUtility.CountPhysicalSlots(grid)];
-            var zones = SlotGridUtility.BuildEffectiveExclusionZones(grid, hardware);
+            var zones = SlotGridUtility.BuildEffectiveExclusionZones(
+                grid, hardware, warehouseId, restrictToWarehouse: true);
             var storageIndices = CollectStorageSlotIndices(grid, zones);
             if (storageIndices.Count == 0)
             {
@@ -91,7 +111,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
             if (random)
             {
-                FillRandomSlots(occupied, storageIndices, fillCount, randomSeed);
+                FillRandomSlots(occupied, storageIndices, fillCount, MixOccupancySeed(randomSeed, warehouseId));
             }
             else
             {
@@ -259,6 +279,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             var stackerCount = Math.Max(1, bindings?.StackerCount ?? 1);
             for (var stackerId = 0; stackerId < stackerCount; stackerId++)
             {
+                if (!ServesThisWarehouse(bindings, topology, stackerId))
+                {
+                    continue;
+                }
+
                 if (HasRetrievableOccupiedSlotForStacker(bindings, topology, stackerId, null))
                 {
                     return true;
@@ -298,7 +323,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                 {
                     for (var level = 0; level < _grid.LevelCount; level++)
                     {
-                        var candidate = new GridIndex(level, col, row, 0);
+                        var candidate = MakeSlot(level, col, row);
                         if (reservedSlots != null && reservedSlots.Contains(candidate))
                         {
                             continue;
@@ -356,7 +381,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                 {
                     for (var level = 0; level < _grid.LevelCount; level++)
                     {
-                        var candidate = new GridIndex(level, col, row, 0);
+                        var candidate = MakeSlot(level, col, row);
                         if (reservedSlots != null && reservedSlots.Contains(candidate))
                         {
                             continue;
@@ -432,7 +457,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                         }
 
                         bestDistance = distance;
-                        bestSlot = new GridIndex(level, col, row, 0);
+                        bestSlot = MakeSlot(level, col, row);
                         found = true;
                     }
                 }
@@ -509,7 +534,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                         if (!_occupied[idx]
                             && SlotGridUtility.IsStorageSlot(_grid, level, col, row, _exclusionZones))
                         {
-                            slot = new GridIndex(level, col, row, 0);
+                            slot = MakeSlot(level, col, row);
                             return true;
                         }
                     }
@@ -519,7 +544,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             return false;
         }
 
-        private static double ComputePickupDistance(
+        private double ComputePickupDistance(
             IWarehouseSimulationBindings bindings,
             int pickupColumn,
             int pickupRow,
@@ -527,8 +552,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             int row,
             int level)
         {
-            var from = new GridIndex(0, pickupColumn, pickupRow, 0);
-            var to = new GridIndex(level, column, row, 0);
+            var from = new GridIndex(0, pickupColumn, pickupRow, 0, _warehouseId);
+            var to = new GridIndex(level, column, row, 0, _warehouseId);
             return SlotPositionMath.ComputeManhattanDistance(bindings.SlotPositions, from, to);
         }
 
@@ -639,7 +664,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             return count;
         }
 
-        private static bool IsColumnAllocatableByAnyStacker(
+        private bool IsColumnAllocatableByAnyStacker(
             IWarehouseSimulationBindings bindings,
             ConveyorMapTopology topology,
             int column)
@@ -647,6 +672,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             var stackerCount = Math.Max(1, bindings?.StackerCount ?? 1);
             for (var stackerId = 0; stackerId < stackerCount; stackerId++)
             {
+                if (!ServesThisWarehouse(bindings, topology, stackerId))
+                {
+                    continue;
+                }
+
                 if (IsAllocatableColumnForStacker(bindings, topology, stackerId, column))
                 {
                     return true;
@@ -656,7 +686,30 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             return false;
         }
 
+        private GridIndex MakeSlot(int level, int column, int row) =>
+            new(level, column, row, 0, _warehouseId);
+
+        private bool ServesThisWarehouse(
+            IWarehouseSimulationBindings bindings,
+            ConveyorMapTopology topology,
+            int stackerId) =>
+            StackerColumnReachUtility.GetWarehouseId(bindings, topology, stackerId) == _warehouseId;
+
         public static int ToFlatIndex(WarehouseGridConfig grid, int level, int column, int row) =>
-            (row * grid.ColumnCount + column) * grid.LevelCount + level;
+            SlotGridUtility.ToFlatIndex(grid, level, column, row);
+
+        /// <summary>0 号库沿用原种子。其他仓库混入仓库号，避免网格相同时初始占用图案相同。</summary>
+        private static int MixOccupancySeed(int randomSeed, int warehouseId)
+        {
+            if (warehouseId == 0)
+            {
+                return randomSeed;
+            }
+
+            unchecked
+            {
+                return (randomSeed * 397) ^ warehouseId;
+            }
+        }
     }
 }

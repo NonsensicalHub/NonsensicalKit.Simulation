@@ -46,6 +46,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             AppendResourceUtilizationSection(sb, result);
             SimEventDiagnosticsReportBuilder.AppendMarkdown(sb, diag);
             SimOccupancySelfCheckMarkdownBuilder.AppendSection(sb, result);
+            SimSegmentCoOccupancyMarkdownBuilder.AppendSection(sb, result);
             SimSubTaskTimelineSelfCheckMarkdownBuilder.AppendSection(sb, result);
             return sb.ToString();
         }

@@ -19,6 +19,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return chain;
             }
 
+            var destinationNode = pathNodeIndices[pathNodeIndices.Count - 1];
             for (var edgeIndex = 0; edgeIndex < pathNodeIndices.Count - 1; edgeIndex++)
             {
                 var from = pathNodeIndices[edgeIndex];
@@ -65,7 +66,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         JunctionNextNodeIndex = nextNode,
                     });
                 }
-                else if (toNode.Kind == SimConveyorNodeKind.PickupPoint)
+                // 主线上别的巷道交互点只是路过，不能当成这次任务的取货终点，否则会多记一段驶入并占用对方堆垛机。
+                else if (toNode.Kind == SimConveyorNodeKind.PickupPoint && to == destinationNode)
                 {
                     chain.Add(new ConveyorPathZone
                     {
@@ -78,7 +80,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         HopSeconds = nodeApproachHop,
                     });
                 }
-                else if (toNode.Kind == SimConveyorNodeKind.OutfeedPort)
+                else if (toNode.Kind == SimConveyorNodeKind.OutfeedPort && to == destinationNode)
                 {
                     chain.Add(new ConveyorPathZone
                     {

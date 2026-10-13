@@ -16,7 +16,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private WarehouseSimScenario m_scenario;
 
         [SerializeField, Label("网格配置")]
-        [Tooltip("规则网格尺寸与排除区。")]
+        [Tooltip("仓库列表留空时，这是唯一 0 号库的网格。绑定资产填写了仓库列表后，以列表里每项自己的网格为准。")]
         private WarehouseGridConfig m_grid = new();
 
         [SerializeField, Label("回放事件源（可选）")]
@@ -53,6 +53,25 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         public bool IsRunning => _isRunning;
         public bool IsExporting => _isExporting;
 
+        /// <summary>后台仿真心跳：已等待时间之外的当前阶段、仿真时刻和完成数。</summary>
+        public string LiveRunStatus { get; private set; }
+
+        /// <summary>已完成入库任务的货物数量。仿真空闲时为 0。</summary>
+        public int LiveInboundCompleted { get; private set; }
+
+        /// <summary>本轮计划入库货物总数。仿真空闲时为 0。</summary>
+        public int LiveInboundTarget { get; private set; }
+
+        internal void SetLiveRunStatus(string text, int inboundCompleted, int inboundTarget)
+        {
+            LiveRunStatus = text;
+            LiveInboundCompleted = inboundCompleted;
+            LiveInboundTarget = inboundTarget;
+        }
+
+        /// <summary>当前仿真任务。空闲时可由界面修改，下一次运行读取这里的配置。</summary>
+        public WarehouseSimScenario Scenario => m_scenario;
+
         [Button("运行仿真")]
         public void RunSimulation()
         {
@@ -79,6 +98,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private IEnumerator RunSimulationCoroutine()
         {
             _isRunning = true;
+            LiveRunStatus = null;
+            LiveInboundCompleted = 0;
+            LiveInboundTarget = 0;
             SimRunBackgroundRun.Outcome outcome = null;
             try
             {
@@ -118,6 +140,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                         this);
                 }
 
+                if (_lastResult.SegmentCoOccupancies != null && _lastResult.SegmentCoOccupancies.Count > 0)
+                {
+                    Debug.LogWarning(
+                        $"[WarehouseSimulation] 路段同时占用自检 {_lastResult.SegmentCoOccupancies.Count} 处，" +
+                        "请导出报告后在调试 Markdown 中查看明细。",
+                        this);
+                }
+
                 if (_lastResult.SubTaskTimelineIssues != null && _lastResult.SubTaskTimelineIssues.Count > 0)
                 {
                     Debug.LogWarning(
@@ -147,6 +177,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             finally
             {
                 _isRunning = false;
+                LiveRunStatus = null;
+                LiveInboundCompleted = 0;
+                LiveInboundTarget = 0;
                 _runCoroutine = null;
             }
         }

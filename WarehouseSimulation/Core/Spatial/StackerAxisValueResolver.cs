@@ -72,6 +72,53 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return true;
         }
 
+        /// <summary>
+        /// 交互点货叉：巷道中心的货叉坐标再加上配置的伸叉深度。
+        /// 深度为正朝列号增大的一侧，为负朝列号减小的一侧。
+        /// </summary>
+        public static bool TryResolvePickupForkValues(
+            ISlotPositionIndex index,
+            int railColumn,
+            int level,
+            int row,
+            int aisleLeftColumn,
+            float forkDepthMeters,
+            out StackerAxisValues values)
+        {
+            values = default;
+            if (!TryResolveCarriageValues(index, railColumn, new GridIndex(level, railColumn, row), out var carriage))
+            {
+                return false;
+            }
+
+            var center = carriage.Fork;
+            if (TryGetForkComponent(index, level, aisleLeftColumn, row, out var leftFork)
+                && TryGetForkComponent(index, level, aisleLeftColumn + 1, row, out var rightFork))
+            {
+                center = (leftFork + rightFork) * 0.5f;
+            }
+
+            values = new StackerAxisValues(carriage.Level, carriage.Row, center + forkDepthMeters);
+            return true;
+        }
+
+        private static bool TryGetForkComponent(
+            ISlotPositionIndex index,
+            int level,
+            int column,
+            int row,
+            out float fork)
+        {
+            fork = 0f;
+            if (!TryGetExactSlotPosition(index, level, column, row, out var position))
+            {
+                return false;
+            }
+
+            fork = position.x;
+            return true;
+        }
+
         public static bool TryResolveOrigin(
             ISlotPositionIndex index,
             int railColumn,

@@ -6,6 +6,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
     /// <summary>输送地图节点与堆垛机巷道列域的绑定解析。</summary>
     public static class SimConveyorNodeBinding
     {
+        /// <summary>已单独配置相对巷道中心的伸叉距离。</summary>
+        public static bool HasForkDepth(in SimConveyorMapNode node) =>
+            Math.Abs(node.ForkDepthMeters) > 0.0001f;
+
         /// <summary>解析取货点货位列（节点显式配置优先，否则由堆垛机巷道推导左侧取货列）。</summary>
         public static int ResolvePickupColumn(
             in SimConveyorMapNode node,

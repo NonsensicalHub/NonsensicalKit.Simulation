@@ -25,7 +25,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 asset.ConveyorMap,
                 asset.SlotPositions,
                 Clone(asset.Fleet),
-                Clone(asset.ResourcePolicy));
+                Clone(asset.ResourcePolicy),
+                asset.Warehouses);
         }
 
         private static StackerFleetConfig Clone(StackerFleetConfig source) =>

@@ -1,6 +1,7 @@
 using System;
 using NaughtyAttributes;
 using UnityEngine;
+using UnityEngine.Serialization;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
@@ -15,8 +16,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
     {
         [Header("货位坐标")]
         [Label("仓库数据名（不含扩展名）")]
-        [Tooltip("StreamingAssets/Warehouse/{名称}.dat，与 WarehouseManager 共用。")]
+        [Tooltip("仓库列表留空时使用。StreamingAssets/Warehouse/{名称}.dat，作为唯一的 0 号库。")]
         public string WarehouseDataName = "SimulationTest";
+
+        [FormerlySerializedAs("AdditionalWarehouses")]
+        [Label("仓库列表")]
+        [Tooltip("每一项一套货架，包含 0 号库。填写后不再使用上方的数据名，也不使用场景 Runner 上的网格。留空则仍是原来的单库。")]
+        public SimWarehouseDefinition[] Warehouses;
 
         [Header("输送地图")]
         [Label("输送地图")]
@@ -34,6 +40,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 
         WarehouseConveyorMap IConveyorMapSource.ConveyorMap => ConveyorMap;
         ISlotPositionIndex IWarehouseSimulationBindings.SlotPositions => ResolveSlotPositions();
+        SimWarehouseDefinition[] IWarehouseSimulationBindings.Warehouses => Warehouses;
         int IStackerFleetDescriptor.StackerCount => Fleet.StackerCount;
         SimStackerColumnReach IStackerFleetDescriptor.DefaultStackerColumnReach => Fleet.DefaultStackerColumnReach;
         SimStackerDefinition[] IStackerFleetDescriptor.StackerDefinitions => Fleet.StackerDefinitions;
@@ -62,8 +69,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 return _slotPositions;
             }
 
-            _slotPositions = SlotPositionIndex.TryLoadFromStreamingAssets(WarehouseDataName)
-                ?? new SlotPositionIndex();
+            _slotPositions = WarehouseSlotPositionCatalog.Load(WarehouseDataName, Warehouses);
             return _slotPositions;
         }
     }

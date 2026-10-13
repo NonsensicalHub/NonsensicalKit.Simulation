@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using NaughtyAttributes;
 using UnityEngine;
+using UnityEngine.Serialization;
+using NonsensicalKit.Simulation.WarehouseSimulation.Allocation;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
@@ -20,7 +22,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private WarehouseSimPlaybackController m_playback;
 
         [SerializeField, Label("货位坐标索引")]
+        [Tooltip("仓库列表留空时，作为唯一的 0 号库。列表有内容时以列表为准。")]
         private WarehouseManagerBinPositionIndex m_positionIndex;
+
+        [FormerlySerializedAs("m_additionalWarehouses")]
+        [SerializeField, Label("仓库列表")]
+        [Tooltip("每一项一座仓库，包含 0 号库。留空则使用上方的单个货位坐标索引。")]
+        private WarehousePlaybackBinding[] m_warehouses;
 
         [Header("堆垛机机组")]
         [SerializeField, Label("堆垛机绑定")]
@@ -36,9 +44,25 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private readonly SimSubTaskPlaybackIndex _subTaskIndex = new();
         private readonly Dictionary<int, JointControllerStackerJobRigPlayback> _executors = new();
         private readonly List<JointControllerStackerJobRigPlayback> _executorList = new();
+        private readonly Dictionary<int, IdleStamp> _idleStamps = new();
         private ConveyorMapTopology _topology;
+        private IReadOnlyList<SimSubTask> _configuredTimeline;
+        private double _lastEvaluateSimTime = double.NaN;
         private bool _loggedEvaluateSkip;
         private bool _rigsInitialized;
+        private readonly HashSet<int> _missingPositionWarehouses = new();
+
+        private struct IdleStamp
+        {
+            public bool HasLast;
+            public int JobId;
+            public double EndTime;
+
+            public bool Matches(in IdleStamp other) =>
+                HasLast == other.HasLast
+                && JobId == other.JobId
+                && System.Math.Abs(EndTime - other.EndTime) < 1e-4;
+        }
 
         private void Awake()
         {
@@ -53,13 +77,22 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
         public override void ResetPlaybackState()
         {
+            _idleStamps.Clear();
+            _configuredTimeline = null;
+            _lastEvaluateSimTime = double.NaN;
             StopAllRigMotion();
             ConfigureAllRigs();
         }
 
         public override void OnPlaybackEvaluate(double simTime, IReadOnlyList<SimSubTask> subTasks)
         {
-            EnsureExecutorsConfigured();
+            EnsureExecutorsConfigured(subTasks);
+            if (!double.IsNaN(_lastEvaluateSimTime) && simTime + 1e-4 < _lastEvaluateSimTime)
+            {
+                _idleStamps.Clear();
+            }
+
+            _lastEvaluateSimTime = simTime;
 
             if (subTasks == null || subTasks.Count == 0)
             {
@@ -101,23 +134,36 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                         simTime,
                         out var context))
                 {
+                    _idleStamps.Remove(stackerId);
                     executor.Evaluate(in context);
                     continue;
                 }
 
-                if (HasActiveStackerSubTask(subTasks, stackerId, simTime))
+                if (_subTaskIndex.TryGetActiveForStacker(stackerId, simTime, out _))
                 {
                     LogEvaluateSkipOnce(
                         $"堆垛机 {stackerId} 在 t={simTime:F2}s 有活动子任务但无法构建回放上下文，本帧跳过 RestoreIdle。");
                     continue;
                 }
 
-                if (StackerJobPlaybackResolver.TryGetLastCompletedJob(
-                        subTasks,
-                        _subTaskIndex,
-                        stackerId,
-                        simTime,
-                        out var last))
+                var hasLast = StackerJobPlaybackResolver.TryGetLastCompletedJob(
+                    subTasks,
+                    _subTaskIndex,
+                    stackerId,
+                    simTime,
+                    out var last);
+                var stamp = new IdleStamp
+                {
+                    HasLast = hasLast,
+                    JobId = hasLast ? last.JobId : 0,
+                    EndTime = hasLast ? last.TaskEndSimTime : 0d,
+                };
+                if (_idleStamps.TryGetValue(stackerId, out var applied) && applied.Matches(stamp))
+                {
+                    continue;
+                }
+
+                if (hasLast)
                 {
                     executor.RestoreIdle(simTime, in last, hasLastTask: true);
                 }
@@ -125,6 +171,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 {
                     executor.RestoreIdle(simTime, default, hasLastTask: false);
                 }
+
+                _idleStamps[stackerId] = stamp;
             }
         }
 
@@ -144,6 +192,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 return false;
             }
 
+            if (HasWarehouseList)
+            {
+                skipReason = null;
+                return true;
+            }
+
             if (m_positionIndex == null)
             {
                 skipReason = "未配置「货位坐标索引」，堆垛机回放不会更新。";
@@ -160,7 +214,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             return true;
         }
 
-        private void EnsureExecutorsConfigured()
+        private void EnsureExecutorsConfigured(IReadOnlyList<SimSubTask> subTasks)
         {
             if (_topology == null)
             {
@@ -172,7 +226,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 RebuildExecutorIndex();
             }
 
+            if (ReferenceEquals(_configuredTimeline, subTasks))
+            {
+                return;
+            }
+
             ConfigureAllRigs();
+            _configuredTimeline = subTasks;
+            _idleStamps.Clear();
         }
 
         private void ConfigureAllRigs()
@@ -190,14 +251,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     continue;
                 }
 
-                rig.Configure(
-                    m_bindings,
-                    m_playback,
-                    m_positionIndex,
-                    m_pickupLevel,
-                    _topology,
-                    m_cargoRegistry,
-                    m_playback?.EventSource?.GridConfig);
+                ConfigureRig(rig);
             }
         }
 
@@ -219,14 +273,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     continue;
                 }
 
-                rig.Configure(
-                    m_bindings,
-                    m_playback,
-                    m_positionIndex,
-                    m_pickupLevel,
-                    _topology,
-                    m_cargoRegistry,
-                    m_playback?.EventSource?.GridConfig);
+                ConfigureRig(rig);
 
                 if (!rig.TryInitialize())
                 {
@@ -246,17 +293,73 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
         }
 
+        private void ConfigureRig(JointControllerStackerJobRigPlayback rig)
+        {
+            var warehouseId = 0;
+            if (m_bindings != null
+                && StackerColumnReachUtility.TryGetDefinition(m_bindings, _topology, rig.StackerId, out var definition))
+            {
+                warehouseId = definition.WarehouseId;
+            }
+
+            rig.Configure(
+                m_bindings,
+                m_playback,
+                ResolvePositionIndex(warehouseId),
+                m_pickupLevel,
+                _topology,
+                m_cargoRegistry,
+                ResolveGrid(warehouseId),
+                warehouseId);
+        }
+
+        private bool HasWarehouseList => m_warehouses != null && m_warehouses.Length > 0;
+
+        private WarehouseManagerBinPositionIndex ResolvePositionIndex(int warehouseId)
+        {
+            if (HasWarehouseList)
+            {
+                for (var i = 0; i < m_warehouses.Length; i++)
+                {
+                    var binding = m_warehouses[i];
+                    if (binding == null || binding.WarehouseId != warehouseId || binding.PositionIndex == null)
+                    {
+                        continue;
+                    }
+
+                    binding.PositionIndex.UseWarehouse(warehouseId);
+                    return binding.PositionIndex;
+                }
+            }
+            else if (warehouseId == 0)
+            {
+                m_positionIndex?.UseWarehouse(0);
+                return m_positionIndex;
+            }
+
+            if (_missingPositionWarehouses.Add(warehouseId))
+            {
+                SimPlaybackLog.Warn($"堆垛机所属仓库 {warehouseId} 未配置货位坐标索引。", this);
+            }
+
+            return null;
+        }
+
+        private WarehouseGridConfig ResolveGrid(int warehouseId)
+        {
+            if (WarehouseCatalog.TryGet(m_bindings, warehouseId, out var definition) && definition.Grid != null)
+            {
+                return definition.Grid;
+            }
+
+            return warehouseId == 0 ? m_playback?.EventSource?.GridConfig : null;
+        }
+
         private bool RebuildTopology()
         {
             _topology = null;
             return SimPlaybackTopologyUtility.TryBuild(m_bindings?.ConveyorMap, m_bindings, out _topology, this);
         }
-
-        private static bool HasActiveStackerSubTask(
-            IReadOnlyList<SimSubTask> subTasks,
-            int stackerId,
-            double simTime) =>
-            SimSubTaskQuery.TryGetActiveForStacker(subTasks, stackerId, simTime, out _);
 
         private void LogEvaluateSkipOnce(string reason)
         {

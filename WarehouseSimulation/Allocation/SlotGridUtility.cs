@@ -18,7 +18,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                 return 0;
             }
 
-            var zones = BuildEffectiveExclusionZones(grid, bindings);
+            return CountStorageSlots(grid, BuildEffectiveExclusionZones(grid, bindings));
+        }
+
+        public static int CountStorageSlots(WarehouseGridConfig grid, SimSlotExclusionZone[] zones)
+        {
+            if (grid == null)
+            {
+                return 0;
+            }
+
             var count = 0;
             for (var row = 0; row < grid.RowCount; row++)
             {
@@ -40,14 +49,19 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
         public static int CountOccupiedStorageSlots(
             WarehouseGridConfig grid,
             bool[] occupied,
-            IWarehouseSimulationBindings bindings = null)
+            IWarehouseSimulationBindings bindings = null) =>
+            CountOccupiedStorageSlots(grid, occupied, BuildEffectiveExclusionZones(grid, bindings));
+
+        public static int CountOccupiedStorageSlots(
+            WarehouseGridConfig grid,
+            bool[] occupied,
+            SimSlotExclusionZone[] zones)
         {
             if (grid == null || occupied == null)
             {
                 return 0;
             }
 
-            var zones = BuildEffectiveExclusionZones(grid, bindings);
             var count = 0;
             for (var row = 0; row < grid.RowCount; row++)
             {
@@ -71,7 +85,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
         public static SimSlotExclusionZone[] BuildEffectiveExclusionZones(
             WarehouseGridConfig grid,
-            IWarehouseSimulationBindings bindings = null)
+            IWarehouseSimulationBindings bindings = null,
+            int warehouseId = 0,
+            bool restrictToWarehouse = false)
         {
             if (grid == null)
             {
@@ -107,6 +123,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             {
                 var node = map.Nodes[i];
                 if (node.Kind != SimConveyorNodeKind.PickupPoint)
+                {
+                    continue;
+                }
+
+                if (restrictToWarehouse
+                    && StackerColumnReachUtility.GetWarehouseId(bindings, topology, node.StackerId) != warehouseId)
                 {
                     continue;
                 }
@@ -233,7 +255,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
         public static List<GridIndex> EnumerateOccupiedStorageSlots(
             WarehouseGridConfig grid,
             bool[] occupied,
-            IWarehouseSimulationBindings bindings = null)
+            IWarehouseSimulationBindings bindings = null,
+            int warehouseId = 0)
         {
             var result = new List<GridIndex>();
             if (grid == null || occupied == null)
@@ -241,7 +264,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                 return result;
             }
 
-            var zones = BuildEffectiveExclusionZones(grid, bindings);
+            var zones = BuildEffectiveExclusionZones(grid, bindings, warehouseId, restrictToWarehouse: true);
             for (var row = 0; row < grid.RowCount; row++)
             {
                 for (var col = 0; col < grid.ColumnCount; col++)
@@ -253,7 +276,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                             && occupied[idx]
                             && IsStorageSlot(grid, level, col, row, zones))
                         {
-                            result.Add(new GridIndex(level, col, row));
+                            result.Add(new GridIndex(level, col, row, 0, warehouseId));
                         }
                     }
                 }

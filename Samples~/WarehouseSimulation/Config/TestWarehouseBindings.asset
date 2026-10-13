@@ -13,9 +13,32 @@ MonoBehaviour:
   m_Name: TestWarehouseBindings
   m_EditorClassIdentifier: 
   WarehouseDataName: SimulationTest
+  Warehouses:
+  - WarehouseId: 0
+    Name: "\u5E930"
+    WarehouseDataName: SimulationTest
+    Grid:
+      LevelCount: 8
+      ColumnCount: 16
+      RowCount: 10
+      SlotExclusionZones: []
+      AutoExcludePickupPointZones: 1
+      PickupPointExcludedLevelCount: 2
+      PickupPointExcludedRearColumnCount: 1
+  - WarehouseId: 1
+    Name: "\u5E931"
+    WarehouseDataName: SimulationTest
+    Grid:
+      LevelCount: 8
+      ColumnCount: 16
+      RowCount: 10
+      SlotExclusionZones: []
+      AutoExcludePickupPointZones: 1
+      PickupPointExcludedLevelCount: 2
+      PickupPointExcludedRearColumnCount: 1
   ConveyorMap: {fileID: 11400000, guid: b8e3f9d20c5e5b75b0f12d3e4c6e7f82, type: 2}
   Fleet:
-    StackerCount: 4
+    StackerCount: 8
     DefaultStackerColumnReach: 2
     DefaultKinematics:
       PickSeconds: 10
@@ -25,6 +48,7 @@ MonoBehaviour:
       DepthSpeedMetersPerSecond: 2.5
     StackerDefinitions:
     - StackerId: 0
+      WarehouseId: 0
       Kinematics:
         PickSeconds: 10
         PlaceSeconds: 10
@@ -35,6 +59,7 @@ MonoBehaviour:
       ColumnReach: 4
       ServingSide: 0
     - StackerId: 1
+      WarehouseId: 0
       Kinematics:
         PickSeconds: 10
         PlaceSeconds: 10
@@ -45,6 +70,7 @@ MonoBehaviour:
       ColumnReach: 4
       ServingSide: 0
     - StackerId: 2
+      WarehouseId: 0
       Kinematics:
         PickSeconds: 10
         PlaceSeconds: 10
@@ -55,6 +81,51 @@ MonoBehaviour:
       ColumnReach: 4
       ServingSide: 0
     - StackerId: 3
+      WarehouseId: 0
+      Kinematics:
+        PickSeconds: 10
+        PlaceSeconds: 10
+        HorizontalSpeedMetersPerSecond: 2.5
+        VerticalSpeedMetersPerSecond: 1
+        DepthSpeedMetersPerSecond: 2.5
+      AisleLeftColumn: 13
+      ColumnReach: 4
+      ServingSide: 0
+    - StackerId: 4
+      WarehouseId: 1
+      Kinematics:
+        PickSeconds: 10
+        PlaceSeconds: 10
+        HorizontalSpeedMetersPerSecond: 2.5
+        VerticalSpeedMetersPerSecond: 1
+        DepthSpeedMetersPerSecond: 2.5
+      AisleLeftColumn: 1
+      ColumnReach: 4
+      ServingSide: 0
+    - StackerId: 5
+      WarehouseId: 1
+      Kinematics:
+        PickSeconds: 10
+        PlaceSeconds: 10
+        HorizontalSpeedMetersPerSecond: 2.5
+        VerticalSpeedMetersPerSecond: 1
+        DepthSpeedMetersPerSecond: 2.5
+      AisleLeftColumn: 5
+      ColumnReach: 4
+      ServingSide: 0
+    - StackerId: 6
+      WarehouseId: 1
+      Kinematics:
+        PickSeconds: 10
+        PlaceSeconds: 10
+        HorizontalSpeedMetersPerSecond: 2.5
+        VerticalSpeedMetersPerSecond: 1
+        DepthSpeedMetersPerSecond: 2.5
+      AisleLeftColumn: 9
+      ColumnReach: 4
+      ServingSide: 0
+    - StackerId: 7
+      WarehouseId: 1
       Kinematics:
         PickSeconds: 10
         PlaceSeconds: 10

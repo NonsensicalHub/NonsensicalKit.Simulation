@@ -98,7 +98,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             int outfeedPortIndex,
             out GridIndex slot,
             out int stackerId,
-            out int pickupPointIndex)
+            out int pickupPointIndex,
+            ConveyorRouteAccess access = default)
         {
             slot = default;
             stackerId = -1;
@@ -164,7 +165,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
                 var pickup = ResolvePickupForStacker(topology, candidateStackerId);
                 if (pickup < 0
-                    || !ConveyorPathPlanner.CanRouteFromPickupToOutfeed(topology, pickup, outfeedPortIndex))
+                    || !ConveyorPathPlanner.CanRouteFromPickupToOutfeed(
+                        topology,
+                        pickup,
+                        outfeedPortIndex,
+                        access))
                 {
                     continue;
                 }
@@ -188,7 +193,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             out GridIndex slot,
             out int stackerId,
             out int pickupPointIndex,
-            out int outfeedPortIndex)
+            out int outfeedPortIndex,
+            ConveyorRouteAccess access = default)
         {
             slot = default;
             stackerId = -1;
@@ -250,7 +256,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
                 var pickup = ResolvePickupForStacker(topology, candidateStackerId);
                 if (pickup < 0
-                    || !ConveyorPathPlanner.CanRouteToOutfeed(topology, pickup))
+                    || !ConveyorPathPlanner.CanRouteToOutfeed(topology, pickup, access))
                 {
                     continue;
                 }

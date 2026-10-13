@@ -13,10 +13,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             ISlotPositionIndex index,
             int railColumn,
             int fromLevel,
-            int toLevel)
+            int toLevel,
+            int warehouseId = 0)
         {
-            if (!TryGetLocalPosition(index, new GridIndex(fromLevel, railColumn, 0), out var from)
-                || !TryGetLocalPosition(index, new GridIndex(toLevel, railColumn, 0), out var to))
+            if (!TryGetLocalPosition(index, new GridIndex(fromLevel, railColumn, 0, 0, warehouseId), out var from)
+                || !TryGetLocalPosition(index, new GridIndex(toLevel, railColumn, 0, 0, warehouseId), out var to))
             {
                 throw BuildMissingPositionException(fromLevel, railColumn, 0, toLevel, railColumn, 0);
             }
@@ -29,10 +30,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             int railColumn,
             int level,
             int fromRow,
-            int toRow)
+            int toRow,
+            int warehouseId = 0)
         {
-            if (!TryGetLocalPosition(index, new GridIndex(level, railColumn, fromRow), out var from)
-                || !TryGetLocalPosition(index, new GridIndex(level, railColumn, toRow), out var to))
+            if (!TryGetLocalPosition(index, new GridIndex(level, railColumn, fromRow, 0, warehouseId), out var from)
+                || !TryGetLocalPosition(index, new GridIndex(level, railColumn, toRow, 0, warehouseId), out var to))
             {
                 throw BuildMissingPositionException(level, railColumn, fromRow, level, railColumn, toRow);
             }
@@ -71,6 +73,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             if (index.TryGetLocalPosition(slot, out local))
             {
                 return true;
+            }
+
+            // 目录在 TryGetLocalPosition 里已经按仓库号做过轴向回退，不能再落到 0 号库。
+            if (index is WarehouseSlotPositionCatalog)
+            {
+                return false;
             }
 
             return index.TryGetAxisPosition(slot.Level, slot.Column, slot.Row, out local);

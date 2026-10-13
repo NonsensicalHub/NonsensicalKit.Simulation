@@ -155,9 +155,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             int toRow,
             float progress,
             float duration,
-            bool commitState)
+            bool commitState,
+            bool toUsesForkDepth = false,
+            float toForkDepthMeters = 0f)
         {
-            if (fromColumn == toColumn && fromLevel == toLevel && fromRow == toRow)
+            if (!toUsesForkDepth && fromColumn == toColumn && fromLevel == toLevel && fromRow == toRow)
             {
                 if (TryBuildFullJointValues(toColumn, toLevel, toRow, out var sameAxes)
                     && TryApplyAxisValues(in sameAxes, duration))
@@ -187,8 +189,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 }
             }
 
-            if (!TryBuildFullJointValues(fromColumn, fromLevel, fromRow, out var fromAxes)
-                || !TryBuildFullJointValues(toColumn, toLevel, toRow, out var toAxes))
+            if (!TryBuildEndpointJointValues(fromColumn, fromLevel, fromRow, false, 0f, out var fromAxes)
+                || !TryBuildEndpointJointValues(
+                    toColumn,
+                    toLevel,
+                    toRow,
+                    toUsesForkDepth,
+                    toForkDepthMeters,
+                    out var toAxes))
             {
                 LogMotionResolveSkipOnce(
                     $"Full C{fromColumn}L{fromLevel}R{fromRow}→C{toColumn}L{toLevel}R{toRow}");
@@ -267,6 +275,29 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 out axes);
         }
 
+        private bool TryBuildEndpointJointValues(
+            int column,
+            int level,
+            int row,
+            bool useForkDepth,
+            float forkDepthMeters,
+            out StackerAxisValueResolver.StackerAxisValues axes)
+        {
+            if (!useForkDepth)
+            {
+                return TryBuildFullJointValues(column, level, row, out axes);
+            }
+
+            return StackerAxisValueResolver.TryResolvePickupForkValues(
+                _positionIndex.Positions,
+                _railColumn,
+                level,
+                row,
+                _activeAisleLeftColumn,
+                forkDepthMeters,
+                out axes);
+        }
+
         private bool TryBuildCarriageJointValues(
             int level,
             int row,
@@ -285,6 +316,24 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
         private void SnapToPickupForJob(in StackerJobPlaybackTask task)
         {
+            if (TryGetPickupNodeFromJob(in task, out var node)
+                && SimConveyorNodeBinding.HasForkDepth(in node)
+                && StackerAxisValueResolver.TryResolvePickupForkValues(
+                    _positionIndex.Positions,
+                    _railColumn,
+                    _pickupLevel,
+                    node.PickupRow,
+                    _activeAisleLeftColumn,
+                    node.ForkDepthMeters,
+                    out var axes))
+            {
+                TryApplyAxisValues(in axes);
+                _storageColumn = _railColumn;
+                _level = _pickupLevel;
+                _row = node.PickupRow;
+                return;
+            }
+
             if (TryResolveTargetGrid(in task, out var pickup, task.IsOutbound))
             {
                 SnapPartial(pickup);

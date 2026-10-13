@@ -21,6 +21,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var plan = SimFlowPlanResolver.Resolve(_scenario);
             _flowPlanScheduler = new SimFlowPlanScheduler(plan, _scenario.FlowRandomSeed);
             _targetCount = _flowPlanScheduler.TotalQuantity;
+            _inboundTargetCount = SimFlowPlanResolver.CountInboundQuantity(plan);
+            _inboundCompletedCount = 0;
             _inboundWaitingCount = 0;
             _outboundWaitingCount = 0;
             _inboundWaitingFlowEntryIndices.Clear();

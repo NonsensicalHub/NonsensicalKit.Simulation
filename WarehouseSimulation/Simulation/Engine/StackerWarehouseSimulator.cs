@@ -48,6 +48,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private readonly List<SimPlaybackEvent> _playback = new();
         /// <summary>细粒度子任务时间轴（占用自检、HTML 报告）。</summary>
         private readonly List<SimSubTask> _subTasks = new();
+        private readonly Dictionary<int, List<SimSubTask>> _subTasksByJob = new();
         private int _nextSubTaskId;
 
         // —— 入库口与堆垛机负载（放货决策用，非 ReservationTable 内资源）——
@@ -72,12 +73,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         // —— 全局到货与进度计数 ——
         /// <summary>本场景计划任务总数（流程计划各段数量之和）。</summary>
         private int _targetCount;
+        private int _inboundTargetCount;
+        private int _inboundCompletedCount;
         private int _nextJobId;
         private bool _inboundExhaustedAtInfeed;
         private int _failedNoCargo;
         private bool _recordPlayback;
         private bool _collectWallClockProfile;
         private readonly SimWallClockProfiler _wallClockProfiler = new();
+        private SimRunLiveProgress _liveProgress;
         private int _completedCount;
         private int _failedNoSlot;
         private readonly Dictionary<SimJobFailureReason, int> _failureCounts = new();
@@ -100,6 +104,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         public bool[] ExportOccupancySnapshot() =>
             _slotAllocator.Occupied != null ? (bool[])_slotAllocator.Occupied.Clone() : null;
 
+        internal void UseLiveProgress(SimRunLiveProgress progress) => _liveProgress = progress;
+
+        private void ReportLiveProgress()
+        {
+            _liveProgress?.ReportTick(
+                _clock.Now,
+                _eventCount,
+                _completedCount,
+                _targetCount,
+                _queue.Count,
+                _inboundCompletedCount,
+                _inboundTargetCount);
+        }
+
         /// <inheritdoc />
         /// <remarks>主循环：按事件时间推进时钟并分发，直至任务全部完成或达到事件上限。</remarks>
         public SimRunResult Run(WarehouseSimScenario scenario, SimRunOptions? runOptions = null)
@@ -119,6 +137,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return result;
             }
 
+            _wallClockProfiler.BindProgress(_liveProgress);
             _wallClockProfiler.Reset(_collectWallClockProfile);
 
             using (_wallClockProfiler.Begin(SimWallClockProfilePhases.InitReset))
@@ -186,6 +205,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 $"入库口数 {_conveyorTopology.InfeedNodeIndices.Count}，" +
                 $"出库口数 {_conveyorTopology.OutfeedNodeIndices?.Count ?? 0}");
             ScheduleFlowPlan();
+            ReportLiveProgress();
 
             // 主循环：每次弹出队首事件 → 推进时钟 → 更新状态机 / 预约资源 / 排定后续事件
             using (_wallClockProfiler.Begin(SimWallClockProfilePhases.DesMainLoop))
@@ -195,6 +215,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     _eventCount++;
                     _eventTypeCounts[(int)evt.Type]++;
                     _clock.AdvanceTo(evt.Time);
+                    _reservations.NoteHistoryFloor(_clock.Now);
+                    if ((_eventCount & 31) == 0)
+                    {
+                        ReportLiveProgress();
+                    }
+
                     Dispatch(evt);
                 }
             }
@@ -249,6 +275,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 result.ComputeStatistics();
                 if (_recordPlayback)
                 {
+                    FlattenSubTasks();
                     using (_wallClockProfiler.Begin(SimWallClockProfilePhases.PostSortPlayback))
                     {
                         SortPlaybackEvents();
@@ -283,12 +310,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _clock.Reset();
             _queue.Clear();
             _reservations = new ReservationTable();
+            _jobsByLaneDirection.Clear();
             _jobs.Clear();
             _completions.Clear();
             _playback.Clear();
             _subTasks.Clear();
+            _subTasksByJob.Clear();
+            _jobsByZoneResource.Clear();
+            ResetCorridorLocks();
             _nextSubTaskId = 0;
             _completedCount = 0;
+            _inboundCompletedCount = 0;
+            _inboundTargetCount = 0;
             _failedNoSlot = 0;
             _failedNoCargo = 0;
             _failureCounts.Clear();
@@ -362,6 +395,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// </remarks>
         private void Dispatch(ScheduledSimEvent evt)
         {
+            if (!_collectWallClockProfile)
+            {
+                DispatchCore(evt);
+                return;
+            }
+
             using (_wallClockProfiler.Begin(SimWallClockProfilePhases.Event(evt.Type)))
             {
                 DispatchCore(evt);
@@ -425,6 +464,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
                 // —— 输送（Conveyor partial）——
                 case SimEventType.ConveyorRouteRetry:
+                    if (!TryAcceptConveyorRouteRetry(evt.JobId, evt.Payload))
+                    {
+                        break;
+                    }
+
                     OnConveyorRouteRetryDispatched(evt.JobId);
                     if (TryGetJob(evt.JobId, evt.Type, out var retryJob))
                     {
@@ -496,6 +540,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     }
 
                     break;
+                case SimEventType.CorridorLockCheck:
+                    if (TryGetJob(evt.JobId, evt.Type, out var corridorJob))
+                    {
+                        OnCorridorLockCheck(corridorJob);
+                    }
+
+                    break;
 
                 default:
                     WarehouseSimLog.Warn($"未处理的仿真事件 {evt.Type}（JobId={evt.JobId}，Payload={evt.Payload}）。");
@@ -540,6 +591,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 && _conveyorTopology.InfeedNodeIndices.Count == 0)
             {
                 error = "流程计划含入库任务，但 ConveyorMap 中未配置入库口节点。";
+                _conveyorTopology = null;
+                return false;
+            }
+
+            if (_slotAllocator is IWarehouseGridLookup grids
+                && !WarehouseCatalog.TryValidate(_bindings, _conveyorTopology, grids, out error))
+            {
                 _conveyorTopology = null;
                 return false;
             }

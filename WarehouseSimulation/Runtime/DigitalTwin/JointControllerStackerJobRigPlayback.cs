@@ -86,12 +86,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             int pickupLevel,
             ConveyorMapTopology topology,
             SimPlaybackCargoVisualRegistry cargoRegistry,
-            WarehouseGridConfig grid = null)
+            WarehouseGridConfig grid = null,
+            int warehouseId = 0)
         {
             _bindings = bindings;
             _grid = grid;
             _exclusionZones = grid != null
-                ? SlotGridUtility.BuildEffectiveExclusionZones(grid, bindings)
+                ? SlotGridUtility.BuildEffectiveExclusionZones(grid, bindings, warehouseId, restrictToWarehouse: true)
                 : Array.Empty<SimSlotExclusionZone>();
             _playback = playback;
             _positionIndex = positionIndex;

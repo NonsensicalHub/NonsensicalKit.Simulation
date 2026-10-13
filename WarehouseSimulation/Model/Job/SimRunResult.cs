@@ -35,6 +35,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
         /// <summary>仿真后自检发现的独占资源占用冲突（不同任务时间重叠）。</summary>
         public List<SimOccupancyConflictRecord> OccupancyConflicts = new();
 
+        /// <summary>仿真后自检：不同货物在同一时间处于同一条物理路段。</summary>
+        public List<SimSegmentCoOccupancyRecord> SegmentCoOccupancies = new();
+
         /// <summary>仿真后自检发现的单任务子任务时间轴重叠或空白。</summary>
         public List<SimSubTaskTimelineIssueRecord> SubTaskTimelineIssues = new();
 

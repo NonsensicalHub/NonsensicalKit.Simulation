@@ -14,8 +14,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private readonly Dictionary<string, MutableEntry> _entries = new();
         private long _runStartTicks;
         private bool _enabled;
+        private SimRunLiveProgress _progress;
 
         public bool Enabled => _enabled;
+
+        public void BindProgress(SimRunLiveProgress progress) => _progress = progress;
 
         public void Reset(bool enabled)
         {
@@ -24,8 +27,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _runStartTicks = enabled ? Stopwatch.GetTimestamp() : 0;
         }
 
-        public IDisposable Begin(string phaseKey) =>
-            _enabled ? new Scope(this, phaseKey) : s_noOp;
+        public IDisposable Begin(string phaseKey)
+        {
+            if (string.IsNullOrEmpty(phaseKey))
+            {
+                return s_noOp;
+            }
+
+            if (!_enabled)
+            {
+                return s_noOp;
+            }
+
+            return new Scope(this, phaseKey, timed: true);
+        }
 
         internal void Add(string phaseKey, long elapsedTicks)
         {
@@ -83,16 +98,33 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             private readonly SimWallClockProfiler _profiler;
             private readonly string _phaseKey;
             private readonly long _startTicks;
+            private readonly bool _timed;
+            private bool _disposed;
 
-            public Scope(SimWallClockProfiler profiler, string phaseKey)
+            public Scope(SimWallClockProfiler profiler, string phaseKey, bool timed)
             {
                 _profiler = profiler;
                 _phaseKey = phaseKey;
-                _startTicks = Stopwatch.GetTimestamp();
+                _timed = timed;
+                _startTicks = timed ? Stopwatch.GetTimestamp() : 0;
+                profiler._progress?.Enter(SimWallClockProfilePhases.GetLabel(phaseKey));
             }
 
-            public void Dispose() =>
-                _profiler.Add(_phaseKey, Stopwatch.GetTimestamp() - _startTicks);
+            public void Dispose()
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _disposed = true;
+                if (_timed)
+                {
+                    _profiler.Add(_phaseKey, Stopwatch.GetTimestamp() - _startTicks);
+                }
+
+                _profiler._progress?.Leave();
+            }
         }
 
         private sealed class NoOpScope : IDisposable
@@ -105,6 +137,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
     internal static class SimWallClockProfilePhases
     {
+        private static readonly Dictionary<string, string> LabelCache = new();
+
         public const string InitReset = "init.reset";
         public const string InitTopology = "init.topology";
         public const string InitPorts = "init.ports";
@@ -120,7 +154,26 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         public const string PostTimelineCheck = "post.timeline_check";
         public const string PostDiagnostics = "post.diagnostics";
 
-        public static string Event(SimEventType type) => $"des.event.{type}";
+        public static string Event(SimEventType type)
+        {
+            var index = (int)type;
+            if ((uint)index < (uint)EventKeyCache.Length)
+            {
+                var cached = EventKeyCache[index];
+                if (cached != null)
+                {
+                    return cached;
+                }
+
+                cached = $"des.event.{type}";
+                EventKeyCache[index] = cached;
+                return cached;
+            }
+
+            return $"des.event.{type}";
+        }
+
+        private static readonly string[] EventKeyCache = new string[32];
 
         public static string RecordSubTaskPhase(SimSubTaskKind kind) =>
             kind is SimSubTaskKind.InfeedMove
@@ -128,6 +181,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 or SimSubTaskKind.SegmentTransit
                 or SimSubTaskKind.SegmentHopMove
                 or SimSubTaskKind.SegmentStopDwell
+                or SimSubTaskKind.SegmentGateWait
                 or SimSubTaskKind.SegmentQueue
                 or SimSubTaskKind.JunctionEnter
                 or SimSubTaskKind.JunctionWait
@@ -144,6 +198,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return "—";
             }
 
+            if (LabelCache.TryGetValue(phaseKey, out var cached))
+            {
+                return cached;
+            }
+
+            var label = ComputeLabel(phaseKey);
+            LabelCache[phaseKey] = label;
+            return label;
+        }
+
+        private static string ComputeLabel(string phaseKey)
+        {
             if (phaseKey.StartsWith("des.event.", StringComparison.Ordinal))
             {
                 var name = phaseKey.Substring("des.event.".Length);

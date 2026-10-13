@@ -497,6 +497,490 @@ MonoBehaviour:
     PickupColumn: 0
     PickupRow: 0
     EditorPosition: {x: -386.66666, y: 322}
+  - LogicalId: W2-C8
+    NodeId: ed97a379-2f57-4027-85aa-d6f67232a162
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 513.333, y: -312.6667}
+  - LogicalId: W2-C7
+    NodeId: 2f50aef0-0c02-4d04-a768-37332b41f7fe
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 497.333, y: -236}
+  - LogicalId: W2-C5
+    NodeId: 40bcd2ec-e52f-4a2f-96a4-31fdad4d73a0
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 513.333, y: -66.666664}
+  - LogicalId: W2-C6
+    NodeId: d047f5ce-e6f7-4912-84a7-68bf6faac137
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 497.333, y: -154.66667}
+  - LogicalId: W2-C11
+    NodeId: 9a77686b-ce3c-4eec-8391-d92d7fc749d3
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 700.667, y: -328.6667}
+  - LogicalId: W2-C12
+    NodeId: 4a0082d6-d773-4880-a7d1-78a29b9dd08f
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 684.667, y: -230}
+  - LogicalId: W2-C14
+    NodeId: db480ea9-0e50-43e3-a2cc-c9a354a6f224
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 690.667, y: -82.666664}
+  - LogicalId: W2-C13
+    NodeId: 7a37fd18-4cb0-4351-add5-e87c9e9dae7f
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 688, y: -146.66667}
+  - LogicalId: W2-C15
+    NodeId: d34aac05-42d1-47c3-a9bf-dc3e6d427003
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 700.667, y: 23.333332}
+  - LogicalId: W2-C16
+    NodeId: 4e307f70-b72d-4072-86ff-ca4c3a31317d
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 700.667, y: 105.33334}
+  - LogicalId: W2-C18
+    NodeId: 2b5b71ed-2411-4fe1-8c21-bc08869371ea
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 708.667, y: 240.00002}
+  - LogicalId: W2-C17
+    NodeId: 76081c02-fdea-4e47-ab8d-5867837cb1af
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 716.667, y: 174}
+  - LogicalId: W2-IN1
+    NodeId: c5924301-3689-4408-b427-c5fb54ac840d
+    Kind: 1
+    InfeedServiceSeconds: 5
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 325.333, y: -334.6667}
+  - LogicalId: W2-OUT1
+    NodeId: b7956db6-5726-44c5-bd30-0e9e0d37242e
+    Kind: 3
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 5
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 300, y: -236}
+  - LogicalId: W2-IN2
+    NodeId: 33034692-31ce-4d8e-aae1-996ae27b9c7d
+    Kind: 1
+    InfeedServiceSeconds: 5
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 309.333, y: -96}
+  - LogicalId: W2-OUT2
+    NodeId: 1d4ce30a-8c26-43bb-9028-7152e0a5b51d
+    Kind: 3
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 5
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 300, y: -170.66667}
+  - LogicalId: W2-IN3
+    NodeId: 2d980f44-7c8f-4cc6-b267-dc2ad4d98cc7
+    Kind: 1
+    InfeedServiceSeconds: 5
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 309.333, y: -4.666664}
+  - LogicalId: W2-OUT3
+    NodeId: 84253ee2-3327-46e3-85d6-8ef214be5b8d
+    Kind: 3
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 5
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 304.667, y: 75.33333}
+  - LogicalId: W2-IN4
+    NodeId: aca85c92-6683-435a-b576-4e5cdbc19e72
+    Kind: 1
+    InfeedServiceSeconds: 5
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 296.667, y: 227.33333}
+  - LogicalId: W2-OUT4
+    NodeId: 5c6e4953-5b5f-4445-8d60-3301edf2573f
+    Kind: 3
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 5
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 296.667, y: 153.33334}
+  - LogicalId: W2-P1
+    NodeId: 85bdae88-c9d0-4cd3-ba8e-07e1e004464c
+    Kind: 2
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 1
+    StackerId: 4
+    PickupColumn: 1
+    PickupRow: 0
+    EditorPosition: {x: 1045.33, y: -322.6667}
+  - LogicalId: W2-P2
+    NodeId: 471ce015-5d71-4f15-beec-5853d6d850c5
+    Kind: 2
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 2
+    StackerId: 4
+    PickupColumn: 2
+    PickupRow: 0
+    EditorPosition: {x: 1050.67, y: -236}
+  - LogicalId: W2-P3
+    NodeId: bf721f60-7031-44cc-8dd2-73e46343251f
+    Kind: 2
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 2
+    StackerId: 5
+    PickupColumn: 5
+    PickupRow: 0
+    EditorPosition: {x: 1061.33, y: -126.66667}
+  - LogicalId: W2-P4
+    NodeId: 2ba5a605-6065-45e6-a93b-92ee108e4c6a
+    Kind: 2
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 1
+    StackerId: 5
+    PickupColumn: 6
+    PickupRow: 0
+    EditorPosition: {x: 1045.33, y: -68}
+  - LogicalId: W2-P5
+    NodeId: 09ae4d53-496e-4a8a-ab88-3cbeb5c2d29c
+    Kind: 2
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 1
+    StackerId: 6
+    PickupColumn: 9
+    PickupRow: 0
+    EditorPosition: {x: 1058.67, y: 17.333336}
+  - LogicalId: W2-P6
+    NodeId: b86a5d4c-ec0d-4c01-846e-6e250835eeb5
+    Kind: 2
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 2
+    StackerId: 6
+    PickupColumn: 10
+    PickupRow: 0
+    EditorPosition: {x: 1042.67, y: 97.33334}
+  - LogicalId: W2-P7
+    NodeId: a2f57bcf-7baa-4a90-9cd9-86c18ce61236
+    Kind: 2
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 2
+    StackerId: 7
+    PickupColumn: 13
+    PickupRow: 0
+    EditorPosition: {x: 1061.33, y: 199.33334}
+  - LogicalId: W2-P8
+    NodeId: e69d9a70-e78b-4d49-ac91-206214fc84ee
+    Kind: 2
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 1
+    StackerId: 7
+    PickupColumn: 14
+    PickupRow: 0
+    EditorPosition: {x: 1074.67, y: 278}
+  - LogicalId: W2-C4
+    NodeId: 55009653-32fb-409f-837d-64313342a7e5
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 502, y: 17.333336}
+  - LogicalId: W2-C3
+    NodeId: 658d52b6-68f0-47d6-b550-353c2c45d4ba
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 505.333, y: 93.33334}
+  - LogicalId: W2-C1
+    NodeId: 71c3af75-6631-467c-b292-7d912c9d7800
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 513.333, y: 240.00002}
+  - LogicalId: W2-C2
+    NodeId: 86dbd764-1e45-46d7-8a80-69cb73b59c7d
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 505.333, y: 172}
+  - LogicalId: W2-C20
+    NodeId: 6c13d614-f351-4271-9610-c375fd412989
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 847.333, y: -322.6667}
+  - LogicalId: W2-C21
+    NodeId: ee5ecbbf-0e40-41df-922e-db14147e7bc3
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 867.333, y: -220}
+  - LogicalId: W2-C22
+    NodeId: 12ce5b70-36d6-4378-8938-a0907faf211f
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 863.333, y: -142.66667}
+  - LogicalId: W2-C23
+    NodeId: dbcb6744-69b8-40fd-be76-1a57f48c6670
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 851.333, y: -68}
+  - LogicalId: W2-C24
+    NodeId: 2451e3ed-8feb-4471-8847-eb10072899bf
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 863.333, y: 7.333336}
+  - LogicalId: W2-C25
+    NodeId: 5bdd139e-777a-431f-b291-b6105f61ae99
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 879.333, y: 109.33334}
+  - LogicalId: W2-C26
+    NodeId: 7013fe31-f122-44e8-9263-d1664c9e37d3
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 875.333, y: 188}
+  - LogicalId: W2-C27
+    NodeId: 59abbb89-34b2-4d37-aab2-baecf07937f2
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 879.333, y: 246.00002}
+  - LogicalId: W2-C9
+    NodeId: 3ef4c40e-f79a-48cd-bf9f-3d8130c05a51
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 513.333, y: -420}
+  - LogicalId: W2-C10
+    NodeId: c31574f4-3193-449e-a9ba-16fe1250cfdc
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 716.667, y: -412}
+  - LogicalId: W2-C19
+    NodeId: e276341f-28aa-4409-b182-fd439a3701bd
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 716.667, y: 322}
+  - LogicalId: W2-C0
+    NodeId: f5492a88-6b01-4307-951c-296f7307487e
+    Kind: 0
+    InfeedServiceSeconds: 0
+    OutfeedServiceSeconds: 0
+    MaxReservations: 0
+    StackerInteractionMode: 0
+    StackerId: 0
+    PickupColumn: 0
+    PickupRow: 0
+    EditorPosition: {x: 513.333, y: 322}
   Edges:
   - FromNodeId: 88c2f41d-8407-4676-a507-77138d8a2de3
     ToNodeId: 6e385394-52ce-4c79-992e-5ce0ac271bf0
@@ -706,6 +1190,235 @@ MonoBehaviour:
     ToNodeId: 6aa401ac-c1d1-412e-a999-87f84b783a43
     DistanceMeters: 4
     SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: c5924301-3689-4408-b427-c5fb54ac840d
+    ToNodeId: ed97a379-2f57-4027-85aa-d6f67232a162
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 2f50aef0-0c02-4d04-a768-37332b41f7fe
+    ToNodeId: b7956db6-5726-44c5-bd30-0e9e0d37242e
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 33034692-31ce-4d8e-aae1-996ae27b9c7d
+    ToNodeId: 40bcd2ec-e52f-4a2f-96a4-31fdad4d73a0
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: d047f5ce-e6f7-4912-84a7-68bf6faac137
+    ToNodeId: 1d4ce30a-8c26-43bb-9028-7152e0a5b51d
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 2d980f44-7c8f-4cc6-b267-dc2ad4d98cc7
+    ToNodeId: 55009653-32fb-409f-837d-64313342a7e5
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 658d52b6-68f0-47d6-b550-353c2c45d4ba
+    ToNodeId: 84253ee2-3327-46e3-85d6-8ef214be5b8d
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: aca85c92-6683-435a-b576-4e5cdbc19e72
+    ToNodeId: 71c3af75-6631-467c-b292-7d912c9d7800
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 86dbd764-1e45-46d7-8a80-69cb73b59c7d
+    ToNodeId: 5c6e4953-5b5f-4445-8d60-3301edf2573f
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 4a0082d6-d773-4880-a7d1-78a29b9dd08f
+    ToNodeId: 2f50aef0-0c02-4d04-a768-37332b41f7fe
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 40bcd2ec-e52f-4a2f-96a4-31fdad4d73a0
+    ToNodeId: db480ea9-0e50-43e3-a2cc-c9a354a6f224
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 7a37fd18-4cb0-4351-add5-e87c9e9dae7f
+    ToNodeId: d047f5ce-e6f7-4912-84a7-68bf6faac137
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 55009653-32fb-409f-837d-64313342a7e5
+    ToNodeId: d34aac05-42d1-47c3-a9bf-dc3e6d427003
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 4e307f70-b72d-4072-86ff-ca4c3a31317d
+    ToNodeId: 658d52b6-68f0-47d6-b550-353c2c45d4ba
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 71c3af75-6631-467c-b292-7d912c9d7800
+    ToNodeId: 2b5b71ed-2411-4fe1-8c21-bc08869371ea
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 76081c02-fdea-4e47-ab8d-5867837cb1af
+    ToNodeId: 86dbd764-1e45-46d7-8a80-69cb73b59c7d
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 9a77686b-ce3c-4eec-8391-d92d7fc749d3
+    ToNodeId: 4a0082d6-d773-4880-a7d1-78a29b9dd08f
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 2f50aef0-0c02-4d04-a768-37332b41f7fe
+    ToNodeId: ed97a379-2f57-4027-85aa-d6f67232a162
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: ed97a379-2f57-4027-85aa-d6f67232a162
+    ToNodeId: 3ef4c40e-f79a-48cd-bf9f-3d8130c05a51
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 3ef4c40e-f79a-48cd-bf9f-3d8130c05a51
+    ToNodeId: c31574f4-3193-449e-a9ba-16fe1250cfdc
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: c31574f4-3193-449e-a9ba-16fe1250cfdc
+    ToNodeId: 9a77686b-ce3c-4eec-8391-d92d7fc749d3
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: ed97a379-2f57-4027-85aa-d6f67232a162
+    ToNodeId: 9a77686b-ce3c-4eec-8391-d92d7fc749d3
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 9a77686b-ce3c-4eec-8391-d92d7fc749d3
+    ToNodeId: 6c13d614-f351-4271-9610-c375fd412989
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 12ce5b70-36d6-4378-8938-a0907faf211f
+    ToNodeId: 7a37fd18-4cb0-4351-add5-e87c9e9dae7f
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 4a0082d6-d773-4880-a7d1-78a29b9dd08f
+    ToNodeId: 7a37fd18-4cb0-4351-add5-e87c9e9dae7f
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 7a37fd18-4cb0-4351-add5-e87c9e9dae7f
+    ToNodeId: db480ea9-0e50-43e3-a2cc-c9a354a6f224
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: db480ea9-0e50-43e3-a2cc-c9a354a6f224
+    ToNodeId: d34aac05-42d1-47c3-a9bf-dc3e6d427003
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: d34aac05-42d1-47c3-a9bf-dc3e6d427003
+    ToNodeId: 4e307f70-b72d-4072-86ff-ca4c3a31317d
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 4e307f70-b72d-4072-86ff-ca4c3a31317d
+    ToNodeId: 76081c02-fdea-4e47-ab8d-5867837cb1af
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 76081c02-fdea-4e47-ab8d-5867837cb1af
+    ToNodeId: 2b5b71ed-2411-4fe1-8c21-bc08869371ea
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 2b5b71ed-2411-4fe1-8c21-bc08869371ea
+    ToNodeId: e276341f-28aa-4409-b182-fd439a3701bd
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: e276341f-28aa-4409-b182-fd439a3701bd
+    ToNodeId: f5492a88-6b01-4307-951c-296f7307487e
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: f5492a88-6b01-4307-951c-296f7307487e
+    ToNodeId: 71c3af75-6631-467c-b292-7d912c9d7800
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 71c3af75-6631-467c-b292-7d912c9d7800
+    ToNodeId: 86dbd764-1e45-46d7-8a80-69cb73b59c7d
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 86dbd764-1e45-46d7-8a80-69cb73b59c7d
+    ToNodeId: 658d52b6-68f0-47d6-b550-353c2c45d4ba
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 658d52b6-68f0-47d6-b550-353c2c45d4ba
+    ToNodeId: 55009653-32fb-409f-837d-64313342a7e5
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 55009653-32fb-409f-837d-64313342a7e5
+    ToNodeId: 40bcd2ec-e52f-4a2f-96a4-31fdad4d73a0
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 40bcd2ec-e52f-4a2f-96a4-31fdad4d73a0
+    ToNodeId: d047f5ce-e6f7-4912-84a7-68bf6faac137
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: d047f5ce-e6f7-4912-84a7-68bf6faac137
+    ToNodeId: 2f50aef0-0c02-4d04-a768-37332b41f7fe
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: db480ea9-0e50-43e3-a2cc-c9a354a6f224
+    ToNodeId: dbcb6744-69b8-40fd-be76-1a57f48c6670
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 7013fe31-f122-44e8-9263-d1664c9e37d3
+    ToNodeId: 76081c02-fdea-4e47-ab8d-5867837cb1af
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 2b5b71ed-2411-4fe1-8c21-bc08869371ea
+    ToNodeId: 59abbb89-34b2-4d37-aab2-baecf07937f2
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 59abbb89-34b2-4d37-aab2-baecf07937f2
+    ToNodeId: e69d9a70-e78b-4d49-ac91-206214fc84ee
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: a2f57bcf-7baa-4a90-9cd9-86c18ce61236
+    ToNodeId: 7013fe31-f122-44e8-9263-d1664c9e37d3
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 5bdd139e-777a-431f-b291-b6105f61ae99
+    ToNodeId: 7013fe31-f122-44e8-9263-d1664c9e37d3
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: b86a5d4c-ec0d-4c01-846e-6e250835eeb5
+    ToNodeId: 5bdd139e-777a-431f-b291-b6105f61ae99
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: dbcb6744-69b8-40fd-be76-1a57f48c6670
+    ToNodeId: 2451e3ed-8feb-4471-8847-eb10072899bf
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 2451e3ed-8feb-4471-8847-eb10072899bf
+    ToNodeId: 09ae4d53-496e-4a8a-ab88-3cbeb5c2d29c
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: dbcb6744-69b8-40fd-be76-1a57f48c6670
+    ToNodeId: 2ba5a605-6065-45e6-a93b-92ee108e4c6a
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: ee5ecbbf-0e40-41df-922e-db14147e7bc3
+    ToNodeId: 12ce5b70-36d6-4378-8938-a0907faf211f
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: bf721f60-7031-44cc-8dd2-73e46343251f
+    ToNodeId: 12ce5b70-36d6-4378-8938-a0907faf211f
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 471ce015-5d71-4f15-beec-5853d6d850c5
+    ToNodeId: ee5ecbbf-0e40-41df-922e-db14147e7bc3
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 6c13d614-f351-4271-9610-c375fd412989
+    ToNodeId: 85bdae88-c9d0-4cd3-ba8e-07e1e004464c
+    DistanceMeters: 4
+    SpeedOverrideMetersPerSecond: 0
+  - FromNodeId: 92b56eaf-777f-4a95-871f-90a226d8fc85
+    ToNodeId: ed97a379-2f57-4027-85aa-d6f67232a162
+    DistanceMeters: 10
+    SpeedOverrideMetersPerSecond: 0
+    ProcessTag: wrap
+  - FromNodeId: ed97a379-2f57-4027-85aa-d6f67232a162
+    ToNodeId: 92b56eaf-777f-4a95-871f-90a226d8fc85
+    DistanceMeters: 10
+    SpeedOverrideMetersPerSecond: 0
+    ProcessTag: wrap
+  - FromNodeId: b67f5066-66a5-4ab6-b2f1-f2d3bf1cf86a
+    ToNodeId: c31574f4-3193-449e-a9ba-16fe1250cfdc
+    DistanceMeters: 10
+    SpeedOverrideMetersPerSecond: 0
+    ProcessTag: wrap
+  - FromNodeId: c31574f4-3193-449e-a9ba-16fe1250cfdc
+    ToNodeId: b67f5066-66a5-4ab6-b2f1-f2d3bf1cf86a
+    DistanceMeters: 10
+    SpeedOverrideMetersPerSecond: 0
+    ProcessTag: wrap
+
   DefaultSpeedMetersPerSecond: 0.6
   CargoUnitLengthMeters: 1.2
   DefaultEdgeDistanceMeters: 4

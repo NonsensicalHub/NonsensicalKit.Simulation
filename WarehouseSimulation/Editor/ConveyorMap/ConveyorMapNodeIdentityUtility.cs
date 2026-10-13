@@ -69,7 +69,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         }
 
         /// <summary>
-        /// 将仍引用逻辑 ID 的旧路段端点迁移为节点 GUID，避免 GraphView 无法解析连线。
+        /// 将仍引用逻辑 ID 的旧路段端点迁移为节点 GUID，避免编辑器无法解析连线。
         /// </summary>
         public static bool EnsureEdgeNodeIds(WarehouseConveyorMap map)
         {

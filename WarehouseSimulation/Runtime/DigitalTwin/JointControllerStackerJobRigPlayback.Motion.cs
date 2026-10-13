@@ -82,7 +82,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                         to.Row,
                         progress,
                         duration,
-                        commitState);
+                        commitState,
+                        toUsesForkDepth: subTask.StackerToUsesForkDepth,
+                        toForkDepthMeters: subTask.StackerToForkDepthMeters);
                     if (commitState)
                     {
                         AttachCargoByJob(task.JobId);
@@ -100,7 +102,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                         to.Row,
                         progress,
                         duration,
-                        commitState);
+                        commitState,
+                        toUsesForkDepth: subTask.StackerToUsesForkDepth,
+                        toForkDepthMeters: subTask.StackerToForkDepthMeters);
                     if (task.IsOutbound)
                     {
                         if (!commitState)

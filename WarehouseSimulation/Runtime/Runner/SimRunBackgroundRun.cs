@@ -69,20 +69,31 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
             var sw = Stopwatch.StartNew();
             var lastProgressLog = sw.Elapsed;
+            var progress = new SimRunLiveProgress
+            {
+                TargetInboundJobs = SimFlowPlanResolver.CountInboundQuantity(
+                    SimFlowPlanResolver.Resolve(scenario)),
+            };
+            PublishLiveStatus(host, progress);
             Debug.Log("[WarehouseSimulation] 仿真已在后台线程启动…", host);
 
             var task = Task.Run(() =>
             {
                 var allocator = SlotAllocatorFactory.Create(scenario, grid);
-                return WarehouseSimulationService.RunOnBackgroundThread(scenario, allocator, runOptions);
+                return WarehouseSimulationService.RunOnBackgroundThread(
+                    scenario,
+                    allocator,
+                    runOptions,
+                    progress);
             });
 
             while (!task.IsCompleted)
             {
+                PublishLiveStatus(host, progress);
                 if (sw.Elapsed - lastProgressLog >= TimeSpan.FromSeconds(3))
                 {
                     Debug.Log(
-                        $"[WarehouseSimulation] 后台仿真进行中… 已等待 {sw.Elapsed.TotalSeconds:F0}s",
+                        $"[WarehouseSimulation] 后台仿真进行中… 已等待 {sw.Elapsed.TotalSeconds:F0}s，{progress.Format()}",
                         host);
                     lastProgressLog = sw.Elapsed;
                 }
@@ -126,6 +137,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             {
                 WarehouseSimLog.KeySteps = previousKeySteps;
                 WarehouseSimLog.Verbose = previousVerbose;
+            }
+        }
+
+        private static void PublishLiveStatus(MonoBehaviour host, SimRunLiveProgress progress)
+        {
+            if (host is WarehouseSimRunner runner)
+            {
+                runner.SetLiveRunStatus(
+                    progress.Format(),
+                    progress.CompletedInboundJobs,
+                    progress.TargetInboundJobs);
             }
         }
 

@@ -64,6 +64,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             Debug.LogWarning($"{Tag} {message}");
         }
 
+        public static bool WarnEnabled => !s_suppressUnityOutput;
+
+        public static void Warn(System.Func<string> messageFactory)
+        {
+            if (s_suppressUnityOutput || messageFactory == null)
+            {
+                return;
+            }
+
+            Debug.LogWarning($"{Tag} {messageFactory()}");
+        }
+
         public static void Error(string message)
         {
             if (s_suppressUnityOutput)

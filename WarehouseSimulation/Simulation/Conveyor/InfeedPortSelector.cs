@@ -53,7 +53,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             int infeedPortIndex,
             out GridIndex slot,
             out int stackerId,
-            bool skipPickupCapacityPrecheck = false)
+            bool skipPickupCapacityPrecheck = false,
+            ConveyorRouteAccess access = default)
         {
             slot = default;
             stackerId = -1;
@@ -69,7 +70,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     out _,
                     out slot,
                     out stackerId,
-                    skipPickupCapacityPrecheck))
+                    skipPickupCapacityPrecheck,
+                    access))
             {
                 return false;
             }
@@ -84,7 +86,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             ISlotAllocator slotAllocator,
             int[] pickupReservationCounts,
             int[] stackerActiveJobCounts,
-            int infeedPortIndex)
+            int infeedPortIndex,
+            ConveyorRouteAccess access = default)
         {
             if (infeedPortIndex < 0)
             {
@@ -102,7 +105,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 ref cursor,
                 out _,
                 out _,
-                out _);
+                out _,
+                access: access);
         }
 
         /// <summary>是否存在任一入库口仍可分配到可通过输送网到达的空货位。</summary>
@@ -170,7 +174,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             out int infeedPortIndex,
             out GridIndex slot,
             out int stackerId,
-            bool skipPickupCapacityPrecheck = false)
+            bool skipPickupCapacityPrecheck = false,
+            ConveyorRouteAccess access = default)
         {
             infeedPortIndex = fixedInfeedPortIndex;
             slot = default;
@@ -194,7 +199,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     topology,
                     bindings,
                     fixedInfeedPortIndex,
-                    pickupReservationCounts))
+                    pickupReservationCounts,
+                    access))
             {
                 return false;
             }
@@ -275,7 +281,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         bindings,
                         fixedInfeedPortIndex,
                         candidateSlot,
-                        pickupReservationCounts))
+                        pickupReservationCounts,
+                        access))
                 {
                     continue;
                 }

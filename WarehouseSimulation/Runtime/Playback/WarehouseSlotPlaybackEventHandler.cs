@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using NaughtyAttributes;
 using NonsensicalKit.DigitalTwin.Warehouse;
 using UnityEngine;
+using UnityEngine.Serialization;
 using NonsensicalKit.Simulation.WarehouseSimulation.Allocation;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
@@ -15,7 +17,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
     public sealed class WarehouseSlotPlaybackEventHandler : SimPlaybackEventHandlerBehaviour
     {
         [SerializeField, Label("数字孪生仓库")]
+        [Tooltip("仓库列表留空时，作为唯一的 0 号库。列表有内容时以列表为准。")]
         private WarehouseManager m_warehouseManager;
+
+        [FormerlySerializedAs("m_additionalWarehouses")]
+        [SerializeField, Label("仓库列表")]
+        [Tooltip("每一项一座仓库，包含 0 号库。留空则使用上方的单个数字孪生仓库。")]
+        private WarehousePlaybackBinding[] m_warehouses;
 
         [SerializeField, Label("未就绪时输出警告")]
         private bool m_warnWhenNotReady = true;
@@ -31,8 +39,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private readonly WarehouseSlotPlaybackSnapshotIndex _snapshotIndex = new();
         private GridIndex? _previousHighlight;
         private bool _loggedSkip;
-        private SimSlotExclusionZone[] _cachedExclusionZones = System.Array.Empty<SimSlotExclusionZone>();
-        private SimSlotExclusionZone[] _exclusionZones = System.Array.Empty<SimSlotExclusionZone>();
+        private readonly Dictionary<int, SimSlotExclusionZone[]> _exclusionByWarehouse = new();
+        private readonly Dictionary<int, WarehouseManagerSlotVisualAdapter> _extraAdapters = new();
         private WarehouseManagerSlotVisualAdapter _adapter;
 
         private void Awake()
@@ -59,14 +67,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             ClearWarehouseOccupancyFromGrid();
             HideHighlight();
 
-            if (Visual != null)
+            foreach (var slot in _previousOccupied)
             {
-                foreach (var slot in _previousOccupied)
-                {
-                    Visual.SetOccupied(slot, false);
-                }
-
-                Visual.HideHighlight();
+                AdapterFor(slot.WarehouseId)?.SetOccupied(slot, false);
             }
 
             _previousOccupied.Clear();
@@ -80,7 +83,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         public override void OnPlaybackEvaluate(double simTime, IReadOnlyList<SimSubTask> subTasks)
         {
             ResolveEventSource();
-            if (Visual == null || subTasks == null || subTasks.Count == 0)
+            if (!HasPlaybackTarget() || subTasks == null || subTasks.Count == 0)
             {
                 LogSkipOnce();
                 return;
@@ -91,7 +94,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 _snapshotIndex.Build(subTasks, m_highlightOnStackerMove, m_eventSource?.InitialOccupiedSlots);
                 _outboundJobIds.Clear();
                 _outboundJobIds.UnionWith(SimSubTaskQuery.BuildOutboundJobIds(subTasks));
-                _cachedExclusionZones = System.Array.Empty<SimSlotExclusionZone>();
+                _exclusionByWarehouse.Clear();
             }
 
             var snapshot = _snapshotIndex.BuildAt(simTime);
@@ -101,13 +104,22 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private void ClearWarehouseOccupancyFromGrid()
         {
             ResolveEventSource();
-            var grid = PlaybackEventSource?.GridConfig;
-            if (grid == null || m_warehouseManager == null || !m_warehouseManager.Inited)
+            _exclusionByWarehouse.Clear();
+            ForEachConfiguredWarehouse(warehouseId =>
+            {
+                TryGetGrid(warehouseId, out var grid);
+                ClearWarehouse(warehouseId, grid, AdapterFor(warehouseId));
+            });
+        }
+
+        private void ClearWarehouse(int warehouseId, WarehouseGridConfig grid, WarehouseManagerSlotVisualAdapter adapter)
+        {
+            if (grid == null || adapter == null)
             {
                 return;
             }
 
-            RebuildExclusionZones(grid);
+            var zones = ExclusionZones(warehouseId, grid);
             var slots = new List<GridIndex>();
             for (var level = 0; level < grid.LevelCount; level++)
             {
@@ -115,37 +127,22 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 {
                     for (var row = 0; row < grid.RowCount; row++)
                     {
-                        if (!SlotGridUtility.IsStorageSlot(grid, level, column, row, _exclusionZones))
+                        if (!SlotGridUtility.IsStorageSlot(grid, level, column, row, zones))
                         {
                             continue;
                         }
 
-                        slots.Add(new GridIndex(level, column, row));
+                        slots.Add(new GridIndex(level, column, row, 0, warehouseId));
                     }
                 }
             }
 
-            if (_adapter == null && m_warehouseManager != null)
-            {
-                _adapter = new WarehouseManagerSlotVisualAdapter(m_warehouseManager, m_warnWhenNotReady);
-            }
-
-            _adapter?.ApplyOccupancyBatch(slots, occupied: false);
+            adapter.ApplyOccupancyBatch(slots, occupied: false);
         }
 
         private void HideHighlight()
         {
-            if (m_warehouseManager != null && m_warehouseManager.Inited)
-            {
-                m_warehouseManager.HideHighlightBin();
-            }
-        }
-
-        private void RebuildExclusionZones(WarehouseGridConfig grid)
-        {
-            _exclusionZones = SlotGridUtility.BuildEffectiveExclusionZones(
-                grid,
-                PlaybackEventSource?.HardwareBindings);
+            ForEachConfiguredWarehouse(warehouseId => AdapterFor(warehouseId)?.HideHighlight());
         }
 
         private void ResolveEventSource()
@@ -172,7 +169,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         {
             ResolveEventSource();
             var initial = m_eventSource?.InitialOccupiedSlots;
-            if (Visual == null || initial == null || initial.Count == 0)
+            if (!HasPlaybackTarget() || initial == null || initial.Count == 0)
             {
                 return;
             }
@@ -185,52 +182,59 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     continue;
                 }
 
-                Visual.SetOccupied(slot, true);
+                AdapterFor(slot.WarehouseId)?.SetOccupied(slot, true);
                 _previousOccupied.Add(slot);
             }
         }
 
         private void ApplySnapshotDiff(in WarehouseSlotPlaybackSnapshot snapshot)
         {
-            var occupied = snapshot.OccupiedSlots ?? new HashSet<GridIndex>();
+            var occupied = snapshot.OccupiedSlots;
 
             foreach (var slot in _previousOccupied)
             {
-                if (!occupied.Contains(slot))
+                if (occupied == null || !occupied.Contains(slot))
                 {
-                    Visual.SetOccupied(slot, false);
+                    AdapterFor(slot.WarehouseId)?.SetOccupied(slot, false);
                 }
             }
 
-            foreach (var slot in occupied)
+            if (occupied != null)
             {
-                if (!IsPlaybackStorageSlot(slot))
+                foreach (var slot in occupied)
                 {
-                    continue;
-                }
+                    if (!IsPlaybackStorageSlot(slot) || _previousOccupied.Contains(slot))
+                    {
+                        continue;
+                    }
 
-                Visual.SetOccupied(slot, true);
+                    AdapterFor(slot.WarehouseId)?.SetOccupied(slot, true);
+                }
             }
 
             _previousOccupied.Clear();
-            foreach (var slot in occupied)
+            if (occupied != null)
             {
-                if (IsPlaybackStorageSlot(slot))
+                foreach (var slot in occupied)
                 {
-                    _previousOccupied.Add(slot);
+                    if (IsPlaybackStorageSlot(slot))
+                    {
+                        _previousOccupied.Add(slot);
+                    }
                 }
             }
 
             if (!EqualsGridIndex(_previousHighlight, snapshot.HighlightSlot))
             {
+                if (_previousHighlight.HasValue)
+                {
+                    AdapterFor(_previousHighlight.Value.WarehouseId)?.HideHighlight();
+                }
+
                 _previousHighlight = snapshot.HighlightSlot;
                 if (snapshot.HighlightSlot.HasValue)
                 {
-                    Visual.ApplyHighlight(snapshot.HighlightSlot.Value);
-                }
-                else
-                {
-                    Visual.HideHighlight();
+                    AdapterFor(snapshot.HighlightSlot.Value.WarehouseId)?.ApplyHighlight(snapshot.HighlightSlot.Value);
                 }
             }
         }
@@ -253,17 +257,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private bool IsPlaybackStorageSlot(GridIndex slot)
         {
             ResolveEventSource();
-            var grid = m_eventSource?.GridConfig;
-            if (grid == null)
+            if (!TryGetGrid(slot.WarehouseId, out var grid))
             {
-                return true;
-            }
-
-            if (_cachedExclusionZones.Length == 0 && m_eventSource != null)
-            {
-                _cachedExclusionZones = SlotGridUtility.BuildEffectiveExclusionZones(
-                    grid,
-                    m_eventSource.HardwareBindings);
+                return slot.WarehouseId == 0;
             }
 
             return SlotGridUtility.IsStorageSlot(
@@ -271,7 +267,122 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 slot.Level,
                 slot.Column,
                 slot.Row,
-                _cachedExclusionZones);
+                ExclusionZones(slot.WarehouseId, grid));
+        }
+
+        private bool TryGetGrid(int warehouseId, out WarehouseGridConfig grid)
+        {
+            if (WarehouseCatalog.TryGet(PlaybackEventSource?.HardwareBindings, warehouseId, out var definition)
+                && definition.Grid != null)
+            {
+                grid = definition.Grid;
+                return true;
+            }
+
+            if (warehouseId == 0)
+            {
+                grid = PlaybackEventSource?.GridConfig;
+                return grid != null;
+            }
+
+            grid = null;
+            return false;
+        }
+
+        private SimSlotExclusionZone[] ExclusionZones(int warehouseId, WarehouseGridConfig grid)
+        {
+            if (_exclusionByWarehouse.TryGetValue(warehouseId, out var cached))
+            {
+                return cached;
+            }
+
+            var zones = SlotGridUtility.BuildEffectiveExclusionZones(
+                grid,
+                PlaybackEventSource?.HardwareBindings,
+                warehouseId,
+                restrictToWarehouse: true);
+            _exclusionByWarehouse[warehouseId] = zones;
+            return zones;
+        }
+
+        private bool HasWarehouseList => m_warehouses != null && m_warehouses.Length > 0;
+
+        private bool HasPlaybackTarget()
+        {
+            if (!HasWarehouseList)
+            {
+                return m_warehouseManager != null;
+            }
+
+            for (var i = 0; i < m_warehouses.Length; i++)
+            {
+                if (m_warehouses[i]?.Manager != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void ForEachConfiguredWarehouse(Action<int> action)
+        {
+            if (!HasWarehouseList)
+            {
+                action(0);
+                return;
+            }
+
+            for (var i = 0; i < m_warehouses.Length; i++)
+            {
+                var binding = m_warehouses[i];
+                if (binding != null)
+                {
+                    action(binding.WarehouseId);
+                }
+            }
+        }
+
+        private WarehouseManagerSlotVisualAdapter AdapterFor(int warehouseId)
+        {
+            if (!HasWarehouseList)
+            {
+                return warehouseId == 0 ? Visual : null;
+            }
+
+            if (_extraAdapters.TryGetValue(warehouseId, out var adapter))
+            {
+                return adapter;
+            }
+
+            var manager = FindManager(warehouseId);
+            if (manager == null)
+            {
+                return null;
+            }
+
+            adapter = new WarehouseManagerSlotVisualAdapter(manager, m_warnWhenNotReady);
+            _extraAdapters[warehouseId] = adapter;
+            return adapter;
+        }
+
+        private WarehouseManager FindManager(int warehouseId)
+        {
+            if (m_warehouses == null)
+            {
+                return null;
+            }
+
+            for (var i = 0; i < m_warehouses.Length; i++)
+            {
+                var binding = m_warehouses[i];
+                if (binding != null && binding.WarehouseId == warehouseId)
+                {
+                    return binding.Manager;
+                }
+            }
+
+            return null;
         }
 
         private void LogSkipOnce()

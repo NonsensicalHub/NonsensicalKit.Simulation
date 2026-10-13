@@ -44,6 +44,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
         VerticalTransferMove,
         /// <summary>任务完成。</summary>
         Completed,
+        /// <summary>在路段中间门前的停留点等待开门。追加在末尾，避免改动已有枚举序号。</summary>
+        SegmentGateWait = 19,
     }
 
     /// <summary>
@@ -76,6 +78,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
 
         /// <summary>本阶段堆垛机轨道列（关节标定用）。</summary>
         public int StackerRailColumn;
+
+        /// <summary>终点货叉使用 <see cref="StackerToForkDepthMeters"/>，不按货位列取坐标。</summary>
+        public bool StackerToUsesForkDepth;
+
+        /// <summary>终点相对巷道中心的货叉伸出距离（米）。</summary>
+        public float StackerToForkDepthMeters;
 
         /// <summary>是否已写入 <see cref="StackerFromSlot"/> / <see cref="StackerToSlot"/>。</summary>
         public bool HasStackerPose;
@@ -212,8 +220,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
         }
 
         /// <summary>
-        /// 从子任务快照中选取最完整的路段预约表（按段数、末段占用结束时刻择优，与回放一致）。
-        /// 勿用首次附带的 schedule：逐步 DES 记录时该副本常缺少后续路段与路口校正。
+        /// 从子任务快照中选取最完整的路段预约表。
+        /// 段数更多者优先；段数相同时取更晚记录的快照。截断后的短表不能靠更晚的末段占用结束时刻盖掉仍含中间路段的完整表。
         /// </summary>
         public static bool TryGetBestSegmentSchedule(
             IReadOnlyList<SimSubTask> subTasks,
@@ -221,6 +229,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
             out ConveyorSegmentScheduleEntry[] schedule)
         {
             schedule = null;
+            var bestRecordId = int.MinValue;
             if (subTasks == null || subTasks.Count == 0)
             {
                 return false;
@@ -230,23 +239,47 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
             {
                 var candidate = subTasks[i];
                 if (candidate.JobId != jobId
-                    || candidate.SegmentSchedule == null
-                    || candidate.SegmentSchedule.Length == 0)
+                    || !IsPreferredScheduleSnapshot(
+                        candidate.SegmentSchedule,
+                        candidate.SubTaskId,
+                        schedule,
+                        bestRecordId))
                 {
                     continue;
                 }
 
-                if (schedule == null
-                    || schedule.Length == 0
-                    || candidate.SegmentSchedule.Length > schedule.Length
-                    || candidate.SegmentSchedule[^1].OccupancyEndSimTime
-                       > schedule[^1].OccupancyEndSimTime + TimeEpsilon)
-                {
-                    schedule = candidate.SegmentSchedule;
-                }
+                schedule = candidate.SegmentSchedule;
+                bestRecordId = candidate.SubTaskId;
             }
 
             return schedule != null && schedule.Length > 0;
+        }
+
+        /// <summary>
+        /// 更长的路段表优先。段数相同时取记录号更大（更晚写入）的快照。
+        /// </summary>
+        public static bool IsPreferredScheduleSnapshot(
+            ConveyorSegmentScheduleEntry[] candidate,
+            int candidateRecordId,
+            ConveyorSegmentScheduleEntry[] existing,
+            int existingRecordId)
+        {
+            if (candidate == null || candidate.Length == 0)
+            {
+                return false;
+            }
+
+            if (existing == null || existing.Length == 0)
+            {
+                return true;
+            }
+
+            if (candidate.Length != existing.Length)
+            {
+                return candidate.Length > existing.Length;
+            }
+
+            return candidateRecordId > existingRecordId;
         }
 
         public static double GetTimelineStart(IReadOnlyList<SimSubTask> subTasks)
@@ -324,6 +357,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
                 SimSubTaskKind.SegmentTransit => "路段行驶",
                 SimSubTaskKind.SegmentHopMove => "停留点间移动",
                 SimSubTaskKind.SegmentStopDwell => "停留点等待",
+                SimSubTaskKind.SegmentGateWait => "等待开门",
                 SimSubTaskKind.SegmentQueue => "路段排队",
                 SimSubTaskKind.JunctionEnter => "驶入路口",
                 SimSubTaskKind.JunctionWait => "路口等待",
@@ -419,6 +453,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
             IReadOnlyList<SimSubTask> subTasks)
         {
             var result = new Dictionary<int, ConveyorSegmentScheduleEntry[]>();
+            var recordIds = new Dictionary<int, int>();
             if (subTasks == null || subTasks.Count == 0)
             {
                 return result;
@@ -433,15 +468,24 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
                 }
 
                 var jobId = candidate.JobId;
-                if (!result.TryGetValue(jobId, out var existing)
-                    || existing == null
-                    || existing.Length == 0
-                    || candidate.SegmentSchedule.Length > existing.Length
-                    || candidate.SegmentSchedule[^1].OccupancyEndSimTime
-                       > existing[^1].OccupancyEndSimTime + TimeEpsilon)
+                result.TryGetValue(jobId, out var existing);
+                recordIds.TryGetValue(jobId, out var existingRecordId);
+                if (!recordIds.ContainsKey(jobId))
                 {
-                    result[jobId] = candidate.SegmentSchedule;
+                    existingRecordId = int.MinValue;
                 }
+
+                if (!IsPreferredScheduleSnapshot(
+                        candidate.SegmentSchedule,
+                        candidate.SubTaskId,
+                        existing,
+                        existingRecordId))
+                {
+                    continue;
+                }
+
+                result[jobId] = candidate.SegmentSchedule;
+                recordIds[jobId] = candidate.SubTaskId;
             }
 
             return result;

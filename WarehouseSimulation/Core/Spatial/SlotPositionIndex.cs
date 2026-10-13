@@ -67,8 +67,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return index;
         }
 
-        public bool TryGetLocalPosition(GridIndex slot, out Vector3 local) =>
-            _localBySlot.TryGetValue(slot, out local);
+        public bool TryGetLocalPosition(GridIndex slot, out Vector3 local)
+        {
+            if (slot.WarehouseId != 0)
+            {
+                slot.WarehouseId = 0;
+            }
+
+            return _localBySlot.TryGetValue(slot, out local);
+        }
 
         public bool TryGetAxisPosition(int level, int column, int row, out Vector3 local)
         {

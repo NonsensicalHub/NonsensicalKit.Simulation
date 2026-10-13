@@ -24,9 +24,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             }
 
             var levelDist = SlotPositionMath.ComputeLevelDistance(
-                positions, railColumn, fromLevel, slot.Level);
+                positions, railColumn, fromLevel, slot.Level, slot.WarehouseId);
             var rowDist = SlotPositionMath.ComputeRowDistance(
-                positions, railColumn, slot.Level, fromRow, slot.Row);
+                positions, railColumn, slot.Level, fromRow, slot.Row, slot.WarehouseId);
 
             var verticalSpeed = ResolveVerticalSpeed(kinematics, isLoaded);
             var depthSpeed = ResolveDepthSpeed(kinematics, isLoaded);

@@ -60,5 +60,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 
         /// <summary>整单完成，写入统计。</summary>
         JobCompleted,
+
+        /// <summary>复查任务通道锁：车尾已离开的路段释放锁并唤醒等锁任务。</summary>
+        CorridorLockCheck,
     }
 }

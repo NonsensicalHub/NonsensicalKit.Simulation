@@ -223,7 +223,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
             }
 
             _lastSimTime = simTime;
-            return new HashSet<GridIndex>(_scratchOccupied);
+            return _scratchOccupied;
         }
 
         private void AdvanceOccupancyCursor(double simTime)

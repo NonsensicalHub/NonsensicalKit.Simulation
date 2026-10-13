@@ -8,6 +8,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
     /// </summary>
     /// <remarks>
     /// <para>同一资源在时间上不可重叠；新预约若与已有区间冲突，则将开始时刻顺延到冲突区间结束之后（FIFO 语义）。</para>
+    /// <para>已结束的区间必须保留。查询常用未来时刻做起点，若据此删掉更早的占用，后续预约仍可能从更早的时刻开始，从而叠进已被删掉的窗口。</para>
     /// <para>输送路段槽位、路口停留点、取货点、堆垛机、巷道列等均映射为不同的 resourceId 字符串。</para>
     /// <para>新预约提交时触发 <see cref="OccupancyChanged"/>（仅 committed，不含 Release），供
     /// <see cref="ReservationOccupancyNotifier"/> 在区间结束时调度唤醒事件。</para>
@@ -16,11 +17,29 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
     {
         private const double TimeEpsilon = 1e-6;
         private readonly Dictionary<string, List<TimeInterval>> _intervals = new();
+        private double _historyFloor = double.NegativeInfinity;
+        private List<TimeInterval>[] _scanLists = Array.Empty<List<TimeInterval>>();
+        private int[] _scanCursors = Array.Empty<int>();
 
         /// <summary>参数：resourceId, start, end, released（true=释放，false=新预约）。</summary>
         public event Action<string, double, double, bool> OccupancyChanged;
 
-        public void Clear() => _intervals.Clear();
+        public void Clear()
+        {
+            _intervals.Clear();
+            _historyFloor = double.NegativeInfinity;
+        }
+
+        /// <summary>
+        /// 仿真时钟推进后调用。早于该时刻结束的占用会被丢掉，避免每条资源的历史区间随任务数一直变长。
+        /// </summary>
+        public void NoteHistoryFloor(double time)
+        {
+            if (time > _historyFloor)
+            {
+                _historyFloor = time;
+            }
+        }
 
         /// <summary>在指定资源上预约 [start, end)；若冲突则顺延到前一预约结束之后（FIFO）。</summary>
         public bool TryReserve(string resourceId, double start, double end, out double conflictFreeStart)
@@ -38,11 +57,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 _intervals[resourceId] = list;
             }
 
-            PruneEndedBefore(list, start);
+            TrimExpired(list);
 
             var candidate = start;
             var shiftedByConflict = false;
-            for (var i = 0; i < list.Count; i++)
+            for (var i = FindFirstIndexEndingAfter(list, candidate); i < list.Count; i++)
             {
                 var iv = list[i];
                 if (iv.End <= candidate + TimeEpsilon)
@@ -76,11 +95,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 return fromTime;
             }
 
-            PruneEndedBefore(list, fromTime);
+            TrimExpired(list);
+            if (list.Count == 0)
+            {
+                return fromTime;
+            }
 
             var t = fromTime;
-            foreach (var iv in list)
+            for (var i = FindFirstIndexEndingAfter(list, t); i < list.Count; i++)
             {
+                var iv = list[i];
                 if (iv.End <= t + TimeEpsilon)
                 {
                     continue;
@@ -113,10 +137,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 return fromTime;
             }
 
-            PruneEndedBefore(list, fromTime);
+            TrimExpired(list);
+            if (list.Count == 0)
+            {
+                return fromTime;
+            }
 
             var candidate = fromTime;
-            for (var i = 0; i < list.Count; i++)
+            for (var i = FindFirstIndexEndingAfter(list, candidate); i < list.Count; i++)
             {
                 var iv = list[i];
                 if (iv.End <= candidate + TimeEpsilon)
@@ -136,19 +164,28 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return candidate;
         }
 
-        /// <summary>移除已结束且不会再影响后续查询的历史区间，避免长仿真中列表无限增长。</summary>
-        private static void PruneEndedBefore(List<TimeInterval> list, double beforeTime)
+        /// <summary>
+        /// 区间按开始时刻排序且互不重叠，结束时刻同样有序。
+        /// 定位第一个尚未在 <paramref name="time"/> 之前结束的区间。
+        /// </summary>
+        private static int FindFirstIndexEndingAfter(List<TimeInterval> list, double time)
         {
-            var removeCount = 0;
-            while (removeCount < list.Count && list[removeCount].End <= beforeTime + TimeEpsilon)
+            var lo = 0;
+            var hi = list.Count;
+            while (lo < hi)
             {
-                removeCount++;
+                var mid = lo + (hi - lo) / 2;
+                if (list[mid].End <= time + TimeEpsilon)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid;
+                }
             }
 
-            if (removeCount > 0)
-            {
-                list.RemoveRange(0, removeCount);
-            }
+            return lo;
         }
 
         private static void InsertSorted(List<TimeInterval> list, TimeInterval interval)
@@ -185,16 +222,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 return 0;
             }
 
-            var count = 0;
-            foreach (var iv in list)
+            var i = FindFirstIndexEndingAfter(list, atTime);
+            if (i >= list.Count)
             {
-                if (iv.Start <= atTime + TimeEpsilon && iv.End > atTime + TimeEpsilon)
-                {
-                    count++;
-                }
+                return 0;
             }
 
-            return count;
+            var iv = list[i];
+            return iv.Start <= atTime + TimeEpsilon && iv.End > atTime + TimeEpsilon ? 1 : 0;
         }
 
         /// <summary>统计一组资源在时刻 atTime 的占用总数。</summary>
@@ -311,9 +346,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 
         /// <summary>查询若干互斥资源在 desiredStart 之后最早可同时开始的一段时长（不写入预约）。</summary>
         /// <remarks>
-        /// 每次迭代至少会将候选起点推进到某一资源占用区间的结束时刻，
-        /// 因此最多迭代 <c>resourceIds.Length × 最长占用链</c> 次即可收敛。
-        /// 上限设为 <c>resourceIds.Length * 64 + 1</c> 以覆盖高密度占用场景，同时避免无限循环。
+        /// 每个资源的游标只向前走，多次推进合计与区间数成正比，避免每次都从历史占用的开头重扫。
         /// </remarks>
         public double QueryEarliestStartAll(double desiredStart, double duration, params string[] resourceIds)
         {
@@ -322,17 +355,41 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 return desiredStart;
             }
 
+            EnsureScanBuffers(resourceIds.Length);
+            var guardMax = 1;
+            for (var i = 0; i < resourceIds.Length; i++)
+            {
+                _scanLists[i] = null;
+                _scanCursors[i] = 0;
+                if (_intervals.TryGetValue(resourceIds[i], out var list) && list.Count > 0)
+                {
+                    TrimExpired(list);
+                    _scanLists[i] = list;
+                    _scanCursors[i] = FindFirstIndexEndingAfter(list, desiredStart);
+                    guardMax += list.Count;
+                }
+            }
+
             var start = desiredStart;
-            var maxIter = resourceIds.Length * 64 + 1;
-            for (var iter = 0; iter < maxIter; iter++)
+            for (var iter = 0; iter < guardMax; iter++)
             {
                 var merged = start;
-                foreach (var id in resourceIds)
+                for (var i = 0; i < resourceIds.Length; i++)
                 {
-                    merged = Math.Max(merged, GetEarliestFreeTimeForDuration(id, start, duration));
+                    var list = _scanLists[i];
+                    if (list == null)
+                    {
+                        continue;
+                    }
+
+                    var freeAt = EarliestFreeFromCursor(list, ref _scanCursors[i], start, duration);
+                    if (freeAt > merged)
+                    {
+                        merged = freeAt;
+                    }
                 }
 
-                if (Math.Abs(merged - start) < TimeEpsilon)
+                if (merged <= start + TimeEpsilon)
                 {
                     return start;
                 }
@@ -341,6 +398,45 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             }
 
             return start;
+        }
+
+        /// <summary>
+        /// 从游标继续向后找可容纳 <paramref name="duration"/> 的起点。游标只前进，多次调用合计线性于区间数。
+        /// </summary>
+        private static double EarliestFreeFromCursor(
+            List<TimeInterval> list,
+            ref int cursor,
+            double fromTime,
+            double duration)
+        {
+            var candidate = fromTime;
+            while (cursor < list.Count && list[cursor].End <= candidate + TimeEpsilon)
+            {
+                cursor++;
+            }
+
+            var i = cursor;
+            while (i < list.Count)
+            {
+                var iv = list[i];
+                if (iv.End <= candidate + TimeEpsilon)
+                {
+                    i++;
+                    continue;
+                }
+
+                if (iv.Start >= candidate + duration - TimeEpsilon)
+                {
+                    cursor = i;
+                    return candidate;
+                }
+
+                candidate = iv.End;
+                i++;
+            }
+
+            cursor = list.Count;
+            return candidate;
         }
 
         /// <summary>在若干互斥资源上同时预约一段时长，返回实际开始时刻（可能晚于 desiredStart）。</summary>
@@ -395,23 +491,82 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return latestId;
         }
 
-        public void Release(string resourceId, double start, double end)
+        public bool Release(string resourceId, double start, double end)
         {
             if (!_intervals.TryGetValue(resourceId, out var list))
+            {
+                return false;
+            }
+
+            TrimExpired(list);
+            var index = FindReleaseIndex(list, start, end);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            var iv = list[index];
+            list.RemoveAt(index);
+            NotifyOccupancyChanged(resourceId, iv.Start, iv.End, released: true);
+            return true;
+        }
+
+        /// <summary>已结束且不会再被改写的前缀删掉。仍覆盖当前时刻的区间保留。</summary>
+        private void TrimExpired(List<TimeInterval> list)
+        {
+            if (list == null || list.Count < 64 || _historyFloor <= double.NegativeInfinity)
             {
                 return;
             }
 
-            for (var i = list.Count - 1; i >= 0; i--)
+            var live = FindFirstIndexEndingAfter(list, _historyFloor);
+            if (live < 32)
+            {
+                return;
+            }
+
+            list.RemoveRange(0, live);
+        }
+
+        private void EnsureScanBuffers(int count)
+        {
+            if (_scanCursors.Length >= count)
+            {
+                return;
+            }
+
+            var size = Math.Max(4, count);
+            _scanLists = new List<TimeInterval>[size];
+            _scanCursors = new int[size];
+        }
+
+        private static int FindReleaseIndex(List<TimeInterval> list, double start, double end)
+        {
+            var lo = 0;
+            var hi = list.Count;
+            while (lo < hi)
+            {
+                var mid = lo + (hi - lo) / 2;
+                if (list[mid].Start < start - TimeEpsilon)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid;
+                }
+            }
+
+            for (var i = lo; i < list.Count && list[i].Start <= start + TimeEpsilon; i++)
             {
                 var iv = list[i];
                 if (Math.Abs(iv.Start - start) < TimeEpsilon && Math.Abs(iv.End - end) < TimeEpsilon)
                 {
-                    list.RemoveAt(i);
-                    NotifyOccupancyChanged(resourceId, iv.Start, iv.End, released: true);
-                    return;
+                    return i;
                 }
             }
+
+            return -1;
         }
 
         private void NotifyOccupancyChanged(string resourceId, double start, double end, bool released)

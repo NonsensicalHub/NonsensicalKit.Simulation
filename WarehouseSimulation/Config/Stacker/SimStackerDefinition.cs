@@ -12,6 +12,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         [Label("堆垛机编号")]
         public int StackerId;
 
+        [Label("所属仓库")]
+        [Tooltip("对应绑定资产「仓库列表」中的仓库号。列表留空时只能为 0。")]
+        public int WarehouseId;
+
         [Tooltip("留空则使用 Fleet 默认运动学")]
         [Label("运动学")]
         public StackerKinematicsConfig Kinematics;

@@ -54,7 +54,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var pickupRow = pickupNode.PickupRow;
             var slot = job.TargetSlot;
 
-            StackerColumnReachUtility.TryGetDefinition(bindings, topology, stackerId, out var definition);
+            if (!StackerColumnReachUtility.TryGetDefinition(bindings, topology, stackerId, out var definition))
+            {
+                definition = new SimStackerDefinition
+                {
+                    StackerId = stackerId,
+                    ColumnReach = bindings != null
+                        ? bindings.DefaultStackerColumnReach
+                        : SimStackerColumnReach.TwoColumns,
+                };
+            }
+
             var clampedSlotColumn = StackerColumnReachUtility.ClampColumn(definition, slot.Column);
             var clampedPickupColumn = StackerColumnReachUtility.ClampColumn(definition, pickupColumn);
 

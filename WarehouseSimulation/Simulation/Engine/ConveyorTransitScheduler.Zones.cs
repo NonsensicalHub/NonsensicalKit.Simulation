@@ -36,6 +36,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 ReleaseProvisionalNextEntryAfterJunction(chain, zoneIndex - 1, zoneIndex);
             }
 
+            if (zoneIndex > 0 && IsSameEdgeSlot(chain[zoneIndex - 1], zone))
+            {
+                ReleaseSameEdgeSuccessorHold(chain[zoneIndex - 1], zone);
+            }
+
             if (zone.HopSeconds <= 1e-9f)
             {
                 var immediate = desiredStart;
@@ -49,29 +54,115 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             var hop = zone.HopSeconds;
-            var hopStart = _reservations.GetEarliestFreeTimeForDuration(zone.ResourceId, desiredStart, hop);
-            var arrive = hopStart + hop;
-            // 下游空闲时 leave == arrive，货箱到达停留点后立即开始下一段 hop，不强制额外停留。
-            var leave = ComputeZoneLeaveTime(job, zone, next, arrive, hop, chain, zoneIndex);
+            var hopStart = desiredStart;
+            var arrive = desiredStart;
+            var leave = desiredStart;
+            var isEntry = IsSegmentEntrySlot(chain, zoneIndex);
+            string laneTokenId = null;
+            var laneDuration = 0d;
+            var slotCommitted = false;
+            var reserveStart = hopStart;
+            var reserveEnd = hopStart;
 
-            for (var iter = 0; iter < 128; iter++)
+            // 入口槽占路段令牌直到车尾离开，并占住下游路口的直线。窗口被顺延时，停留点预约作废重试。
+            for (var attempt = 0; attempt < 24 && !slotCommitted; attempt++)
             {
-                var reserveDuration = Math.Max(hop, leave - hopStart);
-                var conflictFreeStart = _reservations.GetEarliestFreeTimeForDuration(
-                    zone.ResourceId,
-                    hopStart,
-                    reserveDuration);
-                if (conflictFreeStart <= hopStart + 1e-9)
+                hopStart = _reservations.GetEarliestFreeTimeForDuration(zone.ResourceId, hopStart, hop);
+                arrive = hopStart + hop;
+                // 下游空闲时 leave == arrive，货箱到达停留点后立即开始下一段 hop，不强制额外停留。
+                leave = ComputeZoneLeaveTime(job, zone, next, arrive, hop, chain, zoneIndex);
+
+                for (var iter = 0; iter < 128; iter++)
                 {
+                    var holdEnd = SlotReservationEnd(zone, next, leave);
+                    var reserveDuration = Math.Max(hop, holdEnd - hopStart);
+                    var conflictFreeStart = _reservations.GetEarliestFreeTimeForDuration(
+                        zone.ResourceId,
+                        hopStart,
+                        reserveDuration);
+                    if (conflictFreeStart <= hopStart + 1e-9)
+                    {
+                        break;
+                    }
+
+                    hopStart = conflictFreeStart;
+                    arrive = hopStart + hop;
+                    leave = ComputeZoneLeaveTime(job, zone, next, arrive, hop, chain, zoneIndex);
+                }
+
+                if (isEntry)
+                {
+                    laneDuration = SegmentBodyLaneDuration(chain, zoneIndex, hopStart, leave);
+                    var laneStart = EarliestLaneStart(zone, hopStart, laneDuration, out laneTokenId);
+                    if (laneStart > hopStart + 1e-9)
+                    {
+                        hopStart = laneStart;
+                        continue;
+                    }
+                }
+
+                var committedEnd = SlotReservationEnd(zone, next, leave);
+                reserveStart = hopStart;
+                reserveEnd = committedEnd;
+                CommitReservationWindow(zone.ResourceId, ref reserveStart, ref reserveEnd);
+                if (reserveStart > hopStart + 1e-9)
+                {
+                    var shift = reserveStart - hopStart;
+                    hopStart = reserveStart;
+                    arrive += shift;
+                    leave += shift;
+                }
+
+                if (!isEntry || laneDuration <= 1e-9 || string.IsNullOrEmpty(laneTokenId))
+                {
+                    slotCommitted = true;
                     break;
                 }
 
-                hopStart = conflictFreeStart;
-                arrive = hopStart + hop;
-                leave = ComputeZoneLeaveTime(job, zone, next, arrive, hop, chain, zoneIndex);
+                laneDuration = SegmentBodyLaneDuration(chain, zoneIndex, hopStart, leave);
+                var acceptedLaneStart = EarliestLaneStart(zone, hopStart, laneDuration, out laneTokenId);
+                if (acceptedLaneStart > hopStart + 1e-9)
+                {
+                    _reservations.Release(zone.ResourceId, reserveStart, reserveEnd);
+                    hopStart = acceptedLaneStart;
+                    continue;
+                }
+
+                _reservations.TryReserve(laneTokenId, hopStart, hopStart + laneDuration, out var laneActual);
+                if (laneActual > hopStart + 1e-9)
+                {
+                    _reservations.Release(laneTokenId, laneActual, laneActual + laneDuration);
+                    _reservations.Release(zone.ResourceId, reserveStart, reserveEnd);
+                    hopStart = laneActual;
+                    continue;
+                }
+
+                zone.LaneResourceId = laneTokenId;
+                zone.LaneReserveStart = hopStart;
+                zone.LaneReserveEnd = hopStart + laneDuration;
+                slotCommitted = true;
             }
 
-            _reservations.TryReserve(zone.ResourceId, hopStart, leave, out _);
+            if (!slotCommitted)
+            {
+                arrive = hopStart + hop;
+                leave = ComputeZoneLeaveTime(job, zone, next, arrive, hop, chain, zoneIndex);
+                reserveStart = hopStart;
+                reserveEnd = SlotReservationEnd(zone, next, leave);
+                CommitReservationWindow(zone.ResourceId, ref reserveStart, ref reserveEnd);
+                if (reserveStart > hopStart + 1e-9)
+                {
+                    var shift = reserveStart - hopStart;
+                    hopStart = reserveStart;
+                    arrive += shift;
+                    leave += shift;
+                }
+            }
+
+            if (next.HasValue && IsSameEdgeSlot(zone, next.Value))
+            {
+                HoldSameEdgeSuccessor(next.Value, leave);
+            }
 
             zone.DesiredArriveSimTime = desiredStart;
             zone.ArriveSimTime = arrive;
@@ -87,6 +178,23 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     entryWaitResourceId: zone.ResourceId,
                     downstreamWaitDelta: 0,
                     downstreamWaitResourceId: null));
+            }
+
+            if (TryGetEdgeGateHoldSeconds(zone, out var gateWaitSeconds))
+            {
+                var appliedGateWait = Math.Min(gateWaitSeconds, Math.Max(0d, leave - arrive));
+                if (appliedGateWait > 1e-9)
+                {
+                    mutations.ApplySegmentMetrics(new SegmentMetrics(
+                        serviceDelta: 0,
+                        entryWaitDelta: 0,
+                        entryWaitResourceId: null,
+                        downstreamWaitDelta: appliedGateWait,
+                        downstreamWaitResourceId: ConveyorMapMath.BuildSegmentGateResourceId(
+                            _topology.Map,
+                            zone.FromNodeIndex,
+                            zone.ToNodeIndex)));
+                }
             }
 
             if (zone.Kind == ConveyorPathZoneKind.Pickup && job != null)
@@ -129,7 +237,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             return result;
         }
 
-        /// <summary>路口 zone：按整段占用窗（驶入 + 等待）迭代预约。</summary>
+        /// <summary>路口 zone：从到达中心到开始驶出占用；来向驶入不锁路口。</summary>
         private ConveyorPathZoneReservation TryReserveJunctionPathZone(
             WarehouseJob job,
             IReadOnlyList<ConveyorPathZone> chain,
@@ -140,7 +248,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             ConveyorPathZoneReservation result)
         {
             var hop = zone.HopSeconds;
-            var hopStart = _reservations.GetEarliestFreeTimeForDuration(zone.ResourceId, desiredStart, hop);
+            var hopStart = desiredStart;
             var arrive = hopStart + hop;
             double leave;
 
@@ -153,20 +261,30 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         zone.JunctionNextNodeIndex,
                         arrive,
                         hop);
-                    var holdStart = arrive - hop;
-                    var holdDuration = Math.Max(leave - holdStart, hop);
-                    var conflictFree = _reservations.GetEarliestFreeTimeForDuration(
-                        zone.ResourceId,
-                        holdStart,
-                        holdDuration);
-                    if (conflictFree <= holdStart + 1e-9)
+                    if (leave < arrive)
                     {
-                        hopStart = holdStart;
+                        leave = arrive;
+                    }
+
+                    var holdDuration = leave - arrive;
+                    if (holdDuration <= 1e-9)
+                    {
+                        hopStart = arrive - hop;
                         break;
                     }
 
-                    hopStart = conflictFree;
-                    arrive = hopStart + hop;
+                    var conflictFree = _reservations.GetEarliestFreeTimeForDuration(
+                        zone.ResourceId,
+                        arrive,
+                        holdDuration);
+                    if (conflictFree <= arrive + 1e-9)
+                    {
+                        hopStart = arrive - hop;
+                        break;
+                    }
+
+                    arrive = conflictFree;
+                    hopStart = arrive - hop;
                 }
 
                 leave = ComputeJunctionExitHopStart(
@@ -174,6 +292,47 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     zone.JunctionNextNodeIndex,
                     arrive,
                     hop);
+            }
+            else
+            {
+                leave = arrive + hop;
+                for (var iter = 0; iter < 128; iter++)
+                {
+                    var conflictFreeStart = _reservations.GetEarliestFreeTimeForDuration(
+                        zone.ResourceId,
+                        arrive,
+                        leave - arrive);
+                    if (conflictFreeStart <= arrive + 1e-9)
+                    {
+                        hopStart = arrive - hop;
+                        break;
+                    }
+
+                    arrive = conflictFreeStart;
+                    hopStart = arrive - hop;
+                    leave = arrive + hop;
+                }
+            }
+
+            // 来向驶入还在各自边上。路口锁从到达中心开始，到开始驶出为止。
+            if (leave < arrive)
+            {
+                leave = arrive;
+            }
+
+            var junctionStart = arrive;
+            var junctionEnd = leave;
+            CommitReservationWindow(zone.ResourceId, ref junctionStart, ref junctionEnd);
+            if (junctionStart > arrive + 1e-9)
+            {
+                var shift = junctionStart - arrive;
+                hopStart += shift;
+                arrive = junctionStart;
+                leave = junctionEnd;
+            }
+
+            if (next.HasValue && next.Value.Kind == ConveyorPathZoneKind.EdgeSlot)
+            {
                 var provisionalNextArrive = ProvisionalReserveNextEntryAfterJunction(
                     zone,
                     next.Value,
@@ -188,28 +347,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     job.ConveyorPathZones[zoneIndex + 1] = nextEntry;
                 }
             }
-            else
-            {
-                leave = arrive + hop;
-                for (var iter = 0; iter < 128; iter++)
-                {
-                    var reserveDuration = Math.Max(hop, leave - hopStart);
-                    var conflictFreeStart = _reservations.GetEarliestFreeTimeForDuration(
-                        zone.ResourceId,
-                        hopStart,
-                        reserveDuration);
-                    if (conflictFreeStart <= hopStart + 1e-9)
-                    {
-                        break;
-                    }
-
-                    hopStart = conflictFreeStart;
-                    arrive = hopStart + hop;
-                    leave = arrive + hop;
-                }
-            }
-
-            _reservations.TryReserve(zone.ResourceId, hopStart, leave, out _);
 
             zone.DesiredArriveSimTime = desiredStart;
             zone.ArriveSimTime = arrive;
@@ -221,6 +358,551 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             result.Zone = zone;
             result.NextStepStartTime = leave;
             return result;
+        }
+
+        /// <summary>
+        /// 从当前槽的离开时刻推到车头到达下游节点。
+        /// 后面的槽位 hop 与路口/取货点驶入 hop 都算在路段上；路口中心的等待不算。
+        /// </summary>
+        public static double ProjectSegmentClearTime(
+            IReadOnlyList<ConveyorPathZone> chain,
+            int zoneIndex,
+            double leave)
+        {
+            if (chain == null || zoneIndex < 0 || zoneIndex >= chain.Count)
+            {
+                return leave;
+            }
+
+            var clear = leave;
+            var edge = chain[zoneIndex].PathEdgeIndex;
+            for (var i = zoneIndex + 1; i < chain.Count; i++)
+            {
+                var ahead = chain[i];
+                if (ahead.PathEdgeIndex != edge)
+                {
+                    break;
+                }
+
+                if (ahead.Kind == ConveyorPathZoneKind.EdgeSlot || IsApproachNode(ahead.Kind))
+                {
+                    clear += ahead.HopSeconds;
+                }
+            }
+
+            return clear;
+        }
+
+        /// <summary>
+        /// 车尾离开本段的时刻。车头到下游节点后若还停着，停的时间也算；
+        /// 再沿后续路段开出一个车身长度，尾端才让开。没有下一段时，取货抬走即结束。
+        /// </summary>
+        public double ProjectBodyClearTime(
+            IReadOnlyList<ConveyorPathZone> chain,
+            int zoneIndex,
+            double frontAtNode)
+        {
+            if (chain == null || zoneIndex < 0 || zoneIndex >= chain.Count)
+            {
+                return frontAtNode;
+            }
+
+            var nodeLeave = CommittedNodeLeave(chain, zoneIndex, frontAtNode);
+            var downstream = FindDownstreamEdgeStart(chain, zoneIndex);
+            var tail = TailSeconds(chain[zoneIndex].FromNodeIndex, chain[zoneIndex].ToNodeIndex);
+            if (downstream < 0)
+            {
+                if (nodeLeave > frontAtNode + 1e-6)
+                {
+                    return nodeLeave;
+                }
+
+                return frontAtNode + tail;
+            }
+
+            var moveStart = nodeLeave;
+            var next = chain[downstream];
+            if (next.ArriveSimTime > 1e-6)
+            {
+                var depart = next.ArriveSimTime - next.HopSeconds;
+                if (depart > moveStart)
+                {
+                    moveStart = depart;
+                }
+            }
+
+            var cargo = _topology?.Map != null
+                ? (double)ConveyorMapMath.GetCargoOccupancyLengthMeters(_topology.Map)
+                : 1.2d;
+            var time = TravelCargoLength(chain, downstream, moveStart, cargo);
+            if (nodeLeave > frontAtNode + 1e-6 && time < nodeLeave + tail)
+            {
+                time = nodeLeave + tail;
+            }
+
+            return time;
+        }
+
+        private double SegmentBodyLaneDuration(
+            IReadOnlyList<ConveyorPathZone> chain,
+            int zoneIndex,
+            double hopStart,
+            double leave)
+        {
+            var front = hopStart + SegmentLaneDuration(chain, zoneIndex, hopStart, leave);
+            var body = ProjectBodyClearTime(chain, zoneIndex, front);
+            var duration = body - hopStart;
+            return duration < 0d ? 0d : duration;
+        }
+
+        private static double CommittedNodeLeave(
+            IReadOnlyList<ConveyorPathZone> chain,
+            int zoneIndex,
+            double frontAtNode)
+        {
+            var leave = frontAtNode;
+            var edge = chain[zoneIndex].PathEdgeIndex;
+            for (var i = zoneIndex; i < chain.Count; i++)
+            {
+                var ahead = chain[i];
+                if (ahead.PathEdgeIndex != edge)
+                {
+                    break;
+                }
+
+                if (IsApproachNode(ahead.Kind) && ahead.LeaveSimTime > leave)
+                {
+                    leave = ahead.LeaveSimTime;
+                }
+            }
+
+            return leave;
+        }
+
+        private static int FindDownstreamEdgeStart(IReadOnlyList<ConveyorPathZone> chain, int zoneIndex)
+        {
+            var edge = chain[zoneIndex].PathEdgeIndex;
+            for (var i = zoneIndex + 1; i < chain.Count; i++)
+            {
+                if (chain[i].PathEdgeIndex != edge)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private double TailSeconds(int fromNodeIndex, int toNodeIndex)
+        {
+            if (_topology != null && _topology.TryGetEdge(fromNodeIndex, toNodeIndex, out var edge))
+            {
+                return ConveyorMapMath.GetCargoTailClearanceSeconds(_topology.Map, edge);
+            }
+
+            var length = ConveyorMapMath.GetCargoOccupancyLengthMeters(_topology?.Map);
+            var speed = _topology?.Map != null && _topology.Map.DefaultSpeedMetersPerSecond > 0f
+                ? _topology.Map.DefaultSpeedMetersPerSecond
+                : 0.6f;
+            return length / Math.Max(0.01f, speed);
+        }
+
+        private double TravelCargoLength(
+            IReadOnlyList<ConveyorPathZone> chain,
+            int startIndex,
+            double time,
+            double remaining)
+        {
+            var map = _topology?.Map;
+            if (map == null || chain == null)
+            {
+                return time;
+            }
+
+            var i = startIndex;
+            while (i < chain.Count && remaining > 1e-3d)
+            {
+                var zone = chain[i];
+                if (!_topology.TryGetEdge(zone.FromNodeIndex, zone.ToNodeIndex, out var edge))
+                {
+                    break;
+                }
+
+                var length = (double)Math.Max(0f, edge.DistanceMeters);
+                var speed = (double)Math.Max(0.01f, ConveyorMapMath.ResolveSpeedMetersPerSecond(map, edge));
+                if (length <= 1e-4d)
+                {
+                    break;
+                }
+
+                var edgeIndex = zone.PathEdgeIndex;
+                var capacity = Math.Max(1, map.GetEdgeCapacity(edge));
+                var cursor = 0d;
+                var cursorTime = time;
+                var sawSlot = false;
+                for (var j = i; j < chain.Count && chain[j].PathEdgeIndex == edgeIndex; j++)
+                {
+                    var slot = chain[j];
+                    if (slot.Kind != ConveyorPathZoneKind.EdgeSlot || slot.ArriveSimTime <= 1e-6d)
+                    {
+                        continue;
+                    }
+
+                    sawSlot = true;
+                    var meters = (double)ConveyorMapMath.GetZoneNormalizedPosition(
+                        map,
+                        edge,
+                        capacity,
+                        slot.SlotIndex) * length;
+                    if (ConveyorBodyClearance.TryAdvance(
+                            ref cursorTime,
+                            ref cursor,
+                            ref remaining,
+                            slot.ArriveSimTime,
+                            meters,
+                            speed,
+                            out var clear))
+                    {
+                        return clear;
+                    }
+
+                    if (slot.LeaveSimTime > cursorTime)
+                    {
+                        cursorTime = slot.LeaveSimTime;
+                    }
+                }
+
+                if (sawSlot
+                    && ConveyorBodyClearance.TryAdvance(
+                        ref cursorTime,
+                        ref cursor,
+                        ref remaining,
+                        cursorTime,
+                        length,
+                        speed,
+                        out var edgeClear))
+                {
+                    return edgeClear;
+                }
+
+                if (sawSlot)
+                {
+                    time = cursorTime;
+                }
+                else
+                {
+                    var take = remaining < length ? remaining : length;
+                    time += take / speed;
+                    remaining -= take;
+                }
+
+                i++;
+                while (i < chain.Count && chain[i].PathEdgeIndex == edgeIndex)
+                {
+                    i++;
+                }
+            }
+
+            if (remaining > 1e-3d)
+            {
+                var speed = map.DefaultSpeedMetersPerSecond > 0f ? map.DefaultSpeedMetersPerSecond : 0.6f;
+                time += remaining / Math.Max(0.01d, speed);
+            }
+
+            return time;
+        }
+
+        /// <summary>两条路段令牌是否互相阻挡：同一令牌，或同一路段上的相反方向。</summary>
+        public static bool LaneClaimsConflict(string laneA, string laneB)
+        {
+            if (string.IsNullOrEmpty(laneA) || string.IsNullOrEmpty(laneB))
+            {
+                return false;
+            }
+
+            if (string.Equals(laneA, laneB, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (!TryParseLane(laneA, out var keyA, out var signA)
+                || !TryParseLane(laneB, out var keyB, out var signB))
+            {
+                return false;
+            }
+
+            return string.Equals(keyA, keyB, StringComparison.Ordinal) && signA != signB;
+        }
+
+        /// <summary>同一物理路段上、行驶方向相反的两条令牌。</summary>
+        public static bool IsOppositeLane(string laneA, string laneB)
+        {
+            if (string.IsNullOrEmpty(laneA)
+                || string.IsNullOrEmpty(laneB)
+                || string.Equals(laneA, laneB, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (!TryParseLane(laneA, out var keyA, out var signA)
+                || !TryParseLane(laneB, out var keyB, out var signB))
+            {
+                return false;
+            }
+
+            return string.Equals(keyA, keyB, StringComparison.Ordinal) && signA != signB;
+        }
+
+        /// <summary>令牌所属方向键，以及同一路段的反向键。形如 <c>LR1-RC2|f</c>。</summary>
+        public static bool TryGetLaneDirectionKeys(string laneId, out string directionKey, out string oppositeKey)
+        {
+            directionKey = null;
+            oppositeKey = null;
+            if (!TryParseLane(laneId, out var key, out var sign))
+            {
+                return false;
+            }
+
+            var own = sign > 0 ? "f" : "r";
+            var other = sign > 0 ? "r" : "f";
+            directionKey = key + "|" + own;
+            oppositeKey = key + "|" + other;
+            return true;
+        }
+
+        private static bool IsSegmentEntrySlot(IReadOnlyList<ConveyorPathZone> chain, int zoneIndex)
+        {
+            if (chain == null || zoneIndex < 0 || zoneIndex >= chain.Count)
+            {
+                return false;
+            }
+
+            if (chain[zoneIndex].Kind != ConveyorPathZoneKind.EdgeSlot)
+            {
+                return false;
+            }
+
+            if (zoneIndex == 0)
+            {
+                return true;
+            }
+
+            var previous = chain[zoneIndex - 1];
+            return previous.Kind != ConveyorPathZoneKind.EdgeSlot
+                   || previous.PathEdgeIndex != chain[zoneIndex].PathEdgeIndex;
+        }
+
+        private static bool IsApproachNode(ConveyorPathZoneKind kind) =>
+            kind is ConveyorPathZoneKind.Junction
+                or ConveyorPathZoneKind.Pickup
+                or ConveyorPathZoneKind.Outfeed
+                or ConveyorPathZoneKind.ProcessStation
+                or ConveyorPathZoneKind.VerticalTransfer;
+
+        /// <summary>从开始驶入本槽，到车头到达本边下游节点的最短占用（含本槽已发生的等待）。</summary>
+        private static double SegmentLaneDuration(
+            IReadOnlyList<ConveyorPathZone> chain,
+            int zoneIndex,
+            double hopStart,
+            double leave)
+        {
+            var occupied = leave - hopStart;
+            if (occupied < 0)
+            {
+                occupied = 0;
+            }
+
+            var clear = ProjectSegmentClearTime(chain, zoneIndex, leave);
+            var afterLeave = clear - leave;
+            if (afterLeave < 0)
+            {
+                afterLeave = 0;
+            }
+
+            return occupied + afterLeave;
+        }
+
+        private double EarliestLaneStart(
+            in ConveyorPathZone zone,
+            double hopStart,
+            double duration,
+            out string tokenId)
+        {
+            tokenId = null;
+            if (duration <= 1e-9 || _topology?.Map == null)
+            {
+                return hopStart;
+            }
+
+            // 对向互斥由仿真器的通道锁在出发前保证，这里只排同向容量。
+            var own = CachedLaneTokens(zone, CachedLaneSign(zone));
+            var best = double.MaxValue;
+            tokenId = own[0];
+            for (var i = 0; i < own.Length; i++)
+            {
+                var candidate = _reservations.GetEarliestFreeTimeForDuration(own[i], hopStart, duration);
+                if (candidate < best)
+                {
+                    best = candidate;
+                    tokenId = own[i];
+                }
+            }
+
+            return best > hopStart ? best : hopStart;
+        }
+
+        private int CachedLaneSign(in ConveyorPathZone zone)
+        {
+            var key = (zone.FromNodeIndex, zone.ToNodeIndex);
+            if (_laneSignCache.TryGetValue(key, out var sign))
+            {
+                return sign;
+            }
+
+            sign = LaneSign(zone);
+            _laneSignCache[key] = sign;
+            return sign;
+        }
+
+        private string[] CachedLaneTokens(in ConveyorPathZone zone, int sign)
+        {
+            var key = (zone.FromNodeIndex, zone.ToNodeIndex, sign);
+            if (_laneTokenCache.TryGetValue(key, out var ids))
+            {
+                return ids;
+            }
+
+            ids = BuildLaneTokenIds(zone, sign);
+            _laneTokenCache[key] = ids;
+            return ids;
+        }
+
+        private int LaneSign(in ConveyorPathZone zone)
+        {
+            var from = SimEntityNaming.FormatNode(_topology.Map, zone.FromNodeIndex);
+            var to = SimEntityNaming.FormatNode(_topology.Map, zone.ToNodeIndex);
+            return string.CompareOrdinal(from, to) <= 0 ? 1 : -1;
+        }
+
+        private string[] BuildLaneTokenIds(in ConveyorPathZone zone, int sign)
+        {
+            var capacity = 1;
+            if (_topology.TryGetEdge(zone.FromNodeIndex, zone.ToNodeIndex, out var edge))
+            {
+                capacity = Math.Max(1, _topology.Map.GetEdgeCapacity(edge));
+            }
+
+            var from = SimEntityNaming.FormatNode(_topology.Map, zone.FromNodeIndex);
+            var to = SimEntityNaming.FormatNode(_topology.Map, zone.ToNodeIndex);
+            var key = SimEntityNaming.CanonicalSegmentKey(from, to);
+            var signText = sign > 0 ? "f" : "r";
+            var ids = new string[capacity];
+            for (var i = 0; i < capacity; i++)
+            {
+                ids[i] = $"lane|{key}|{signText}|{i}";
+            }
+
+            return ids;
+        }
+
+        private static bool TryParseLane(string id, out string key, out int sign)
+        {
+            key = null;
+            sign = 0;
+            if (string.IsNullOrEmpty(id))
+            {
+                return false;
+            }
+
+            var parts = id.Split('|');
+            if (parts.Length != 4 || !string.Equals(parts[0], "lane", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            key = parts[1];
+            if (string.Equals(parts[2], "f", StringComparison.Ordinal))
+            {
+                sign = 1;
+            }
+            else if (string.Equals(parts[2], "r", StringComparison.Ordinal))
+            {
+                sign = -1;
+            }
+
+            return sign != 0 && !string.IsNullOrEmpty(key);
+        }
+
+        /// <summary>
+        /// 停留点在预约表上的结束时刻。同边下一槽多占一个 hop；
+        /// 下一段是路口/取货点时，再占住端部驶入，直到车头到达下游节点。
+        /// </summary>
+        private static double SlotReservationEnd(in ConveyorPathZone zone, ConveyorPathZone? next, double leave)
+        {
+            var end = SameEdgeHoldEnd(zone, next, leave);
+            if (zone.Kind != ConveyorPathZoneKind.EdgeSlot
+                || !next.HasValue
+                || !IsApproachNode(next.Value.Kind)
+                || next.Value.HopSeconds <= 1e-9f)
+            {
+                return end;
+            }
+
+            var cleared = leave + next.Value.HopSeconds;
+            return cleared > end ? cleared : end;
+        }
+
+        /// <summary>已写入链上的出口槽，其预约表结束时刻（含端部驶入）。</summary>
+        public static double CommittedSlotReservationEnd(in ConveyorPathZone zone, in ConveyorPathZone? next) =>
+            SlotReservationEnd(zone, next, zone.LeaveSimTime);
+
+        /// <summary>
+        /// 同一条边上的下一停留点尚未正式预约前，多占住一个 hop。
+        /// 这样在“预计离开”时刻处理交接时，后车不能从半开区间的终点抢入；交接完成后再把尾段收回。
+        /// </summary>
+        private static double SameEdgeHoldEnd(in ConveyorPathZone zone, ConveyorPathZone? next, double leave)
+        {
+            if (!next.HasValue || !IsSameEdgeSlot(zone, next.Value) || next.Value.HopSeconds <= 1e-9f)
+            {
+                return leave;
+            }
+
+            return leave + next.Value.HopSeconds;
+        }
+
+        private static bool IsSameEdgeSlot(in ConveyorPathZone previous, in ConveyorPathZone next) =>
+            previous.Kind == ConveyorPathZoneKind.EdgeSlot
+            && next.Kind == ConveyorPathZoneKind.EdgeSlot
+            && previous.PathEdgeIndex == next.PathEdgeIndex;
+
+        /// <summary>把下一停留点的起步 hop 先占上，避免预计离开之后、正式预约之前被别的箱子抢走。</summary>
+        private void HoldSameEdgeSuccessor(in ConveyorPathZone next, double leave)
+        {
+            var hop = next.HopSeconds;
+            if (hop <= 1e-9f || leave < 0)
+            {
+                return;
+            }
+
+            var accepted = _reservations.TryReserve(next.ResourceId, leave, leave + hop, out var actualStart);
+            if (accepted && actualStart <= leave + 1e-9)
+            {
+                return;
+            }
+
+            _reservations.Release(next.ResourceId, actualStart, actualStart + hop);
+        }
+
+        private void ReleaseSameEdgeSuccessorHold(in ConveyorPathZone previous, in ConveyorPathZone next)
+        {
+            var hop = next.HopSeconds;
+            var start = previous.LeaveSimTime;
+            if (hop <= 1e-9f || start < 0)
+            {
+                return;
+            }
+
+            _reservations.Release(next.ResourceId, start, start + hop);
         }
 
         /// <summary>路口预约时占位下一段入口停留点，避免他车在路口等待尚未结束时抢入。</summary>
@@ -242,17 +924,63 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return 0;
             }
 
-            var nextArrive = _reservations.GetEarliestFreeTimeForDuration(
+            // 返回值是到达入口停留点的时刻（hop 结束），不是空闲窗口的起点。
+            var hopStart = _reservations.GetEarliestFreeTimeForDuration(
                 nextEntryZone.ResourceId,
-                junctionArrive,
+                exitHopStart,
                 nextHop);
-            if (nextArrive <= exitHopStart + 1e-9)
+            var arrival = hopStart + nextHop;
+            if (hopStart <= exitHopStart + 1e-9)
             {
                 return 0;
             }
 
-            _reservations.TryReserve(nextEntryZone.ResourceId, exitHopStart, nextArrive, out _);
-            return nextArrive;
+            var holdDuration = arrival - exitHopStart;
+            var holdStart = _reservations.GetEarliestFreeTimeForDuration(
+                nextEntryZone.ResourceId,
+                exitHopStart,
+                holdDuration);
+            if (holdStart > exitHopStart + 1e-9)
+            {
+                // 等待区间里已经有别的箱子，不能再占一段会被顺延的窗。
+                return arrival;
+            }
+
+            var reservedStart = exitHopStart;
+            var reservedEnd = arrival;
+            CommitReservationWindow(nextEntryZone.ResourceId, ref reservedStart, ref reservedEnd);
+            if (reservedStart > exitHopStart + 1e-9)
+            {
+                _reservations.Release(nextEntryZone.ResourceId, reservedStart, reservedEnd);
+                return arrival;
+            }
+
+            return arrival;
+        }
+
+        /// <summary>
+        /// 写入 [start, end)。若预约表把起点顺延了，丢掉错位窗口并按实际起点重写，
+        /// 避免时刻表仍声称原来的区间、和表上的占用对不上。
+        /// </summary>
+        private void CommitReservationWindow(string resourceId, ref double start, ref double end)
+        {
+            if (string.IsNullOrEmpty(resourceId) || end <= start + 1e-9)
+            {
+                return;
+            }
+
+            var duration = end - start;
+            _reservations.TryReserve(resourceId, start, end, out var actualStart);
+            if (actualStart <= start + 1e-9)
+            {
+                return;
+            }
+
+            _reservations.Release(resourceId, actualStart, actualStart + duration);
+            _reservations.TryReserve(resourceId, actualStart, actualStart + duration, out var placed);
+            var shift = placed - start;
+            start += shift;
+            end = start + duration;
         }
 
         /// <summary>下一段入口 zone 正式预约前，释放路口阶段对入口停留点的占位。</summary>
@@ -301,6 +1029,40 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             IReadOnlyList<ConveyorPathZone> chain,
             int zoneIndex)
         {
+            var leave = ComputeZoneLeaveTimeCore(job, zone, next, arrive, hop, chain, zoneIndex);
+            if (zone.Kind == ConveyorPathZoneKind.EdgeSlot
+                && TryGetEdgeGateHoldSeconds(zone, out var gateWait)
+                && leave < arrive + gateWait)
+            {
+                return arrive + gateWait;
+            }
+
+            return leave;
+        }
+
+        /// <summary>路段中间门：该槽位是门前停留点时，返回开门等待秒数。</summary>
+        private bool TryGetEdgeGateHoldSeconds(in ConveyorPathZone zone, out float waitSeconds)
+        {
+            waitSeconds = 0f;
+            if (zone.Kind != ConveyorPathZoneKind.EdgeSlot
+                || !_topology.TryGetEdge(zone.FromNodeIndex, zone.ToNodeIndex, out var edge))
+            {
+                return false;
+            }
+
+            return ConveyorMapMath.TryGetGateHoldSlot(_topology.Map, in edge, out var slotIndex, out waitSeconds)
+                   && slotIndex == zone.SlotIndex;
+        }
+
+        private double ComputeZoneLeaveTimeCore(
+            WarehouseJob job,
+            ConveyorPathZone zone,
+            ConveyorPathZone? next,
+            double arrive,
+            float hop,
+            IReadOnlyList<ConveyorPathZone> chain,
+            int zoneIndex)
+        {
             if (!next.HasValue)
             {
                 if (zone.Kind == ConveyorPathZoneKind.VerticalTransfer)
@@ -322,6 +1084,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         arrive,
                         nextZone.HopSeconds);
                     return nextArrive;
+                }
+
+                // 路过别的交互点/出库口时不建节点区。出口槽要先走完端部留白到节点，
+                // 再等下一边入口槽能接住这一跳，避免箱子在两段之间没有占用。
+                case ConveyorPathZoneKind.EdgeSlot when nextZone.Kind == ConveyorPathZoneKind.EdgeSlot:
+                {
+                    var earliestAtNode = arrive + IncomingTerminalHopSeconds(zone);
+                    return _reservations.GetEarliestFreeTimeForDuration(
+                        nextZone.ResourceId,
+                        earliestAtNode,
+                        nextZone.HopSeconds);
                 }
 
                 case ConveyorPathZoneKind.EdgeSlot when nextZone.Kind == ConveyorPathZoneKind.Junction:
@@ -420,6 +1193,19 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
         }
 
+        /// <summary>当前边出口槽到下游节点的端部留白。只有 slot 0 紧挨节点。</summary>
+        private float IncomingTerminalHopSeconds(in ConveyorPathZone zone)
+        {
+            if (zone.SlotIndex != 0
+                || _topology == null
+                || !_topology.TryGetEdge(zone.FromNodeIndex, zone.ToNodeIndex, out var edge))
+            {
+                return 0f;
+            }
+
+            return ConveyorMapMath.GetNodeApproachHopSeconds(_topology.Map, edge);
+        }
+
         /// <summary>加工站点 zone：匹配标签时占用至加工完成，否则仅计 hop 直通。</summary>
         private double ResolveProcessStationZoneLeave(
             WarehouseJob job,
@@ -441,7 +1227,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             WarehouseJob job,
             int pathEdgeIndex,
             IReadOnlyList<ConveyorPathZone> chain,
-            double desiredEntrySimTime)
+            double desiredEntrySimTime,
+            int reservedZoneCount)
         {
             if (job == null || chain == null || chain.Count == 0)
             {
@@ -459,6 +1246,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             {
                 var p = chain[i];
                 if (p.PathEdgeIndex != pathEdgeIndex)
+                {
+                    continue;
+                }
+
+                // 路口/取货点还没预约时，链上可能留着上一轮的到达时刻。用它会把本段离开时刻写成未来。
+                if (i >= reservedZoneCount)
                 {
                     continue;
                 }
@@ -551,24 +1344,45 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                                ?? exitTime;
 
             job.ConveyorSegmentSchedule ??= new List<ConveyorSegmentScheduleEntry>();
-            job.ConveyorSegmentSchedule.Add(new ConveyorSegmentScheduleEntry
+            var entry = new ConveyorSegmentScheduleEntry
             {
                 FromNodeIndex = edgeAnchor.FromNodeIndex,
                 ToNodeIndex = edgeAnchor.ToNodeIndex,
+                PathEdgeIndex = pathEdgeIndex,
                 SlotIndex = entrySlot,
                 DesiredEntrySimTime = desiredEntrySimTime,
                 EntrySimTime = entryTime,
                 ExitSimTime = exitTime,
                 OccupancyEndSimTime = occupancyEnd,
                 StopArriveSimTimes = stopArrives,
-            });
+            };
+            for (var i = job.ConveyorSegmentSchedule.Count - 1; i >= 0; i--)
+            {
+                var existing = job.ConveyorSegmentSchedule[i];
+                if (existing.PathEdgeIndex != pathEdgeIndex)
+                {
+                    continue;
+                }
+
+                job.ConveyorSegmentSchedule[i] = entry;
+                ConveyorSegmentScheduleNavigation.SortByPath(
+                    job.ConveyorSegmentSchedule,
+                    job.ConveyorPathNodeIndices);
+                return;
+            }
+
+            job.ConveyorSegmentSchedule.Add(entry);
+            ConveyorSegmentScheduleNavigation.SortByPath(
+                job.ConveyorSegmentSchedule,
+                job.ConveyorPathNodeIndices);
         }
 
         private double PickupDwellAfterEnter(WarehouseJob job, int pickupNodeIndex, double enter)
         {
             ref var pickup = ref _topology.GetNode(pickupNodeIndex);
             var workDuration = ComputeStackerWorkSeconds(job, pickup);
-            var stackerResources = BuildStackerResourceIds(pickup.StackerId, job.TargetSlot.Column);
+            var stackerResources = BuildStackerResourceIds(
+                pickup.StackerId, job.TargetSlot.Column, job.TargetSlot.WarehouseId);
             var stackerStart = stackerResources.Length > 0
                 ? _reservations.QueryEarliestStartAll(enter, workDuration, stackerResources)
                 : enter;
@@ -757,7 +1571,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         {
             ref var pickup = ref _topology.GetNode(pickupNodeIndex);
             var workDuration = ComputeStackerWorkSeconds(job, pickup);
-            var stackerResources = BuildStackerResourceIds(pickup.StackerId, job.TargetSlot.Column);
+            var stackerResources = BuildStackerResourceIds(
+                pickup.StackerId, job.TargetSlot.Column, job.TargetSlot.WarehouseId);
             var stackerStart = stackerResources.Length > 0
                 ? _reservations.QueryEarliestStartAll(pickupEnter, workDuration, stackerResources)
                 : pickupEnter;

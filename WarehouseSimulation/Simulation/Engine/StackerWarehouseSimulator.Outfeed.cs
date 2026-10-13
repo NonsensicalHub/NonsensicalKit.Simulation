@@ -138,6 +138,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// <summary>单次唤醒内为空闲堆垛机建单；出库口在输送选路时再占，交互点未释放前不再派同机任务。</summary>
         private bool TryPlaceOneOutboundFromQueue()
         {
+            var access = ConveyorRouteAccess.FromTags(PeekOutboundProcessTags());
             if (!OutfeedPortSelector.TrySelectOutboundPlacement(
                     _conveyorTopology,
                     _bindings,
@@ -148,7 +149,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     out var slot,
                     out var stackerId,
                     out var pickupIndex,
-                    out _))
+                    out _,
+                    access))
             {
                 if (!_slotAllocator.HasRetrievableOccupiedSlot(_bindings, _conveyorTopology))
                 {
@@ -163,10 +165,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             _outboundWaitingCount--;
+            var processTags = PeekOutboundProcessTags();
+            if (_outboundWaitingFlowEntryIndices.Count > 0)
+            {
+                _outboundWaitingFlowEntryIndices.Dequeue();
+            }
+
             var job = new WarehouseJob(_nextJobId++, _clock.Now)
             {
                 Direction = SimFlowDirection.Outbound,
                 State = WarehouseJobState.WaitingStacker,
+                RequiredProcessTags = CopyProcessTags(processTags),
             };
             _jobs[job.JobId] = job;
             PlaceOutboundJob(job, slot, stackerId, pickupIndex);
@@ -206,10 +215,21 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             var remaining = _outboundWaitingCount;
             _outboundWaitingCount = 0;
+            _outboundWaitingFlowEntryIndices.Clear();
             _failedNoCargo += remaining;
             RecordFailure(SimJobFailureReason.OutboundQueueNoInventory, remaining);
             WarehouseSimLog.Info(
                 $"无可用库存：{remaining} 箱出库请求失败 t={_clock.Now:F2}s");
+        }
+
+        private string[] PeekOutboundProcessTags()
+        {
+            if (_outboundWaitingFlowEntryIndices.Count == 0 || _flowPlanScheduler == null)
+            {
+                return null;
+            }
+
+            return _flowPlanScheduler.GetRequiredProcessTags(_outboundWaitingFlowEntryIndices.Peek());
         }
 
         private void FailJobNoCargo(
@@ -239,6 +259,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             ReleaseOutboundStackerAfterPickupDeparture(job);
             ClearOutboundPickupHold(job);
+            ReleaseAllCorridorLocks(job);
 
             job.State = WarehouseJobState.FailedNoCargo;
             _failedNoCargo++;
@@ -332,7 +353,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         {
             if (job == null
                 || job.Direction != SimFlowDirection.Outbound
-                || job.PickupPointIndex < 0)
+                || job.PickupPointIndex < 0
+                || _outboundStackerReleasedAfterPickup.Contains(job.JobId))
             {
                 return;
             }

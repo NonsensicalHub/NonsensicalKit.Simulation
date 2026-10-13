@@ -9,7 +9,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
     /// <content>
     /// 输送资源占用结束后的异步唤醒：避免在占用尚未释放时反复寻路失败。
     /// <para>流程：预约表提交占用 → 占用结束时刻 + delay → <see cref="SimEventType.OccupancyReleased"/> →
-    /// 从 FIFO 队列取出等待该资源的 Job → <see cref="SimEventType.ConveyorRouteRetry"/> 重试 <c>TryBeginConveyor</c>。</para>
+    /// 从该资源 FIFO 队列取出队首 Job → <see cref="SimEventType.ConveyorRouteRetry"/> 重试 <c>TryBeginConveyor</c>。
+    /// 等取货点容量的任务不走这条路径，改由取货点释放时批量唤醒。</para>
     /// </content>
     public sealed partial class StackerWarehouseSimulator
     {
@@ -20,6 +21,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private readonly ResourceWaitQueueRegistry _resourceWaitQueues = new();
         private readonly Dictionary<int, string> _occupancyReleaseResourcesBySeq = new();
         private readonly HashSet<int> _scheduledConveyorRouteRetryJobs = new();
+        private readonly Dictionary<int, int> _conveyorRetryTokenByJob = new();
+        private readonly Dictionary<int, double> _conveyorRetryAtByJob = new();
+        private int _nextConveyorRetryToken = 1;
         private readonly HashSet<int> _inboundAwaitingConveyorRoute = new();
         private readonly HashSet<int> _outboundAwaitingConveyorRoute = new();
         private int _occupancyReleaseSeq;
@@ -32,6 +36,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _occupancyReleaseResourcesBySeq.Clear();
             _occupancyReleaseSeq = 0;
             _scheduledConveyorRouteRetryJobs.Clear();
+            _conveyorRetryTokenByJob.Clear();
+            _conveyorRetryAtByJob.Clear();
+            _nextConveyorRetryToken = 1;
             _inboundAwaitingConveyorRoute.Clear();
             _outboundAwaitingConveyorRoute.Clear();
             _resourceWaitQueues.Clear();
@@ -57,6 +64,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         }
 
         /// <summary>资源占用结束：仅唤醒该资源 FIFO 队首，并在 delay 后触发路径重试。</summary>
+        /// <remarks>
+        /// 不回落到 <see cref="ConveyorRoutePlanWaitResource"/>。
+        /// 等取货点/出库口容量的任务由 <c>NotifyConveyorRouteWaiters</c> 唤醒；
+        /// 否则每条预约释放都会重跑寻路，1000 入库会把重试数放大到数万次。
+        /// </remarks>
         private void OnOccupancyReleased(int releaseSeq)
         {
             if (!_occupancyReleaseResourcesBySeq.TryGetValue(releaseSeq, out var resourceId))
@@ -66,14 +78,26 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             _occupancyReleaseResourcesBySeq.Remove(releaseSeq);
             if (!TryGrantNextOccupancyWaiter(resourceId, out var jobId)
-                && resourceId != ConveyorRoutePlanWaitResource
-                && !TryGrantNextOccupancyWaiter(ConveyorRoutePlanWaitResource, out jobId))
+                || !_jobs.TryGetValue(jobId, out var waiting)
+                || waiting == null)
             {
                 return;
             }
 
             var delay = _bindings != null ? _bindings.OccupancyNotifyDelaySeconds : 0.1f;
-            _queue.Enqueue(new ScheduledSimEvent(_clock.Now + delay, SimEventType.ConveyorRouteRetry, jobId));
+            ScheduleConveyorRouteRetry(waiting, _clock.Now + delay);
+        }
+
+        private bool TryAcceptConveyorRouteRetry(int jobId, int token)
+        {
+            if (!_conveyorRetryTokenByJob.TryGetValue(jobId, out var expected) || expected != token)
+            {
+                return false;
+            }
+
+            _conveyorRetryTokenByJob.Remove(jobId);
+            _conveyorRetryAtByJob.Remove(jobId);
+            return true;
         }
 
         private bool TryGrantNextOccupancyWaiter(string resourceId, out int jobId) =>
@@ -82,8 +106,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// <summary>
         /// 排定输送路径重试。常规唤醒仅由 <see cref="OnOccupancyReleased"/> 触发；
         /// 路口重排等已知未来时刻的场景可传入 <paramref name="when"/>。
+        /// <paramref name="postpone"/> 为真时，已排定的更早重试改到这次时刻之后，避免占用延长后仍按旧时刻抢回。
         /// </summary>
-        private void ScheduleConveyorRouteRetry(WarehouseJob job, double when = -1)
+        private void ScheduleConveyorRouteRetry(WarehouseJob job, double when = -1, bool postpone = false)
         {
             if (job == null)
             {
@@ -92,14 +117,27 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             var delay = _bindings != null ? _bindings.OccupancyNotifyDelaySeconds : 0.1f;
             var retryAt = when >= 0 ? Math.Max(_clock.Now, when) : _clock.Now + delay;
-            var isFutureWake = when >= 0 && retryAt > _clock.Now + 1e-9;
-            if (!isFutureWake && _scheduledConveyorRouteRetryJobs.Contains(job.JobId))
+            if (_conveyorRetryAtByJob.TryGetValue(job.JobId, out var pendingAt))
             {
-                return;
+                var alreadyCovers = postpone
+                    ? pendingAt >= retryAt - 1e-9
+                    : pendingAt <= retryAt + 1e-9;
+                if (alreadyCovers)
+                {
+                    return;
+                }
             }
 
+            var token = _nextConveyorRetryToken++;
+            if (_nextConveyorRetryToken <= 0)
+            {
+                _nextConveyorRetryToken = 1;
+            }
+
+            _conveyorRetryTokenByJob[job.JobId] = token;
+            _conveyorRetryAtByJob[job.JobId] = retryAt;
             _scheduledConveyorRouteRetryJobs.Add(job.JobId);
-            _queue.Enqueue(new ScheduledSimEvent(retryAt, SimEventType.ConveyorRouteRetry, job.JobId));
+            _queue.Enqueue(new ScheduledSimEvent(retryAt, SimEventType.ConveyorRouteRetry, job.JobId, token));
         }
 
         private void OnConveyorRouteRetryDispatched(int jobId) =>
@@ -113,6 +151,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         {
             if (job == null)
             {
+                return;
+            }
+
+            // 等通道锁的任务由锁释放唤醒；资源队列每次只放出一个，挂进去会把真正等该资源的任务挤掉。
+            if (IsCorridorLockBlocked(job))
+            {
+                TrackConveyorRoutePending(job);
                 return;
             }
 
@@ -176,6 +221,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             _resourceWaitQueues.RemoveJob(job.JobId);
             _scheduledConveyorRouteRetryJobs.Remove(job.JobId);
+            _conveyorRetryTokenByJob.Remove(job.JobId);
+            _conveyorRetryAtByJob.Remove(job.JobId);
             _inboundAwaitingConveyorRoute.Remove(job.JobId);
             _outboundAwaitingConveyorRoute.Remove(job.JobId);
         }

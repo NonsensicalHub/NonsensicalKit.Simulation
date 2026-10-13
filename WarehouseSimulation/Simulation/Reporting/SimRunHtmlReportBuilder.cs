@@ -232,6 +232,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             SimReportHtml.AppendKvRow(sb, "吞吐", $"{result.ThroughputPerHour:F1} 箱/小时");
             AppendUtilizationSummaryRows(sb, resourceUtilizations);
             SimOccupancySelfCheckHtmlBuilder.AppendToSummary(sb, result);
+            SimSegmentCoOccupancyMarkdownBuilder.AppendHtmlSummary(sb, result);
             SimSubTaskTimelineSelfCheckHtmlBuilder.AppendToSummary(sb, result);
             AppendOccupancyRows(sb, scenario, simulator);
             if (HasSelfCheckFailures(result) && !string.IsNullOrEmpty(debugMarkdownFileName))
@@ -246,6 +247,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         private static bool HasSelfCheckFailures(SimRunResult result) =>
             (result?.OccupancyConflicts != null && result.OccupancyConflicts.Count > 0)
+            || (result?.SegmentCoOccupancies != null && result.SegmentCoOccupancies.Count > 0)
             || (result?.SubTaskTimelineIssues != null && result.SubTaskTimelineIssues.Count > 0);
 
         private static void AppendOccupancyRows(

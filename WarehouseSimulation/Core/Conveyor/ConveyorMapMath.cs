@@ -84,6 +84,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         public static float GetEdgeTerminalHopSeconds(WarehouseConveyorMap map, SimConveyorMapEdge edge) =>
             GetTransitSecondsForNormalizedSpan(map, edge, GetEdgeEndMarginNormalized(map, edge));
 
+        /// <summary>
+        /// 从上游节点驶入本段入口停留点的 hop。
+        /// 多槽时入口槽就在端部留白处；单槽时唯一停留点靠近终点，路程是整段减去端部留白。
+        /// </summary>
+        public static float GetEdgeEntrySlotHopSeconds(WarehouseConveyorMap map, SimConveyorMapEdge edge)
+        {
+            var capacity = GetSegmentCapacity(map, edge);
+            var entrySlot = Math.Max(0, capacity - 1);
+            return GetZoneHopSecondsFromPrevious(map, edge, entrySlot);
+        }
+
         /// <summary>从上一位置驶入指定槽位 zone 的 hop 时长（按实际路程）。</summary>
         public static float GetZoneHopSecondsFromPrevious(
             WarehouseConveyorMap map,
@@ -111,6 +122,113 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         /// <summary>从末槽位驶入下游节点（路口/取货点等）的 hop 时长。</summary>
         public static float GetNodeApproachHopSeconds(WarehouseConveyorMap map, SimConveyorMapEdge edge) =>
             GetEdgeTerminalHopSeconds(map, edge);
+
+        private const float GateUnsetEpsilon = 1e-4f;
+        private const float GateResolvedStart = 0.001f;
+        private const float GateResolvedEnd = 0.999f;
+
+        /// <summary>
+        /// 中间门的归一化位置（0=起点，1=终点）。配置为 0 时视为路段中点。
+        /// </summary>
+        public static float ResolveGateNormalizedPosition(in SimConveyorMapEdge edge)
+        {
+            var t = edge.GateNormalizedPosition;
+            if (t <= GateUnsetEpsilon)
+            {
+                return 0.5f;
+            }
+
+            if (t >= 1f)
+            {
+                return GateResolvedEnd;
+            }
+
+            return t;
+        }
+
+        /// <summary>
+        /// 反向路段上的门位置。0 表示「使用中点」，保持 0。
+        /// 正向在终点时，反向落到起点侧；不能写回 0，否则会被当成中点。
+        /// </summary>
+        public static float MirrorGateNormalizedPosition(float position)
+        {
+            if (position <= GateUnsetEpsilon)
+            {
+                return 0f;
+            }
+
+            var resolved = position >= 1f ? GateResolvedEnd : position;
+            var mirrored = 1f - resolved;
+            if (mirrored <= GateUnsetEpsilon)
+            {
+                return GateResolvedStart;
+            }
+
+            if (mirrored >= 1f)
+            {
+                return GateResolvedEnd;
+            }
+
+            return mirrored;
+        }
+
+        /// <summary>
+        /// 中间门前的等待落在哪个停留点：门位置之前、最靠近门的那个槽位。
+        /// 门在全部停留点之前时，停在入口停留点。
+        /// </summary>
+        public static bool TryGetGateHoldSlot(
+            WarehouseConveyorMap map,
+            in SimConveyorMapEdge edge,
+            out int slotIndex,
+            out float waitSeconds)
+        {
+            waitSeconds = edge.GateWaitSeconds;
+            slotIndex = -1;
+            if (waitSeconds <= 1e-4f)
+            {
+                return false;
+            }
+
+            var capacity = GetSegmentCapacity(map, edge);
+            if (capacity <= 0)
+            {
+                return false;
+            }
+
+            var gateT = ResolveGateNormalizedPosition(in edge);
+            var bestSlot = -1;
+            var bestT = -1f;
+            for (var s = 0; s < capacity; s++)
+            {
+                var t = GetZoneNormalizedPosition(map, edge, capacity, s);
+                if (t <= gateT + 1e-4f && t > bestT)
+                {
+                    bestT = t;
+                    bestSlot = s;
+                }
+            }
+
+            slotIndex = bestSlot >= 0 ? bestSlot : capacity - 1;
+            return true;
+        }
+
+        /// <summary>中间门资源 ID（与方向无关，用于等待统计）。</summary>
+        public static string BuildSegmentGateResourceId(
+            WarehouseConveyorMap map,
+            int fromNodeIndex,
+            int toNodeIndex)
+        {
+            var fromId = map?.Nodes != null && fromNodeIndex >= 0 && fromNodeIndex < map.Nodes.Length
+                ? map.Nodes[fromNodeIndex].NodeId?.Trim()
+                : null;
+            var toId = map?.Nodes != null && toNodeIndex >= 0 && toNodeIndex < map.Nodes.Length
+                ? map.Nodes[toNodeIndex].NodeId?.Trim()
+                : null;
+            var segKey = CanonicalSegmentKey(
+                string.IsNullOrEmpty(fromId) ? $"n{fromNodeIndex}" : fromId,
+                string.IsNullOrEmpty(toId) ? $"n{toNodeIndex}" : toId);
+            return $"seg-{segKey}-gate";
+        }
 
         /// <summary>zone 在路段上的归一化位置（0=起点，1=终点）。</summary>
         public static float GetZoneNormalizedPosition(

@@ -14,7 +14,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         private readonly Dictionary<(int from, int to), SimConveyorMapEdge> _edgeData = new();
         private readonly Dictionary<(int from, int to), int[]> _transitShortestPathCache = new();
         private readonly HashSet<(int from, int to)> _transitShortestPathMiss = new();
+        private readonly Dictionary<(int from, int to, string access), int[]> _accessPathCache = new();
+        private readonly HashSet<(int from, int to, string access)> _accessPathMiss = new();
+        private readonly Dictionary<(int from, int to, string access), int[]> _effectiveAccessPathCache = new();
+        private readonly HashSet<(int from, int to, string access)> _effectiveAccessPathMiss = new();
         private readonly Dictionary<int, int[]> _reachablePickupCache = new();
+        private readonly Dictionary<(int from, string access), int[]> _accessiblePickupCache = new();
 
         public WarehouseConveyorMap Map { get; }
         public IReadOnlyList<int> InfeedNodeIndices { get; }
@@ -132,9 +137,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 
                         stackerPickups.Add(i);
 
-                        if (node.PickupColumn <= 0)
+                        if (node.PickupColumn <= 0 && !SimConveyorNodeBinding.HasForkDepth(in node))
                         {
-                            error = $"堆垛机交互点节点 {logicalId} 需要配置 PickupColumn（侧别由列号与巷道左列推导）。";
+                            error = $"堆垛机交互点节点 {logicalId} 需要配置伸叉深度（米），或配置参考列。";
                             return false;
                         }
 
@@ -361,19 +366,32 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 }
 
                 var seenColumns = new HashSet<int>();
+                var seenForkSides = new HashSet<int>();
                 for (var i = 0; i < pickupIndices.Count; i++)
                 {
                     ref var node = ref map.Nodes[pickupIndices[i]];
+                    if (SimConveyorNodeBinding.HasForkDepth(in node)
+                        && !seenForkSides.Add(Math.Sign(node.ForkDepthMeters)))
+                    {
+                        error = $"堆垛机 {stackerId} 有多个交互点的伸叉深度在同一侧。";
+                        return false;
+                    }
+
+                    if (node.PickupColumn <= 0)
+                    {
+                        continue;
+                    }
+
                     if (!StackerColumnReachUtility.CanReachColumn(in def, node.PickupColumn))
                     {
                         error =
-                            $"堆垛机交互点 {SimEntityNaming.FormatLogicalId(in node, pickupIndices[i])} 的交互列 {node.PickupColumn} 不在堆垛机 {stackerId} 的伸叉列域内。";
+                            $"堆垛机交互点 {SimEntityNaming.FormatLogicalId(in node, pickupIndices[i])} 的参考列 {node.PickupColumn} 不在堆垛机 {stackerId} 的伸叉列域内。";
                         return false;
                     }
 
                     if (!seenColumns.Add(node.PickupColumn))
                     {
-                        error = $"堆垛机 {stackerId} 存在多个交互点使用相同交互列 {node.PickupColumn}。";
+                        error = $"堆垛机 {stackerId} 存在多个交互点使用相同参考列 {node.PickupColumn}。";
                         return false;
                     }
                 }
@@ -549,6 +567,56 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return cached;
         }
 
+        /// <summary>
+        /// 按加工权限收集可达入库交互点。普通货物不会穿过加工专用路段和加工站。
+        /// </summary>
+        public int[] GetAccessiblePickupNodeIndices(int fromNodeIndex, ConveyorRouteAccess access)
+        {
+            if (fromNodeIndex < 0 || Map?.Nodes == null || fromNodeIndex >= Map.Nodes.Length)
+            {
+                return Array.Empty<int>();
+            }
+
+            var signature = access.Signature;
+            if (_accessiblePickupCache.TryGetValue((fromNodeIndex, signature), out var cached))
+            {
+                return cached;
+            }
+
+            var result = new List<int>();
+            var visited = new bool[Map.Nodes.Length];
+            var queue = new Queue<int>();
+            visited[fromNodeIndex] = true;
+            queue.Enqueue(fromNodeIndex);
+
+            while (queue.Count > 0)
+            {
+                var u = queue.Dequeue();
+                ref var node = ref Map.Nodes[u];
+                if (node.Kind == SimConveyorNodeKind.PickupPoint
+                    && StackerInteractionModeUtility.AllowsInbound(in node))
+                {
+                    result.Add(u);
+                }
+
+                foreach (var (to, _) in _outEdges[u])
+                {
+                    if (visited[to]
+                        || !ConveyorProcessStationUtility.CanTraverse(this, u, to, access, searchTarget: -1))
+                    {
+                        continue;
+                    }
+
+                    visited[to] = true;
+                    queue.Enqueue(to);
+                }
+            }
+
+            cached = result.Count > 0 ? result.ToArray() : Array.Empty<int>();
+            _accessiblePickupCache[(fromNodeIndex, signature)] = cached;
+            return cached;
+        }
+
         private static int CountReachableInboundPickups(ConveyorMapTopology topology, int fromNodeIndex) =>
             topology.GetReachablePickupNodes(fromNodeIndex).Count;
 
@@ -587,12 +655,181 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return true;
         }
 
+        /// <summary>按加工权限的输送时间最短路。同一权限的结果会缓存。</summary>
+        public bool TryFindAccessiblePathByTransit(
+            int fromNodeIndex,
+            int toNodeIndex,
+            ConveyorRouteAccess access,
+            out List<int> path)
+        {
+            path = null;
+            if (fromNodeIndex == toNodeIndex)
+            {
+                path = new List<int> { fromNodeIndex };
+                return true;
+            }
+
+            var key = (fromNodeIndex, toNodeIndex, access.Signature);
+            if (_accessPathCache.TryGetValue(key, out var cached))
+            {
+                path = new List<int>(cached);
+                return true;
+            }
+
+            if (_accessPathMiss.Contains(key))
+            {
+                return false;
+            }
+
+            if (!TryFindShortestPathByTransitCore(
+                    fromNodeIndex,
+                    toNodeIndex,
+                    restrictAccess: true,
+                    access: access,
+                    accessSearchTarget: -1,
+                    nodeArrivalExtraSeconds: null,
+                    out path)
+                || path == null
+                || path.Count < 2)
+            {
+                _accessPathMiss.Add(key);
+                path = null;
+                return false;
+            }
+
+            _accessPathCache[key] = path.ToArray();
+            return true;
+        }
+
         /// <summary>
         /// 按边输送时间 + 节点停留/服务时间的最短路径（不缓存；用于含提升机/加工站的路径择优）。
         /// </summary>
         public bool TryFindShortestPathByEffectiveTransit(
             int fromNodeIndex,
             int toNodeIndex,
+            Func<int, float> nodeArrivalExtraSeconds,
+            out List<int> path,
+            bool restrictAccess = false,
+            ConveyorRouteAccess access = default)
+        {
+            return TryFindShortestPathByTransitCore(
+                fromNodeIndex,
+                toNodeIndex,
+                restrictAccess,
+                access,
+                restrictAccess ? toNodeIndex : -1,
+                nodeArrivalExtraSeconds,
+                out path);
+        }
+
+        /// <summary>
+        /// 计入节点停留后的最短路。无任务相关加工停留时结果可缓存，避免每次重试都跑一遍 Dijkstra。
+        /// </summary>
+        public bool TryFindShortestPathByEffectiveTransitCached(
+            int fromNodeIndex,
+            int toNodeIndex,
+            Func<int, float> nodeArrivalExtraSeconds,
+            out List<int> path,
+            bool restrictAccess = false,
+            ConveyorRouteAccess access = default,
+            bool cacheStableExtras = false)
+        {
+            if (!cacheStableExtras)
+            {
+                return TryFindShortestPathByEffectiveTransit(
+                    fromNodeIndex,
+                    toNodeIndex,
+                    nodeArrivalExtraSeconds,
+                    out path,
+                    restrictAccess,
+                    access);
+            }
+
+            path = null;
+            var key = (fromNodeIndex, toNodeIndex, restrictAccess ? access.Signature ?? string.Empty : string.Empty);
+            if (_effectiveAccessPathCache.TryGetValue(key, out var cached))
+            {
+                path = new List<int>(cached);
+                return true;
+            }
+
+            if (_effectiveAccessPathMiss.Contains(key))
+            {
+                return false;
+            }
+
+            if (!TryFindShortestPathByEffectiveTransit(
+                    fromNodeIndex,
+                    toNodeIndex,
+                    nodeArrivalExtraSeconds,
+                    out path,
+                    restrictAccess,
+                    access)
+                || path == null
+                || path.Count < 2)
+            {
+                _effectiveAccessPathMiss.Add(key);
+                path = null;
+                return false;
+            }
+
+            _effectiveAccessPathCache[key] = path.ToArray();
+            return true;
+        }
+
+        /// <summary>预热入库口→取货点、取货点→出库口的静态最短路缓存。</summary>
+        public void WarmTransitShortestPathCache()
+        {
+            foreach (var infeed in InfeedNodeIndices)
+            {
+                GetReachablePickupNodeIndices(infeed);
+                foreach (var pickup in PickupNodeIndices)
+                {
+                    TryFindShortestPathByTransit(infeed, pickup, out _);
+                }
+            }
+
+            var plain = ConveyorRouteAccess.Plain;
+            foreach (var infeed in InfeedNodeIndices)
+            {
+                GetAccessiblePickupNodeIndices(infeed, plain);
+                foreach (var pickup in PickupNodeIndices)
+                {
+                    TryFindAccessiblePathByTransit(infeed, pickup, plain, out _);
+                }
+            }
+
+            if (OutfeedNodeIndices == null)
+            {
+                return;
+            }
+
+            foreach (var pickup in PickupNodeIndices)
+            {
+                foreach (var outfeed in OutfeedNodeIndices)
+                {
+                    TryFindShortestPathByTransit(pickup, outfeed, out _);
+                    TryFindAccessiblePathByTransit(pickup, outfeed, plain, out _);
+                }
+            }
+        }
+
+        private bool TryFindShortestPathByTransitCore(int fromNodeIndex, int toNodeIndex, out List<int> path) =>
+            TryFindShortestPathByTransitCore(
+                fromNodeIndex,
+                toNodeIndex,
+                restrictAccess: false,
+                access: default,
+                accessSearchTarget: -1,
+                nodeArrivalExtraSeconds: null,
+                out path);
+
+        private bool TryFindShortestPathByTransitCore(
+            int fromNodeIndex,
+            int toNodeIndex,
+            bool restrictAccess,
+            ConveyorRouteAccess access,
+            int accessSearchTarget,
             Func<int, float> nodeArrivalExtraSeconds,
             out List<int> path)
         {
@@ -615,7 +852,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             Array.Fill(dist, float.MaxValue);
             Array.Fill(parent, -1);
             dist[fromNodeIndex] = 0f;
-            nodeArrivalExtraSeconds ??= _ => 0f;
 
             for (var iter = 0; iter < n; iter++)
             {
@@ -651,101 +887,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                         continue;
                     }
 
-                    var next = dist[u] + transit + nodeArrivalExtraSeconds(to);
-                    if (next < dist[to])
-                    {
-                        dist[to] = next;
-                        parent[to] = u;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>预热入库口→取货点、取货点→出库口的静态最短路缓存。</summary>
-        public void WarmTransitShortestPathCache()
-        {
-            foreach (var infeed in InfeedNodeIndices)
-            {
-                GetReachablePickupNodeIndices(infeed);
-                foreach (var pickup in PickupNodeIndices)
-                {
-                    TryFindShortestPathByTransit(infeed, pickup, out _);
-                }
-            }
-
-            if (OutfeedNodeIndices == null)
-            {
-                return;
-            }
-
-            foreach (var pickup in PickupNodeIndices)
-            {
-                foreach (var outfeed in OutfeedNodeIndices)
-                {
-                    TryFindShortestPathByTransit(pickup, outfeed, out _);
-                }
-            }
-        }
-
-        private bool TryFindShortestPathByTransitCore(int fromNodeIndex, int toNodeIndex, out List<int> path)
-        {
-            path = null;
-            if (fromNodeIndex == toNodeIndex)
-            {
-                path = new List<int> { fromNodeIndex };
-                return true;
-            }
-
-            var n = Map.Nodes.Length;
-            if (fromNodeIndex < 0 || toNodeIndex < 0 || fromNodeIndex >= n || toNodeIndex >= n)
-            {
-                return false;
-            }
-
-            var dist = new float[n];
-            var settled = new bool[n];
-            var parent = new int[n];
-            Array.Fill(dist, float.MaxValue);
-            Array.Fill(parent, -1);
-            dist[fromNodeIndex] = 0f;
-
-            for (var iter = 0; iter < n; iter++)
-            {
-                var u = -1;
-                var best = float.MaxValue;
-                for (var i = 0; i < n; i++)
-                {
-                    if (settled[i] || dist[i] >= best)
+                    if (restrictAccess
+                        && !ConveyorProcessStationUtility.CanTraverse(this, u, to, access, accessSearchTarget))
                     {
                         continue;
                     }
 
-                    best = dist[i];
-                    u = i;
-                }
-
-                if (u < 0 || best >= float.MaxValue)
-                {
-                    break;
-                }
-
-                if (u == toNodeIndex)
-                {
-                    path = Reconstruct(parent, toNodeIndex);
-                    return true;
-                }
-
-                settled[u] = true;
-                foreach (var (to, transit) in _outEdges[u])
-                {
-                    if (settled[to])
-                    {
-                        continue;
-                    }
-
-                    var next = dist[u] + transit;
+                    var extra = nodeArrivalExtraSeconds != null ? nodeArrivalExtraSeconds(to) : 0f;
+                    var next = dist[u] + transit + extra;
                     if (next < dist[to])
                     {
                         dist[to] = next;

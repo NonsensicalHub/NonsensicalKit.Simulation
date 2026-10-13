@@ -136,7 +136,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                         nextSegment.Value.ToNodeIndex,
                         out var nextEdge))
                 {
-                    hop = ConveyorMapMath.GetEdgeTerminalHopSeconds(map, nextEdge);
+                    hop = ConveyorMapMath.GetEdgeEntrySlotHopSeconds(map, nextEdge);
                 }
 
                 if (hop > TimeEpsilon)

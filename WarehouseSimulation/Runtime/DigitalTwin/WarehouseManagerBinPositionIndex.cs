@@ -21,7 +21,33 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         [SerializeField, Label("仓库数据名（无绑定时）")]
         private string m_warehouseName = "SimulationTest";
 
+        [SerializeField, Label("仓库号")]
+        [Tooltip("0 为默认库。堆垛机回放会按堆垛机所属仓库调用 UseWarehouse。")]
+        private int m_warehouseId;
+
+        private int _activeWarehouseId;
+        private bool _hasWarehouseOverride;
+        private ISlotPositionIndex _resolvedIndex;
+
+        public int WarehouseId => _hasWarehouseOverride ? _activeWarehouseId : m_warehouseId;
+
         public bool IsReady => ResolvePositions().IsReady;
+
+        /// <summary>指定本次解析使用的仓库号，并在仓库变化时丢掉已解析的坐标索引。</summary>
+        public void UseWarehouse(int warehouseId)
+        {
+            if (_hasWarehouseOverride
+                && _activeWarehouseId == warehouseId
+                && _resolvedIndex != null
+                && _resolvedIndex.IsReady)
+            {
+                return;
+            }
+
+            _hasWarehouseOverride = true;
+            _activeWarehouseId = warehouseId;
+            _resolvedIndex = null;
+        }
 
         public ISlotPositionIndex Positions => ResolvePositions();
 
@@ -57,17 +83,40 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
         private ISlotPositionIndex ResolvePositions()
         {
+            if (_resolvedIndex != null && _resolvedIndex.IsReady)
+            {
+                return _resolvedIndex;
+            }
+
+            _resolvedIndex = LoadPositions();
+            return _resolvedIndex;
+        }
+
+        private ISlotPositionIndex LoadPositions()
+        {
+            var warehouseId = WarehouseId;
             if (m_bindings != null)
             {
                 m_bindings.EnsureSlotPositionsLoaded();
-                if (m_bindings.SlotPositions.IsReady)
+                if (m_bindings.SlotPositions is WarehouseSlotPositionCatalog catalog
+                    && catalog.TryGetIndex(warehouseId, out var indexed)
+                    && indexed.IsReady)
+                {
+                    return indexed;
+                }
+
+                if (warehouseId == 0 && m_bindings.SlotPositions != null && m_bindings.SlotPositions.IsReady)
                 {
                     return m_bindings.SlotPositions;
                 }
             }
 
-            return SlotPositionIndex.TryLoadFromStreamingAssets(m_warehouseName)
-                ?? new SlotPositionIndex();
+            if (warehouseId == 0)
+            {
+                return SlotPositionIndex.TryLoadFromStreamingAssets(m_warehouseName) ?? new SlotPositionIndex();
+            }
+
+            return new SlotPositionIndex();
         }
     }
 }

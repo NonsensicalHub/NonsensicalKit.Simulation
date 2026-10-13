@@ -11,10 +11,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
     {
         [Tooltip("输送网所有节点：入库口、路口、堆垛机交互点")]
         [Label("节点列表")]
+        [HideInInspector]
         public SimConveyorMapNode[] Nodes;
 
         [Tooltip("有向路段：路口间默认双向（A→B 与 B→A 各一条），也可仅保留单向；距离与可选速度覆盖")]
         [Label("路段列表")]
+        [HideInInspector]
         public SimConveyorMapEdge[] Edges;
 
         [Header("输送物理参数")]
