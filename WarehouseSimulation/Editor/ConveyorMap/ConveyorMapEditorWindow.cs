@@ -685,6 +685,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     DrawProp(element, "ProcessMode", "加工模式");
                     DrawProp(element, "ProcessTag", "加工标签");
                     DrawProp(element, "ProcessServiceSeconds", "加工服务时间（秒）");
+                    EditorGUILayout.Space(4f);
+                    EditorGUILayout.LabelField("死胡同占用路口", EditorStyles.boldLabel);
+                    EditorGUILayout.HelpBox(
+                        "填写路口逻辑 ID（如 LR1104）。货物前往本站时，首次经过该路口独占，再次经过时释放，避免进站对向争用。留空则不启用。",
+                        MessageType.Info);
+                    DrawProcessOccupiedJunctionField(element);
                     break;
                 case SimConveyorNodeKind.VerticalTransfer:
                     EditorGUILayout.LabelField("垂直提升机", EditorStyles.boldLabel);
@@ -990,12 +996,148 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             }
         }
 
+        /// <summary>
+        /// 加工站「占用路口」字段：优先用 SerializedProperty；找不到时回退直接改 Nodes 数组，避免静默不显示。
+        /// </summary>
+        private void DrawProcessOccupiedJunctionField(SerializedProperty element)
+        {
+            const string fieldName = "ProcessOccupiedJunctionLogicalId";
+            const string label = "占用路口（逻辑 ID）";
+            var prop = element != null ? element.FindPropertyRelative(fieldName) : null;
+            var junctionChoices = CollectJunctionLogicalIds();
+
+            if (prop != null)
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.PropertyField(prop, new GUIContent(label), GUILayout.MinWidth(160f));
+                if (junctionChoices.Length > 0
+                    && GUILayout.Button("选路口", EditorStyles.miniButton, GUILayout.Width(56f)))
+                {
+                    ShowJunctionLogicalIdMenu(prop, junctionChoices);
+                }
+
+                EditorGUILayout.EndHorizontal();
+                return;
+            }
+
+            // SerializedProperty 缺失（脚本未重编/序列化异常）时仍可编辑，避免配置窗“看不见字段”。
+            EditorGUILayout.HelpBox(
+                "序列化属性暂不可用，已用节点数组回退编辑。请触发一次脚本重编译（刷新/改代码）后再确认。",
+                MessageType.Warning);
+            if (_selectedNode < 0 || _map?.Nodes == null || _selectedNode >= _map.Nodes.Length)
+            {
+                return;
+            }
+
+            var node = _map.Nodes[_selectedNode];
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.BeginHorizontal();
+            var next = EditorGUILayout.TextField(label, node.ProcessOccupiedJunctionLogicalId ?? string.Empty);
+            if (junctionChoices.Length > 0
+                && GUILayout.Button("选路口", EditorStyles.miniButton, GUILayout.Width(56f)))
+            {
+                ShowJunctionLogicalIdMenuForNodeIndex(_selectedNode, junctionChoices);
+            }
+
+            EditorGUILayout.EndHorizontal();
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(_map, "Set ProcessOccupiedJunctionLogicalId");
+                node.ProcessOccupiedJunctionLogicalId = next?.Trim() ?? string.Empty;
+                _map.Nodes[_selectedNode] = node;
+                EditorUtility.SetDirty(_map);
+                _serializedMap = new SerializedObject(_map);
+            }
+        }
+
+        private string[] CollectJunctionLogicalIds()
+        {
+            if (_map?.Nodes == null || _map.Nodes.Length == 0)
+            {
+                return System.Array.Empty<string>();
+            }
+
+            var list = new System.Collections.Generic.List<string>();
+            for (var i = 0; i < _map.Nodes.Length; i++)
+            {
+                ref var n = ref _map.Nodes[i];
+                if (n.Kind != SimConveyorNodeKind.Junction)
+                {
+                    continue;
+                }
+
+                var id = n.LogicalId?.Trim();
+                if (!string.IsNullOrEmpty(id) && !list.Contains(id))
+                {
+                    list.Add(id);
+                }
+            }
+
+            list.Sort(System.StringComparer.Ordinal);
+            return list.ToArray();
+        }
+
+        private static void ShowJunctionLogicalIdMenu(SerializedProperty prop, string[] choices)
+        {
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent("(清空)"), false, () =>
+            {
+                prop.stringValue = string.Empty;
+                prop.serializedObject.ApplyModifiedProperties();
+            });
+            for (var i = 0; i < choices.Length; i++)
+            {
+                var choice = choices[i];
+                menu.AddItem(new GUIContent(choice), prop.stringValue == choice, () =>
+                {
+                    prop.stringValue = choice;
+                    prop.serializedObject.ApplyModifiedProperties();
+                });
+            }
+
+            menu.ShowAsContext();
+        }
+
+        private void ShowJunctionLogicalIdMenuForNodeIndex(int nodeIndex, string[] choices)
+        {
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent("(清空)"), false, () => ApplyOccupiedJunctionToNode(nodeIndex, string.Empty));
+            for (var i = 0; i < choices.Length; i++)
+            {
+                var choice = choices[i];
+                menu.AddItem(new GUIContent(choice), false, () => ApplyOccupiedJunctionToNode(nodeIndex, choice));
+            }
+
+            menu.ShowAsContext();
+        }
+
+        private void ApplyOccupiedJunctionToNode(int nodeIndex, string logicalId)
+        {
+            if (_map?.Nodes == null || nodeIndex < 0 || nodeIndex >= _map.Nodes.Length)
+            {
+                return;
+            }
+
+            Undo.RecordObject(_map, "Set ProcessOccupiedJunctionLogicalId");
+            var node = _map.Nodes[nodeIndex];
+            node.ProcessOccupiedJunctionLogicalId = logicalId ?? string.Empty;
+            _map.Nodes[nodeIndex] = node;
+            EditorUtility.SetDirty(_map);
+            _serializedMap = new SerializedObject(_map);
+            Repaint();
+        }
+
         private static void DrawProp(SerializedProperty parent, string relativePath, string label)
         {
             var prop = parent.FindPropertyRelative(relativePath);
             if (prop != null)
             {
                 EditorGUILayout.PropertyField(prop, new GUIContent(label));
+            }
+            else if (relativePath == "ProcessOccupiedJunctionLogicalId")
+            {
+                // 由 DrawProcessOccupiedJunctionField 兜底；此处不再静默跳过。
+                EditorGUILayout.HelpBox($"缺少序列化字段：{relativePath}", MessageType.Warning);
             }
         }
 

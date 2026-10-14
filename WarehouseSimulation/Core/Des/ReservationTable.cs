@@ -491,6 +491,46 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return latestId;
         }
 
+        /// <summary>
+        /// 按起点释放区间。Trim/延长时若终点因尾垫或等待窗变化与写入时不完全一致，精确 Release 会失败。
+        /// </summary>
+        public bool ReleaseByStart(string resourceId, double start)
+        {
+            if (!_intervals.TryGetValue(resourceId, out var list))
+            {
+                return false;
+            }
+
+            TrimExpired(list);
+            var lo = 0;
+            var hi = list.Count;
+            while (lo < hi)
+            {
+                var mid = lo + (hi - lo) / 2;
+                if (list[mid].Start < start - TimeEpsilon)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid;
+                }
+            }
+
+            for (var i = lo; i < list.Count && list[i].Start <= start + TimeEpsilon; i++)
+            {
+                if (Math.Abs(list[i].Start - start) < TimeEpsilon)
+                {
+                    var iv = list[i];
+                    list.RemoveAt(i);
+                    NotifyOccupancyChanged(resourceId, iv.Start, iv.End, released: true);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool Release(string resourceId, double start, double end)
         {
             if (!_intervals.TryGetValue(resourceId, out var list))

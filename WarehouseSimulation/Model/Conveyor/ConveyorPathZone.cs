@@ -59,5 +59,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
         public string ExitLaneResourceId;
         public double ExitLaneReserveStart;
         public double ExitLaneReserveEnd;
+
+        /// <summary>
+        /// 本 zone 在预约表上的实际占用窗（含 SameEdgeHold / 等待下游时的延长）。
+        /// Trim/释放必须用这对时刻，不能只用 Arrive/Leave 反推，否则精确 Release 会失败。
+        /// </summary>
+        public double SlotReserveStart;
+        public double SlotReserveEnd;
     }
 }

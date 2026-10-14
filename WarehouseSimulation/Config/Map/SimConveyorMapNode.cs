@@ -38,6 +38,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         [Tooltip("≤0 使用 Profile.ProcessStationServiceSeconds；停留加工模式的单次服务耗时")]
         [Label("加工服务时间（秒）")]
         public float ProcessServiceSeconds;
+        [Tooltip("占用路口逻辑 ID（如 LR1104）。货物前往本加工站时，首次经过该路口独占占用，再次经过时释放，避免死胡同进站对向争用。留空则不启用。")]
+        [Label("占用路口（逻辑 ID）")]
+        public string ProcessOccupiedJunctionLogicalId;
 
         [Header("垂直提升机")]
         [Tooltip("同一物理提升机各层节点共用此 ID，用于设备互斥预约；留空则使用本节点逻辑 ID")]

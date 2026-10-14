@@ -648,6 +648,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 zone.ExitLaneResourceId = null;
                 zone.ExitLaneReserveStart = 0;
                 zone.ExitLaneReserveEnd = 0;
+                zone.SlotReserveStart = 0;
+                zone.SlotReserveEnd = 0;
                 chain[i] = zone;
             }
         }
@@ -1371,6 +1373,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
 
                 zone.LeaveSimTime = s0LeaveSimTime;
+                zone.SlotReserveStart = reserveStart;
+                zone.SlotReserveEnd = newReservedEnd;
                 chain[i] = zone;
                 return;
             }
@@ -1410,6 +1414,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             exit.LeaveSimTime = hopStart;
+            exit.SlotReserveStart = reserveStart;
+            exit.SlotReserveEnd = hopStart;
             chain[exitIndex] = exit;
         }
 
@@ -1445,21 +1451,31 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             schedule[index] = seg;
         }
 
-        /// <summary>取货点 zone 预约完成后，用其真实预约窗回填来向边路段时刻表。</summary>
-        private static void UpdateApproachSegmentScheduleForPickup(WarehouseJob job, in ConveyorPathZone pickupZone)
+        /// <summary>
+        /// 下游节点 zone 预约完成后，用其真实预约窗回填来向边路段时刻表。
+        /// 加工站/提升机与 <see cref="ConveyorTransitScheduler"/> 的 lane 规则一致：
+        /// 来向边占用止于进站（Arrive），服务 dwell 不计入 approach occupancy。
+        /// </summary>
+        private void UpdateApproachSegmentScheduleForPickup(WarehouseJob job, in ConveyorPathZone nodeZone)
         {
             var schedule = job.ConveyorSegmentSchedule;
             var idx = schedule == null
                 ? -1
-                : ConveyorSegmentScheduleNavigation.FindPathEdgeIndex(schedule, pickupZone.PathEdgeIndex);
+                : ConveyorSegmentScheduleNavigation.FindPathEdgeIndex(schedule, nodeZone.PathEdgeIndex);
             if (idx < 0)
             {
                 return;
             }
 
             var seg = schedule[idx];
-            seg.ExitSimTime = pickupZone.ArriveSimTime - pickupZone.HopSeconds;
-            seg.OccupancyEndSimTime = pickupZone.LeaveSimTime;
+            seg.ExitSimTime = nodeZone.ArriveSimTime - nodeZone.HopSeconds;
+            // Pickup/Outfeed：货物仍压在来向边上直到节点 Leave。
+            // ProcessStation/VerticalTransfer：进站后由站内资源占用，来向边止于 Arrive。
+            var holdThroughLeave = nodeZone.Kind is ConveyorPathZoneKind.Pickup
+                or ConveyorPathZoneKind.Outfeed;
+            seg.OccupancyEndSimTime = holdThroughLeave
+                ? nodeZone.LeaveSimTime
+                : Math.Max(seg.ExitSimTime, nodeZone.ArriveSimTime);
             schedule[idx] = seg;
         }
 

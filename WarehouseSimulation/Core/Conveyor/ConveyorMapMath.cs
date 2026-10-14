@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
@@ -37,7 +38,98 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         public static int GetSegmentCapacity(WarehouseConveyorMap map, SimConveyorMapEdge edge)
         {
             var unit = GetCargoOccupancyLengthMeters(map);
-            return Math.Max(1, (int)Math.Floor(Math.Max(0f, edge.DistanceMeters) / unit));
+            var cap = Math.Max(1, (int)Math.Floor(Math.Max(0f, edge.DistanceMeters) / unit));
+            // 死胡同加工站（度数 1）的进出边：容量强制 1，避免多箱挤进后再折返对向卡死。
+            if (IsDeadEndProcessSpurEdge(map, edge))
+            {
+                return 1;
+            }
+
+            return cap;
+        }
+
+        /// <summary>边是否连到仅有一条无向邻接的加工站（进站必须原路折返）。</summary>
+        public static bool IsDeadEndProcessSpurEdge(WarehouseConveyorMap map, SimConveyorMapEdge edge)
+        {
+            // SimConveyorMapEdge 是 struct，不能与 null 比较；无效边用空 NodeId 判断。
+            if (map?.Nodes == null
+                || map.Edges == null
+                || string.IsNullOrWhiteSpace(edge.FromNodeId)
+                || string.IsNullOrWhiteSpace(edge.ToNodeId))
+            {
+                return false;
+            }
+
+            var from = FindNodeIndexById(map, edge.FromNodeId);
+            var to = FindNodeIndexById(map, edge.ToNodeId);
+            if (from < 0 || to < 0)
+            {
+                return false;
+            }
+
+            return IsDeadEndProcessStationNode(map, from) || IsDeadEndProcessStationNode(map, to);
+        }
+
+        public static bool IsDeadEndProcessStationNode(WarehouseConveyorMap map, int nodeIndex)
+        {
+            if (map?.Nodes == null || nodeIndex < 0 || nodeIndex >= map.Nodes.Length)
+            {
+                return false;
+            }
+
+            ref var node = ref map.Nodes[nodeIndex];
+            if (node.Kind != SimConveyorNodeKind.ProcessStation)
+            {
+                return false;
+            }
+
+            return CountUndirectedNeighbors(map, nodeIndex) <= 1;
+        }
+
+        private static int FindNodeIndexById(WarehouseConveyorMap map, string nodeId)
+        {
+            if (map?.Nodes == null || string.IsNullOrWhiteSpace(nodeId))
+            {
+                return -1;
+            }
+
+            var trimmed = nodeId.Trim();
+            for (var i = 0; i < map.Nodes.Length; i++)
+            {
+                if (string.Equals(map.Nodes[i].NodeId?.Trim(), trimmed, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static int CountUndirectedNeighbors(WarehouseConveyorMap map, int nodeIndex)
+        {
+            var id = map.Nodes[nodeIndex].NodeId?.Trim();
+            if (string.IsNullOrEmpty(id) || map.Edges == null)
+            {
+                return 0;
+            }
+
+            var neighbors = new HashSet<string>(StringComparer.Ordinal);
+            for (var i = 0; i < map.Edges.Length; i++)
+            {
+                var e = map.Edges[i];
+                var a = e.FromNodeId?.Trim();
+                var b = e.ToNodeId?.Trim();
+                if (string.Equals(a, id, StringComparison.Ordinal) && !string.IsNullOrEmpty(b))
+                {
+                    neighbors.Add(b);
+                }
+                else if (string.Equals(b, id, StringComparison.Ordinal) && !string.IsNullOrEmpty(a))
+                {
+                    neighbors.Add(a);
+                }
+            }
+
+            return neighbors.Count;
         }
 
         /// <summary>货箱尾端经过某点所需的额外时间（碰撞长度 ÷ 路段速度）。</summary>
@@ -298,7 +390,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         public static float GetCargoSegmentOccupancySeconds(WarehouseConveyorMap map, SimConveyorMapEdge edge) =>
             GetTransitSeconds(map, edge) + GetCargoTailClearanceSeconds(map, edge);
 
-        /// <summary>输送路段槽位资源 ID（与方向无关的段键 + 槽位序号）。</summary>
+        /// <summary>输送路段槽位资源 ID（无向段键 + 槽位序号）。</summary>
         public static string[] BuildSegmentSlotIds(
             WarehouseConveyorMap map,
             int fromNodeIndex,
@@ -322,5 +414,39 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 
             return slotIds;
         }
+
+        /// <summary>
+        /// 加工站占用路口互斥资源：首次经过路口 X 独占，再次经过时释放（见 ProcessOccupiedJunctionLogicalId）。
+        /// </summary>
+        public static string BuildProcessOccupiedJunctionResourceId(string junctionLogicalId)
+        {
+            if (string.IsNullOrWhiteSpace(junctionLogicalId))
+            {
+                return null;
+            }
+
+            return $"proc-junc-excl|{junctionLogicalId.Trim()}";
+        }
+
+        /// <summary>按逻辑 ID 查找节点下标；找不到返回 -1。</summary>
+        public static int FindNodeIndexByLogicalId(WarehouseConveyorMap map, string logicalId)
+        {
+            if (map?.Nodes == null || string.IsNullOrWhiteSpace(logicalId))
+            {
+                return -1;
+            }
+
+            var trimmed = logicalId.Trim();
+            for (var i = 0; i < map.Nodes.Length; i++)
+            {
+                if (string.Equals(map.Nodes[i].LogicalId?.Trim(), trimmed, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
     }
 }

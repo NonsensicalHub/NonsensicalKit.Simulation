@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 
@@ -8,8 +9,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
     /// <content>
     /// 通道锁：对向与路口直线互斥，代替原来在途改预约窗、互相顶开的做法。
     /// <list type="bullet">
-    /// <item>方向锁：每段路一把，同一方向可多箱同时持有。出发前一次性锁住整条路径，
-    /// 拿不到就停在起点（入库口/交互点）等，手里不持有任何锁，所以对向车不会在路上顶牛卡死。</item>
+    /// <item>方向锁：每段路一把，同一方向可多箱同时持有。单向路段出发前一次性锁住整条路径，
+    /// 拿不到就停在起点（入库口/交互点）等，手里不持有任何锁，所以对向车不会在路上顶牛卡死。
+    /// 同一物理段上的折返边（如加工死胡同进站再折回）改为进入该边时再申请，
+    /// 避免出发时同时占住 f+r 导致后车只能堵在入库口；死胡同互斥由路段容量与加工占槽保证。</item>
     /// <item>直线锁：路口所在的一条直线一把，同一条来向路段可多箱同时持有。
     /// 到该路段末端停留点之前才申请（短路段提前到上一个路口之前），在上一个停留点等。
     /// 持锁车只需通过路口驶离，不依赖等锁的车。</item>
@@ -175,7 +178,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
                 foreach (var pair in holders)
                 {
-                    if (pair.Key != jobId && !string.Equals(pair.Value, claims.Sides[i], StringComparison.Ordinal))
+                    if (pair.Key == jobId)
+                    {
+                        continue;
+                    }
+
+                    // 折返段用独占侧 "x"：任意他车占用即冲突；普通方向锁仍允许同向共持。
+                    if (IsExclusiveCorridorSide(claims.Sides[i])
+                        || IsExclusiveCorridorSide(pair.Value)
+                        || !string.Equals(pair.Value, claims.Sides[i], StringComparison.Ordinal))
                     {
                         return false;
                     }
@@ -210,8 +221,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 for (var y = 0; y < bClaims.Count; y++)
                 {
                     var j = bClaims[y];
-                    if (string.Equals(a.Keys[i], b.Keys[j], StringComparison.Ordinal)
-                        && !string.Equals(a.Sides[i], b.Sides[j], StringComparison.Ordinal))
+                    if (!string.Equals(a.Keys[i], b.Keys[j], StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    if (IsExclusiveCorridorSide(a.Sides[i])
+                        || IsExclusiveCorridorSide(b.Sides[j])
+                        || !string.Equals(a.Sides[i], b.Sides[j], StringComparison.Ordinal))
                     {
                         return true;
                     }
@@ -220,6 +237,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             return false;
         }
+
+        private const string ExclusiveCorridorSide = "x";
+
+        private static bool IsExclusiveCorridorSide(string side) =>
+            string.Equals(side, ExclusiveCorridorSide, StringComparison.Ordinal);
 
         private CorridorClaims GetOrBuildCorridorClaims(WarehouseJob job)
         {
@@ -286,6 +308,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
             }
 
+            var bidirectionalSegments = FindBidirectionalPathSegments(map, path);
             var keys = new List<string>(edgeCount * 2);
             var sides = new List<string>(edgeCount * 2);
             var edgeOfClaim = new List<int>(edgeCount * 2);
@@ -296,9 +319,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 var to = path[e + 1];
                 var segment = SimEntityNaming.FormatSegment(map, from, to);
                 keys.Add("dir|" + segment);
-                sides.Add(from < to ? "f" : "r");
-                edgeOfClaim.Add(e);
-                acquireZone.Add(0);
+                // 折返段延到进入该边再申请（避免出发时同时占 f+r 堵入库口）；
+                // 互斥靠死胡同 capacity=1 + 加工期间占住进站 slot，不再用走廊独占侧（易引发对向共占误报/死锁）。
+                if (bidirectionalSegments.Contains(segment))
+                {
+                    sides.Add(from < to ? "f" : "r");
+                    edgeOfClaim.Add(e);
+                    acquireZone.Add(ResolveDirAcquireZone(chain, e));
+                }
+                else
+                {
+                    sides.Add(from < to ? "f" : "r");
+                    edgeOfClaim.Add(e);
+                    acquireZone.Add(0);
+                }
 
                 if (ConveyorJunctionAxis.TryBuildResourceId(map, from, to, out var axisId))
                 {
@@ -322,6 +356,59 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             };
             _corridorClaimsByJob[job.JobId] = claims;
             return claims;
+        }
+
+        /// <summary>本路径上出现双向折返的物理段（进站再折回），需独占且延后申请。</summary>
+        private static HashSet<string> FindBidirectionalPathSegments(
+            WarehouseConveyorMap map,
+            IReadOnlyList<int> path)
+        {
+            var both = new HashSet<string>(StringComparer.Ordinal);
+            if (map == null || path == null || path.Count < 3)
+            {
+                return both;
+            }
+
+            var firstSide = new Dictionary<string, string>(StringComparer.Ordinal);
+            for (var e = 0; e < path.Count - 1; e++)
+            {
+                var from = path[e];
+                var to = path[e + 1];
+                var segment = SimEntityNaming.FormatSegment(map, from, to);
+                var side = from < to ? "f" : "r";
+                if (firstSide.TryGetValue(segment, out var seen))
+                {
+                    if (!string.Equals(seen, side, StringComparison.Ordinal))
+                    {
+                        both.Add(segment);
+                    }
+                }
+                else
+                {
+                    firstSide[segment] = side;
+                }
+            }
+
+            return both;
+        }
+
+        /// <summary>方向锁申请点：该路径边的第一个 zone（折返独占段用，避免出发时预锁）。</summary>
+        private static int ResolveDirAcquireZone(IReadOnlyList<ConveyorPathZone> chain, int pathEdgeIndex)
+        {
+            if (chain == null)
+            {
+                return 0;
+            }
+
+            for (var k = 0; k < chain.Count; k++)
+            {
+                if (chain[k].PathEdgeIndex == pathEdgeIndex)
+                {
+                    return k;
+                }
+            }
+
+            return 0;
         }
 
         /// <summary>
@@ -494,11 +581,31 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
 
                 claims.ClaimHeld[i] = false;
-                if (RemoveCorridorHolder(claims.Keys[i], jobId))
+                // 进站+折返共用同一 dir|segment 键：仅当该任务不再持有同键其它边时才摘 holders。
+                if (!HasOtherHeldClaimWithKey(claims, i) && RemoveCorridorHolder(claims.Keys[i], jobId))
                 {
                     _corridorReleasedKeysScratch.Add(claims.Keys[i]);
                 }
             }
+        }
+
+        private static bool HasOtherHeldClaimWithKey(CorridorClaims claims, int claimIndex)
+        {
+            var key = claims.Keys[claimIndex];
+            for (var i = 0; i < claims.Keys.Length; i++)
+            {
+                if (i == claimIndex || !claims.ClaimHeld[i])
+                {
+                    continue;
+                }
+
+                if (string.Equals(claims.Keys[i], key, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool RemoveCorridorHolder(string key, int jobId)

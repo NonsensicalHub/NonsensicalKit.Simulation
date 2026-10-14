@@ -581,6 +581,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         }
 
         /// <summary>为每个必需加工标签选取可达站点并拼接最短路。</summary>
+        /// <remarks>
+        /// 选站时「站→终点」只要求任务标签权限下仍可达（可穿过后续工序站），
+        /// 不要求绕开后续站的直达路。例如整形→取货可途经缠膜。
+        /// 「当前→该站」仍用直达路，避免提前进入尚未轮到的工序站。
+        /// </remarks>
         private static bool TryFindPathViaRequiredProcessStations(
             ConveyorMapTopology topology,
             IWarehouseSimulationBindings bindings,
@@ -638,7 +643,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         continue;
                     }
 
-                    if (!TryFindDirectPath(
+                    // 后续工序站仍在任务标签权限内，预判终点可达时允许穿过它们。
+                    if (!TryFindPathAllowingAllowedProcessStations(
                             topology,
                             bindings,
                             strategy,
@@ -646,7 +652,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                             station,
                             toNodeIndex,
                             atTime,
-                            job,
                             access,
                             out var legToDest)
                         || legToDest == null
@@ -688,6 +693,54 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 job,
                 access,
                 out pathNodeIndices);
+        }
+
+        /// <summary>
+        /// 在任务加工标签权限下寻路；匹配标签的加工站可作为途经点（非仅终点）。
+        /// 用于多工序选站时判断「该站之后仍能到取货点」。
+        /// </summary>
+        private static bool TryFindPathAllowingAllowedProcessStations(
+            ConveyorMapTopology topology,
+            IWarehouseSimulationBindings bindings,
+            WarehouseSimStrategyProfile strategy,
+            ReservationTable reservations,
+            int fromNodeIndex,
+            int toNodeIndex,
+            double atTime,
+            ConveyorRouteAccess access,
+            out List<int> pathNodeIndices)
+        {
+            pathNodeIndices = null;
+            if (topology == null || bindings == null)
+            {
+                return false;
+            }
+
+            if (strategy != null
+                && strategy.ConveyorRoutingStrategy == ConveyorRoutingStrategy.LeastCongestion
+                && reservations != null)
+            {
+                return topology.TryFindLowestWeightPath(
+                    fromNodeIndex,
+                    toNodeIndex,
+                    (from, to) => ComputeEdgeWeight(
+                        topology,
+                        bindings,
+                        strategy,
+                        reservations,
+                        from,
+                        to,
+                        atTime,
+                        applyAccess: true,
+                        access,
+                        searchTarget: -1),
+                    out pathNodeIndices,
+                    out _);
+            }
+
+            return topology.TryFindAccessiblePathByTransit(fromNodeIndex, toNodeIndex, access, out pathNodeIndices)
+                   && pathNodeIndices != null
+                   && pathNodeIndices.Count >= 2;
         }
 
         private static bool TryStitchPath(

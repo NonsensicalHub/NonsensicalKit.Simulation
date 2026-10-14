@@ -461,12 +461,22 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (!job.InboundRouteReachableChecked)
             {
                 job.InboundRouteReachableChecked = true;
-                if (!ConveyorPathPlanner.CanRouteFromInfeedIgnoringPickupCapacity(
+                // 与真实选路同一套规则（含多工序必经站拼接）；忽略取货点预定容量。
+                // 勿用宽松的拓扑可达性：否则选路失败时任务会挂起且永不唤醒。
+                if (!ConveyorPathPlanner.TrySelectBestPath(
                         _conveyorTopology,
                         _bindings,
+                        _strategy,
+                        _reservations,
+                        pickupReservationCounts: null,
                         job.InfeedPortIndex,
                         job.TargetSlot,
-                        ConveyorRouteAccess.FromJob(job)))
+                        job.AssignedStackerId,
+                        _clock.Now,
+                        out _,
+                        out _,
+                        out _,
+                        job))
                 {
                     FailJobNoSlot(job, SimJobFailureReason.InboundConveyorRouteUnreachable, releaseResources: true);
                     return false;

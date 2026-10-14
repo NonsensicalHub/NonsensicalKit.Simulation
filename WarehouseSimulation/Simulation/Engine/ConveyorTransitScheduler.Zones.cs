@@ -124,6 +124,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 if (acceptedLaneStart > hopStart + 1e-9)
                 {
                     _reservations.Release(zone.ResourceId, reserveStart, reserveEnd);
+                    if (!string.IsNullOrEmpty(zone.AxisResourceId))
+                    {
+                        _reservations.Release(zone.AxisResourceId, zone.AxisReserveStart, zone.AxisReserveEnd);
+                        zone.AxisResourceId = null;
+                    }
+
                     hopStart = acceptedLaneStart;
                     continue;
                 }
@@ -133,6 +139,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 {
                     _reservations.Release(laneTokenId, laneActual, laneActual + laneDuration);
                     _reservations.Release(zone.ResourceId, reserveStart, reserveEnd);
+                    if (!string.IsNullOrEmpty(zone.AxisResourceId))
+                    {
+                        _reservations.Release(zone.AxisResourceId, zone.AxisReserveStart, zone.AxisReserveEnd);
+                        zone.AxisResourceId = null;
+                    }
+
                     hopStart = laneActual;
                     continue;
                 }
@@ -167,6 +179,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             zone.DesiredArriveSimTime = desiredStart;
             zone.ArriveSimTime = arrive;
             zone.LeaveSimTime = leave;
+            zone.SlotReserveStart = reserveStart;
+            zone.SlotReserveEnd = reserveEnd;
+
+            ExtendProcessOccupiedJunctionHoldIfNeeded(
+                chain,
+                zoneIndex,
+                leave + ProcessOccupiedJunctionPadSeconds);
+
 
             var mutations = new TransitMutationAccumulator();
             var entryWait = hopStart - desiredStart;
@@ -331,6 +351,51 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 leave = junctionEnd;
             }
 
+            // 加工站占用路口 X：首次经过独占，直到再次经过（leave+尾迹）立即释放。
+            // 仅保留数秒裕量并由途中 Extend 盖住延误；禁止大 Pad（否则后车按估时窗尾排队，清空后空等 ~95s）。
+            if (TryResolveProcessOccupiedJunctionPass(
+                    job,
+                    chain,
+                    zoneIndex,
+                    zone,
+                    out var occupiedLockId,
+                    out var occupiedPass,
+                    out _))
+            {
+                if (occupiedPass == ProcessOccupiedJunctionPass.First)
+                {
+                    ApplyProcessOccupiedJunctionAcquire(
+                        job,
+                        chain,
+                        zoneIndex,
+                        ref hopStart,
+                        ref arrive,
+                        ref leave,
+                        ref junctionStart,
+                        ref junctionEnd,
+                        ref zone,
+                        occupiedLockId,
+                        hop);
+                }
+                else if (occupiedPass == ProcessOccupiedJunctionPass.Second)
+                {
+                    // 车尾清出 spur 的时刻起锁对后车可用（短占到 releaseFrom，OccupancyReleased 对齐此刻）。
+                    var releaseFrom = leave + TailSeconds(zone.FromNodeIndex, zone.ToNodeIndex);
+                    if (releaseFrom < leave)
+                    {
+                        releaseFrom = leave;
+                    }
+
+                    TrimProcessOccupiedJunctionLock(chain, zoneIndex, occupiedLockId, releaseFrom);
+                }
+            }
+
+            // 仅在仍持锁（首次与再次之间）时顺延；二次经过 Trim 会清掉 AxisResourceId，避免又被 +Pad 拉长。
+            ExtendProcessOccupiedJunctionHoldIfNeeded(
+                chain,
+                zoneIndex,
+                leave + ProcessOccupiedJunctionPadSeconds);
+
             if (next.HasValue && next.Value.Kind == ConveyorPathZoneKind.EdgeSlot)
             {
                 var provisionalNextArrive = ProvisionalReserveNextEntryAfterJunction(
@@ -455,6 +520,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             return duration < 0d ? 0d : duration;
         }
 
+
+        /// <summary>
+        /// 车头到达下游节点后，若节点仍压在来向边上则取该占用结束。
+        /// 加工站/提升机的服务停留由站内 zone/service 独占，不延长来向边占用，以便站前排队。
+        /// </summary>
         private static double CommittedNodeLeave(
             IReadOnlyList<ConveyorPathZone> chain,
             int zoneIndex,
@@ -470,14 +540,33 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     break;
                 }
 
-                if (IsApproachNode(ahead.Kind) && ahead.LeaveSimTime > leave)
+                if (!IsApproachNode(ahead.Kind))
                 {
-                    leave = ahead.LeaveSimTime;
+                    continue;
+                }
+
+                // Pickup/Outfeed/Junction：货物仍在来向边上直到节点 Leave。
+                // ProcessStation/VerticalTransfer：进站后改由站内资源占用，来向边只算到 Arrive。
+                var nodeHoldEnd = HoldsApproachSegmentThroughNodeLeave(ahead.Kind)
+                    ? ahead.LeaveSimTime
+                    : ahead.ArriveSimTime;
+                if (nodeHoldEnd > leave)
+                {
+                    leave = nodeHoldEnd;
                 }
             }
 
             return leave;
         }
+
+        /// <summary>
+        /// 节点离开前是否仍占用来向边车身/lane。
+        /// 加工站与提升机进站后由站内资源独占服务时间，不阻塞站前排队。
+        /// </summary>
+        private static bool HoldsApproachSegmentThroughNodeLeave(ConveyorPathZoneKind kind) =>
+            kind is ConveyorPathZoneKind.Junction
+                or ConveyorPathZoneKind.Pickup
+                or ConveyorPathZoneKind.Outfeed;
 
         private static int FindDownstreamEdgeStart(IReadOnlyList<ConveyorPathZone> chain, int zoneIndex)
         {
@@ -837,6 +926,423 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// 停留点在预约表上的结束时刻。同边下一槽多占一个 hop；
         /// 下一段是路口/取货点时，再占住端部驶入，直到车头到达下游节点。
         /// </summary>
+
+
+
+        private enum ProcessOccupiedJunctionPass
+        {
+            None = 0,
+            First = 1,
+            Second = 2,
+        }
+
+        /// <summary>
+        /// 当前路口 zone 是否对应某加工站配置的占用路口 X，以及是首次还是再次经过。
+        /// </summary>
+        private bool TryResolveProcessOccupiedJunctionPass(
+            WarehouseJob job,
+            IReadOnlyList<ConveyorPathZone> chain,
+            int zoneIndex,
+            in ConveyorPathZone zone,
+            out string lockId,
+            out ProcessOccupiedJunctionPass pass,
+            out double estimatedLockEnd)
+        {
+            lockId = null;
+            pass = ProcessOccupiedJunctionPass.None;
+            estimatedLockEnd = 0d;
+            if (job == null
+                || chain == null
+                || zone.Kind != ConveyorPathZoneKind.Junction
+                || _topology?.Map?.Nodes == null
+                || zone.ToNodeIndex < 0
+                || zone.ToNodeIndex >= _topology.Map.Nodes.Length)
+            {
+                return false;
+            }
+
+            ref var junctionNode = ref _topology.GetNode(zone.ToNodeIndex);
+            var junctionLogicalId = junctionNode.LogicalId?.Trim();
+            if (string.IsNullOrEmpty(junctionLogicalId))
+            {
+                return false;
+            }
+
+            // 路径上是否存在「需要本任务加工、且占用路口=本路口」的加工站。
+            var matchedProcessNode = -1;
+            for (var i = 0; i < chain.Count; i++)
+            {
+                var z = chain[i];
+                if (z.Kind != ConveyorPathZoneKind.ProcessStation
+                    || z.ToNodeIndex < 0
+                    || z.ToNodeIndex >= _topology.Map.Nodes.Length)
+                {
+                    continue;
+                }
+
+                ref var station = ref _topology.GetNode(z.ToNodeIndex);
+                if (!ConveyorProcessStationUtility.JobRequiresStationTag(job, in station))
+                {
+                    continue;
+                }
+
+                var occupied = station.ProcessOccupiedJunctionLogicalId?.Trim();
+                if (!string.Equals(occupied, junctionLogicalId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                matchedProcessNode = z.ToNodeIndex;
+                break;
+            }
+
+            if (matchedProcessNode < 0)
+            {
+                return false;
+            }
+
+            // 统计本路口 Junction 在链上的经过次序（含当前）。
+            var visitOrdinal = 0;
+            for (var i = 0; i <= zoneIndex; i++)
+            {
+                if (chain[i].Kind == ConveyorPathZoneKind.Junction
+                    && chain[i].ToNodeIndex == zone.ToNodeIndex)
+                {
+                    visitOrdinal++;
+                }
+            }
+
+            if (visitOrdinal == 1)
+            {
+                pass = ProcessOccupiedJunctionPass.First;
+                lockId = ConveyorMapMath.BuildProcessOccupiedJunctionResourceId(junctionLogicalId);
+                estimatedLockEnd = 0d; // First 分支用 arrive 再估绝对结束时刻
+                return !string.IsNullOrEmpty(lockId);
+            }
+
+            if (visitOrdinal == 2)
+            {
+                pass = ProcessOccupiedJunctionPass.Second;
+                lockId = ConveyorMapMath.BuildProcessOccupiedJunctionResourceId(junctionLogicalId);
+                estimatedLockEnd = 0d;
+                return !string.IsNullOrEmpty(lockId);
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 占用窗相对估时/当前 leave 的微小裕量（秒）。只用于浮点与短延误；长延误靠逐 zone Extend。
+        /// 不可再用 120s：会在 spur 物理清空后仍让后车空等近一个 Pad。
+        /// </summary>
+        private const double ProcessOccupiedJunctionPadSeconds = 5d;
+
+        private void ApplyProcessOccupiedJunctionAcquire(
+            WarehouseJob job,
+            IReadOnlyList<ConveyorPathZone> chain,
+            int zoneIndex,
+            ref double hopStart,
+            ref double arrive,
+            ref double leave,
+            ref double junctionStart,
+            ref double junctionEnd,
+            ref ConveyorPathZone zone,
+            string occupiedLockId,
+            float hop)
+        {
+            var processNode = FindMatchedProcessNodeForOccupiedJunction(job, chain, zone.ToNodeIndex);
+            var estimatedEnd = EstimateProcessOccupiedJunctionLockEnd(
+                job,
+                chain,
+                zoneIndex,
+                zone.ToNodeIndex,
+                processNode,
+                arrive);
+            if (estimatedEnd < leave + ProcessOccupiedJunctionPadSeconds)
+            {
+                estimatedEnd = leave + ProcessOccupiedJunctionPadSeconds;
+            }
+            else
+            {
+                estimatedEnd += ProcessOccupiedJunctionPadSeconds;
+            }
+
+            var lockDuration = estimatedEnd - arrive;
+            if (lockDuration < hop + 1e-6)
+            {
+                lockDuration = hop + ProcessOccupiedJunctionPadSeconds;
+                estimatedEnd = arrive + lockDuration;
+            }
+
+            var lockFree = _reservations.GetEarliestFreeTimeForDuration(
+                occupiedLockId,
+                arrive,
+                lockDuration);
+            if (lockFree > arrive + 1e-9)
+            {
+                var shift = lockFree - arrive;
+                hopStart += shift;
+                arrive = lockFree;
+                leave += shift;
+                estimatedEnd += shift;
+                _reservations.Release(zone.ResourceId, junctionStart, junctionEnd);
+                junctionStart = arrive;
+                junctionEnd = leave < arrive ? arrive : leave;
+                CommitReservationWindow(zone.ResourceId, ref junctionStart, ref junctionEnd);
+                if (junctionStart > arrive + 1e-9)
+                {
+                    var jShift = junctionStart - arrive;
+                    hopStart += jShift;
+                    arrive = junctionStart;
+                    leave = junctionEnd;
+                    estimatedEnd += jShift;
+                }
+            }
+
+            var mxStart = arrive;
+            var mxEnd = estimatedEnd > mxStart ? estimatedEnd : mxStart + lockDuration;
+            CommitReservationWindow(occupiedLockId, ref mxStart, ref mxEnd);
+            if (mxStart > arrive + 1e-9)
+            {
+                var shift = mxStart - arrive;
+                _reservations.Release(zone.ResourceId, junctionStart, junctionEnd);
+                hopStart += shift;
+                arrive = mxStart;
+                leave += shift;
+                mxEnd += shift;
+                junctionStart = arrive;
+                junctionEnd = leave < arrive ? arrive : leave;
+                CommitReservationWindow(zone.ResourceId, ref junctionStart, ref junctionEnd);
+                if (junctionStart > arrive + 1e-9)
+                {
+                    var jShift = junctionStart - arrive;
+                    hopStart += jShift;
+                    arrive = junctionStart;
+                    leave = junctionEnd;
+                    mxEnd += jShift;
+                }
+
+                // CommitReservationWindow 顺延后留下的互斥窗要拆掉再按新 arrive 重占。
+                _reservations.Release(occupiedLockId, mxStart, mxEnd);
+                mxStart = arrive;
+                mxEnd = arrive + lockDuration;
+                if (mxEnd <= mxStart)
+                {
+                    mxEnd = mxStart + ProcessOccupiedJunctionPadSeconds;
+                }
+
+                CommitReservationWindow(occupiedLockId, ref mxStart, ref mxEnd);
+            }
+
+            zone.AxisResourceId = occupiedLockId;
+            zone.AxisReserveStart = mxStart;
+            zone.AxisReserveEnd = mxEnd;
+        }
+
+        /// <summary>
+        /// 仍持有占用路口锁时，把结束时刻顺延到至少 <paramref name="neededEnd"/>，
+        /// 避免估时偏短后预约表提前“空窗”放行后车。
+        /// </summary>
+        private void ExtendProcessOccupiedJunctionHoldIfNeeded(
+            IReadOnlyList<ConveyorPathZone> chain,
+            int beforeZoneIndex,
+            double neededEnd)
+        {
+            if (chain == null || beforeZoneIndex <= 0 || neededEnd <= 0)
+            {
+                return;
+            }
+
+            for (var i = 0; i < beforeZoneIndex; i++)
+            {
+                var z = chain[i];
+                if (string.IsNullOrEmpty(z.AxisResourceId)
+                    || !z.AxisResourceId.StartsWith("proc-junc-excl|", StringComparison.Ordinal)
+                    || z.AxisReserveEnd >= neededEnd - 1e-9)
+                {
+                    continue;
+                }
+
+                // Release 必须用原始 [start,end] 精确匹配；再按新 end 重占。
+                if (!_reservations.Release(z.AxisResourceId, z.AxisReserveStart, z.AxisReserveEnd))
+                {
+                    continue;
+                }
+
+                var start = z.AxisReserveStart;
+                var end = neededEnd;
+                CommitReservationWindow(z.AxisResourceId, ref start, ref end);
+                z.AxisReserveStart = start;
+                z.AxisReserveEnd = end;
+                if (chain is IList<ConveyorPathZone> mutable)
+                {
+                    mutable[i] = z;
+                }
+
+                break;
+            }
+        }
+
+        private void TrimProcessOccupiedJunctionLock(
+            IReadOnlyList<ConveyorPathZone> chain,
+            int currentZoneIndex,
+            string lockId,
+            double releaseFrom)
+        {
+            if (chain == null || string.IsNullOrEmpty(lockId))
+            {
+                return;
+            }
+
+            for (var i = 0; i < currentZoneIndex; i++)
+            {
+                var z = chain[i];
+                if (!string.Equals(z.AxisResourceId, lockId, StringComparison.Ordinal)
+                    || z.AxisReserveEnd <= z.AxisReserveStart + 1e-9)
+                {
+                    continue;
+                }
+
+                var heldStart = z.AxisReserveStart;
+                var heldEnd = z.AxisReserveEnd;
+                // Release 必须精确匹配提交时的 [start,end]。
+                if (!_reservations.Release(lockId, heldStart, heldEnd))
+                {
+                    break;
+                }
+
+                var keepEnd = releaseFrom > heldStart + 1e-9 ? releaseFrom : heldStart;
+                // 短占到车尾清空时刻：预约表在 keepEnd 触发 OccupancyReleased，后车可立刻按 keepEnd 抢锁。
+                if (keepEnd > heldStart + 1e-9)
+                {
+                    _reservations.TryReserve(lockId, heldStart, keepEnd, out var actual);
+                    if (actual > heldStart + 1e-9)
+                    {
+                        // 短占被挤走则视为已完全释放。
+                        _reservations.Release(lockId, actual, actual + Math.Max(keepEnd - heldStart, 1e-6));
+                        keepEnd = heldStart;
+                    }
+                }
+
+                // 清掉 Axis，防止随后 Extend(..., leave+Pad) 再次把窗拉长。
+                z.AxisResourceId = null;
+                z.AxisReserveStart = heldStart;
+                z.AxisReserveEnd = keepEnd;
+                if (chain is IList<ConveyorPathZone> mutable)
+                {
+                    mutable[i] = z;
+                }
+
+                break;
+            }
+        }
+
+        private int FindMatchedProcessNodeForOccupiedJunction(
+            WarehouseJob job,
+            IReadOnlyList<ConveyorPathZone> chain,
+            int junctionNodeIndex)
+        {
+            if (job == null || chain == null || _topology?.Map?.Nodes == null
+                || junctionNodeIndex < 0
+                || junctionNodeIndex >= _topology.Map.Nodes.Length)
+            {
+                return -1;
+            }
+
+            ref var junctionNode = ref _topology.GetNode(junctionNodeIndex);
+            var junctionLogicalId = junctionNode.LogicalId?.Trim();
+            if (string.IsNullOrEmpty(junctionLogicalId))
+            {
+                return -1;
+            }
+
+            for (var i = 0; i < chain.Count; i++)
+            {
+                var z = chain[i];
+                if (z.Kind != ConveyorPathZoneKind.ProcessStation
+                    || z.ToNodeIndex < 0
+                    || z.ToNodeIndex >= _topology.Map.Nodes.Length)
+                {
+                    continue;
+                }
+
+                ref var station = ref _topology.GetNode(z.ToNodeIndex);
+                if (!ConveyorProcessStationUtility.JobRequiresStationTag(job, in station))
+                {
+                    continue;
+                }
+
+                var occupied = station.ProcessOccupiedJunctionLogicalId?.Trim();
+                if (string.Equals(occupied, junctionLogicalId, StringComparison.Ordinal))
+                {
+                    return z.ToNodeIndex;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// 估占用窗结束（绝对时刻）：自首次经过 X 的 arrive，经加工 dwell，到再次经过 X 离开。
+        /// </summary>
+        private double EstimateProcessOccupiedJunctionLockEnd(
+            WarehouseJob job,
+            IReadOnlyList<ConveyorPathZone> chain,
+            int firstJunctionZoneIndex,
+            int junctionNodeIndex,
+            int processNodeIndex,
+            double firstArrive)
+        {
+            var t = firstArrive;
+            var seenSecond = false;
+            for (var i = firstJunctionZoneIndex; i < chain.Count; i++)
+            {
+                var z = chain[i];
+                if (i == firstJunctionZoneIndex)
+                {
+                    if (z.HopSeconds > 1e-9f)
+                    {
+                        t += z.HopSeconds;
+                    }
+
+                    continue;
+                }
+
+                if (z.HopSeconds > 1e-9f)
+                {
+                    t += z.HopSeconds;
+                }
+
+                if (z.Kind == ConveyorPathZoneKind.ProcessStation
+                    && z.ToNodeIndex == processNodeIndex
+                    && job != null)
+                {
+                    var dwell = ProcessDwellAfterEnter(job, processNodeIndex, t);
+                    if (dwell > 1e-9)
+                    {
+                        t += dwell;
+                    }
+                }
+
+                if (z.Kind == ConveyorPathZoneKind.Junction
+                    && z.ToNodeIndex == junctionNodeIndex)
+                {
+                    t += TailSeconds(z.FromNodeIndex, z.ToNodeIndex);
+                    seenSecond = true;
+                    break;
+                }
+            }
+
+            if (!seenSecond)
+            {
+                t += 60d;
+            }
+
+            return t > firstArrive
+                ? t
+                : firstArrive + Math.Max(chain[firstJunctionZoneIndex].HopSeconds, 1e-6);
+        }
+
         private static double SlotReservationEnd(in ConveyorPathZone zone, ConveyorPathZone? next, double leave)
         {
             var end = SameEdgeHoldEnd(zone, next, leave);
@@ -874,6 +1380,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             previous.Kind == ConveyorPathZoneKind.EdgeSlot
             && next.Kind == ConveyorPathZoneKind.EdgeSlot
             && previous.PathEdgeIndex == next.PathEdgeIndex;
+
 
         /// <summary>把下一停留点的起步 hop 先占上，避免预计离开之后、正式预约之前被别的箱子抢走。</summary>
         private void HoldSameEdgeSuccessor(in ConveyorPathZone next, double leave)
@@ -1336,12 +1843,33 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 exitTime = entryTime;
             }
 
-            var occupancyEnd = pickupZone?.LeaveSimTime
-                               ?? outfeedZone?.LeaveSimTime
-                               ?? processZone?.LeaveSimTime
-                               ?? verticalTransferZone?.LeaveSimTime
-                               ?? junctionZone?.LeaveSimTime
-                               ?? exitTime;
+
+            // 与 CommittedNodeLeave 一致：加工站/提升机来向边占用止于进站，不含服务 dwell。
+            double occupancyEnd;
+            if (pickupZone.HasValue)
+            {
+                occupancyEnd = pickupZone.Value.LeaveSimTime;
+            }
+            else if (outfeedZone.HasValue)
+            {
+                occupancyEnd = outfeedZone.Value.LeaveSimTime;
+            }
+            else if (processZone.HasValue)
+            {
+                occupancyEnd = processZone.Value.ArriveSimTime;
+            }
+            else if (verticalTransferZone.HasValue)
+            {
+                occupancyEnd = verticalTransferZone.Value.ArriveSimTime;
+            }
+            else if (junctionZone.HasValue)
+            {
+                occupancyEnd = junctionZone.Value.LeaveSimTime;
+            }
+            else
+            {
+                occupancyEnd = exitTime;
+            }
 
             job.ConveyorSegmentSchedule ??= new List<ConveyorSegmentScheduleEntry>();
             var entry = new ConveyorSegmentScheduleEntry
