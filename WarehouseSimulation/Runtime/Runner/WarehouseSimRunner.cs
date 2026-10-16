@@ -42,6 +42,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         [SerializeField, Label("导出目录（留空=StreamingAssets/SimulationExports）")]
         private string m_exportDirectory;
 
+                /// <summary>当前任务若来自 JSON，记录其存档 Id（不含扩展名）。</summary>
+        private string _scenarioJsonId;
+
+        /// <summary>当前任务的硬件 Resources 路径（导出 JSON 时写入）。</summary>
+        private string _hardwareResourcesPath;
+
+        /// <summary>当前任务的策略 Resources 路径（可选）。</summary>
+        private string _strategyResourcesPath;
+
         private SimRunResult _lastResult;
         private Coroutine _runCoroutine;
         private Coroutine _exportCoroutine;
@@ -72,6 +81,83 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         /// <summary>当前仿真任务。空闲时可由界面修改，下一次运行读取这里的配置。</summary>
         public WarehouseSimScenario Scenario => m_scenario;
 
+                /// <summary>若当前任务来自 JSON 存档，为其 Id；否则为空。</summary>
+        public string ScenarioJsonId => _scenarioJsonId;
+
+        public string HardwareResourcesPath =>
+            string.IsNullOrWhiteSpace(_hardwareResourcesPath)
+                ? WarehouseSimScenarioJson.DefaultHardwareResourcesPath
+                : _hardwareResourcesPath;
+
+        public string StrategyResourcesPath => _strategyResourcesPath;
+
+        /// <summary>切换当前任务配置（运行中不可改）。可传入运行时 CreateInstance 的 Scenario。</summary>
+        public void SetScenario(WarehouseSimScenario scenario, string jsonId = null, string hardwareResourcesPath = null, string strategyResourcesPath = null)
+        {
+            if (_isRunning)
+            {
+                Debug.LogWarning("[WarehouseSimulation] 仿真运行中，无法切换任务配置。", this);
+                return;
+            }
+
+            if (scenario == null)
+            {
+                Debug.LogError("[WarehouseSimulation] SetScenario：scenario 为空。", this);
+                return;
+            }
+
+            m_scenario = scenario;
+            _scenarioJsonId = string.IsNullOrWhiteSpace(jsonId) ? null : WarehouseSimScenarioJson.SanitizeId(jsonId);
+            if (!string.IsNullOrWhiteSpace(hardwareResourcesPath))
+            {
+                _hardwareResourcesPath = hardwareResourcesPath.Trim().Replace('\\', '/');
+            }
+
+            if (strategyResourcesPath != null)
+            {
+                _strategyResourcesPath = string.IsNullOrWhiteSpace(strategyResourcesPath)
+                    ? null
+                    : strategyResourcesPath.Trim().Replace('\\', '/');
+            }
+        }
+
+        /// <summary>从 JSON DTO 构建运行时 Scenario 并设为当前任务。</summary>
+        public bool ApplyScenarioDto(WarehouseSimScenarioDto dto, out string error)
+        {
+            error = null;
+            if (_isRunning)
+            {
+                error = "仿真运行中，无法切换任务配置。";
+                return false;
+            }
+
+            var scenario = WarehouseSimScenarioJson.ToRuntimeScenario(dto, out error);
+            if (scenario == null)
+            {
+                return false;
+            }
+
+            SetScenario(scenario, dto.Id, dto.HardwareResourcesPath, dto.StrategyResourcesPath);
+            return true;
+        }
+
+        /// <summary>把当前 Scenario 导出为 DTO（用于保存 JSON）。</summary>
+        public WarehouseSimScenarioDto ExportCurrentScenarioDto(string idOverride = null)
+        {
+            if (m_scenario == null)
+            {
+                return null;
+            }
+
+            var id = !string.IsNullOrWhiteSpace(idOverride)
+                ? idOverride
+                : (!string.IsNullOrWhiteSpace(_scenarioJsonId) ? _scenarioJsonId : m_scenario.name);
+            return WarehouseSimScenarioJson.FromScenario(
+                m_scenario,
+                id,
+                HardwareResourcesPath,
+                _strategyResourcesPath);
+        }
         [Button("运行仿真")]
         public void RunSimulation()
         {

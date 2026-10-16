@@ -154,13 +154,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
-            // 等通道锁的任务由锁释放唤醒；资源队列每次只放出一个，挂进去会把真正等该资源的任务挤掉。
-            if (IsCorridorLockBlocked(job))
-            {
-                TrackConveyorRoutePending(job);
-                return;
-            }
-
             var enqueued = false;
             if (blockingResources != null)
             {
@@ -197,7 +190,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 if (job.PickupPointIndex >= 0 && job.PickupCompleteSimTime > 0)
                 {
                     _outboundAwaitingConveyorRoute.Add(job.JobId);
-                    RefreshOutboundPickupRouteHold(job);
                 }
 
                 return;

@@ -24,11 +24,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private readonly HashSet<GridIndex> _outboundReservedSlots = new();
         /// <summary>已在交互点放货后、输送接走前释放堆垛机负载计数的出库任务。</summary>
         private readonly HashSet<int> _outboundStackerReleasedAfterPickup = new();
-        /// <summary>出库交互点当前预约窗（替换更新，避免叠加 86400s 占位导致仿真时间爆炸）。</summary>
-        private readonly Dictionary<int, (string ResourceId, double Start, double End)> _outboundPickupHolds = new();
 
-        /// <summary>交互点等待出库输送路径时的占位窗口（每次重试会续期；选路成功后替换为真实离开时刻）。</summary>
-        private const double OutboundPickupRouteHoldWindowSeconds = 3600d;
 
         private void InitOutfeedPorts()
         {
@@ -258,8 +254,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             ReleaseOutboundStackerAfterPickupDeparture(job);
-            ClearOutboundPickupHold(job);
-            ReleaseAllCorridorLocks(job);
+            if (_primaryKernel != null && job.PickupPointIndex >= 0)
+            {
+                _primaryKernel.ReleaseClaim(PickupZoneKey(job.PickupPointIndex), job.JobId);
+                _primaryPickupWaiters.Remove(job.JobId);
+            }
 
             job.State = WarehouseJobState.FailedNoCargo;
             _failedNoCargo++;
@@ -296,72 +295,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 ScheduleInfeedQueueFill(_clock.Now);
             }
 
-            HoldOutboundPickupUntilConveyorDeparture(job);
             if (!TryBeginConveyor(job))
             {
                 WarehouseSimLog.Detail(
                     $"出库交互点待发运 job={job.JobId} pickup={job.PickupPointIndex} t={_clock.Now:F2}s，" +
                     "暂无可用出库口，在交互点等待。");
             }
-        }
-
-        /// <summary>更新出库交互点占用：先释放旧窗再写入，避免预约表叠加长占位区间。</summary>
-        internal void SetOutboundPickupHold(WarehouseJob job, double holdEnd)
-        {
-            if (job?.PickupPointIndex < 0)
-            {
-                return;
-            }
-
-            ref var pickupNode = ref _conveyorTopology.GetNode(job.PickupPointIndex);
-            var resourceId = SimEntityNaming.PickupResourceId(pickupNode, job.PickupPointIndex);
-            if (string.IsNullOrEmpty(resourceId))
-            {
-                return;
-            }
-
-            var holdStart = job.PickupCompleteSimTime > 0 ? job.PickupCompleteSimTime : _clock.Now;
-            if (holdEnd <= holdStart + 1e-9)
-            {
-                return;
-            }
-
-            ClearOutboundPickupHold(job);
-            _reservations.TryReserve(resourceId, holdStart, holdEnd, out _);
-            _outboundPickupHolds[job.JobId] = (resourceId, holdStart, holdEnd);
-        }
-
-        internal void ClearOutboundPickupHold(WarehouseJob job)
-        {
-            if (job == null || !_outboundPickupHolds.TryGetValue(job.JobId, out var hold))
-            {
-                return;
-            }
-
-            _reservations.Release(hold.ResourceId, hold.Start, hold.End);
-            _outboundPickupHolds.Remove(job.JobId);
-        }
-
-        /// <summary>
-        /// 堆垛机放货后占用交互点，直至输送接走；无出库口时亦保持占用，待选路成功后收窄结束时刻。
-        /// </summary>
-        private void HoldOutboundPickupUntilConveyorDeparture(WarehouseJob job) =>
-            RefreshOutboundPickupRouteHold(job);
-
-        /// <summary>续期出库交互点占位窗口，避免长时间等待选路时预约过期。</summary>
-        internal void RefreshOutboundPickupRouteHold(WarehouseJob job)
-        {
-            if (job == null
-                || job.Direction != SimFlowDirection.Outbound
-                || job.PickupPointIndex < 0
-                || _outboundStackerReleasedAfterPickup.Contains(job.JobId))
-            {
-                return;
-            }
-
-            var holdStart = job.PickupCompleteSimTime > 0 ? job.PickupCompleteSimTime : _clock.Now;
-            var holdEnd = Math.Max(_clock.Now, holdStart) + OutboundPickupRouteHoldWindowSeconds;
-            SetOutboundPickupHold(job, holdEnd);
         }
 
         /// <summary>货箱离开交互点（出库输送首段入口 slot 开始驶离）后释放堆垛机负载并尝试派下一出库任务。</summary>
@@ -378,70 +317,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             DecrementStackerActiveJobCount(job.AssignedStackerId);
-            ClearOutboundPickupHold(job);
             ScheduleOutfeedQueueFill(_clock.Now);
         }
-
-        internal void ScheduleOutboundPickupDeparture(WarehouseJob job, double departTime)
-        {
-            if (job == null || job.Direction != SimFlowDirection.Outbound)
-            {
-                return;
-            }
-
-            if (_outboundStackerReleasedAfterPickup.Contains(job.JobId))
-            {
-                return;
-            }
-
-            var when = Math.Max(_clock.Now, departTime);
-            _queue.Enqueue(new ScheduledSimEvent(when, SimEventType.OutboundPickupDeparture, job.JobId));
-        }
-
-        /// <summary>出库首段路径边：堆垛机交互点侧入口停留点（最大 slot 序号）。</summary>
-        internal static bool TryGetOutboundPickupEntrySlotIndex(
-            IReadOnlyList<ConveyorPathZone> chain,
-            out int entrySlotIndex)
-        {
-            entrySlotIndex = -1;
-            if (chain == null)
-            {
-                return false;
-            }
-
-            for (var i = 0; i < chain.Count; i++)
-            {
-                var zone = chain[i];
-                if (zone.Kind != ConveyorPathZoneKind.EdgeSlot || zone.PathEdgeIndex != 0)
-                {
-                    continue;
-                }
-
-                if (zone.SlotIndex > entrySlotIndex)
-                {
-                    entrySlotIndex = zone.SlotIndex;
-                }
-            }
-
-            return entrySlotIndex >= 0;
-        }
-
-        internal static bool IsOutboundPickupEntryZone(
-            WarehouseJob job,
-            in ConveyorPathZone zone,
-            IReadOnlyList<ConveyorPathZone> chain) =>
-            job != null
-            && job.Direction == SimFlowDirection.Outbound
-            && job.PickupPointIndex >= 0
-            && job.PickupCompleteSimTime > 0
-            && zone.Kind == ConveyorPathZoneKind.EdgeSlot
-            && zone.PathEdgeIndex == 0
-            && zone.FromNodeIndex == job.PickupPointIndex
-            && TryGetOutboundPickupEntrySlotIndex(chain, out var entrySlot)
-            && zone.SlotIndex == entrySlot;
-
-        internal static bool IsOutboundPickupDepartureZone(WarehouseJob job, ConveyorPathZone completedZone) =>
-            IsOutboundPickupEntryZone(job, in completedZone, job?.ConveyorPathZones);
 
         private void BeginOutfeed(WarehouseJob job)
         {
@@ -509,6 +386,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             RecordPlayback(job, SimPlaybackPhase.OutfeedDone, job.AssignedStackerId, job.TargetSlot);
+            ReleasePrimaryOutfeed(job);
             RetryOutboundConveyorRouteWaiters();
             _queue.Enqueue(new ScheduledSimEvent(_clock.Now, SimEventType.JobCompleted, job.JobId));
             ScheduleOutfeedPortPhysicalRelease(job, _clock.Now + 0.5);

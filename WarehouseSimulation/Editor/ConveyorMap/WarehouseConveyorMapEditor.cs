@@ -37,6 +37,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 serializedObject.FindProperty("CargoUnitLengthMeters"),
                 new GUIContent("单箱长度 (m)"));
             EditorGUILayout.PropertyField(
+                serializedObject.FindProperty("NodeStopExtraClearanceMeters"),
+                new GUIContent("节点前停车额外留白 (m)", "节点前后停车点中心到节点中心 = 单箱长度 + 本值；0 表示刚好一个箱长"));
+            EditorGUILayout.PropertyField(
                 serializedObject.FindProperty("DefaultEdgeDistanceMeters"),
                 new GUIContent("新建路段距离 (m)"));
             serializedObject.ApplyModifiedProperties();

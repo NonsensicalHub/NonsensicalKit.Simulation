@@ -28,6 +28,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         [Label("单箱占用长度（米）")]
         public float CargoUnitLengthMeters = 1.2f;
 
+        [Tooltip("节点前后停车点在一个箱长之外再额外留出的距离（米）。路段末端 / 首端停留点中心到节点中心 = 单箱占用长度 + 本值；" +
+                 "0 表示刚好一个箱长（节点上的货与停车等待的货首尾相接、不重叠）。调大单箱占用长度时节点前后间距会自动跟着变大")]
+        [Label("节点前停车额外留白（米）")]
+        [Min(0f)]
+        public float NodeStopExtraClearanceMeters = 0f;
+
         [Tooltip("新建路段时的默认输送距离（米），与编辑器布局无关")]
         [Label("新建路段默认距离（米）")]
         public float DefaultEdgeDistanceMeters = 4f;

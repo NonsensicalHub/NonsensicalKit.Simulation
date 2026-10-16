@@ -16,7 +16,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
     /// <para><b>单箱生命周期</b>（见各 partial）：</para>
     /// <list type="number">
     /// <item>入库口放货与扫描服务（<c>Infeed</c>）</item>
-    /// <item>输送网 zone 链逐步预约（<c>Conveyor</c> + <see cref="ConveyorTransitScheduler"/>）</item>
+    /// <item>输送网 zone 链逐步预约（<c>Conveyor</c> + <c>PrimaryKernel</c> / ConveyorZoneKernel）</item>
     /// <item>取货点堆垛机取/移/放（<c>Stacker</c>）</item>
     /// </list>
     /// <para><b>资源模型</b>：<see cref="ReservationTable"/> 记录各资源 ID 的时空占用；冲突时按 FIFO 顺延。
@@ -61,8 +61,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// <summary>各堆垛机已分配货位且未完成的任务数（用于负载均衡选机）。</summary>
         private int[] _stackerActiveJobCounts;
         private StackerCarriageBookkeeper _stackerCarriage = new();
-        private ConveyorTransitScheduler _conveyorScheduler;
-        private ConveyorSubTaskRecorder _conveyorSubTaskRecorder;
         /// <summary>各入库口扫描服务时间轴的下一空闲时刻（单口串行服务）。</summary>
         private double[] _infeedServiceFreeByPort;
         /// <summary>是否已为该入库口排定 <see cref="SimEventType.InfeedPortFeed"/> 事件（防重复入队）。</summary>
@@ -204,6 +202,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 $"输送={result.ConveyorRoutingStrategyLabel}；" +
                 $"入库口数 {_conveyorTopology.InfeedNodeIndices.Count}，" +
                 $"出库口数 {_conveyorTopology.OutfeedNodeIndices?.Count ?? 0}");
+            InitPrimaryKernel(options, SimFlowPlanResolver.RequiresOutboundPorts(plan));
             ScheduleFlowPlan();
             ReportLiveProgress();
 
@@ -228,6 +227,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             using (_wallClockProfiler.Begin(SimWallClockProfilePhases.PostDiagnostics))
             {
                 var queuePending = _queue.Count;
+                ReportPrimaryKernelDiagnostics();
                 LastEventDiagnostics = BuildEventDiagnosticsSnapshot(queuePending);
                 FinalizeFailureCounts(queuePending);
                 result.FailureCounts = new Dictionary<SimJobFailureReason, int>(_failureCounts);
@@ -310,14 +310,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _clock.Reset();
             _queue.Clear();
             _reservations = new ReservationTable();
-            _jobsByLaneDirection.Clear();
             _jobs.Clear();
             _completions.Clear();
             _playback.Clear();
             _subTasks.Clear();
             _subTasksByJob.Clear();
-            _jobsByZoneResource.Clear();
-            ResetCorridorLocks();
             _nextSubTaskId = 0;
             _completedCount = 0;
             _inboundCompletedCount = 0;
@@ -339,7 +336,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _outboundWaitingFlowEntryIndices.Clear();
             _outboundReservedSlots.Clear();
             _outboundStackerReleasedAfterPickup.Clear();
-            _outboundPickupHolds.Clear();
 
             var physicalSlots = _slotAllocator.PhysicalSlotCount;
             var storageSlots = _slotAllocator.StorageSlotCount;
@@ -353,7 +349,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _infeedCargoOccupied = null;
             _infeedReservationCounts = null;
             _pickupReservationCounts = null;
-            _conveyorScheduler = null;
             _infeedServiceFreeByPort = null;
             _infeedPortFeedScheduled = null;
             _infeedPortOrderScratch = null;
@@ -377,9 +372,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _pickupReservationCounts = new int[nodeCount];
             _stackerActiveJobCounts = new int[Math.Max(1, _bindings.StackerCount)];
             _stackerCarriage.Reset(_bindings.StackerCount);
-            _conveyorScheduler = new ConveyorTransitScheduler(
-                _conveyorTopology, _reservations, _bindings, _stackerCarriage);
-            _conveyorSubTaskRecorder = new ConveyorSubTaskRecorder(_conveyorTopology, _bindings, RecordSubTask);
             InitOccupancyNotifier();
         }
 
@@ -472,20 +464,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     OnConveyorRouteRetryDispatched(evt.JobId);
                     if (TryGetJob(evt.JobId, evt.Type, out var retryJob))
                     {
-                        if (retryJob.Direction == SimFlowDirection.Outbound)
-                        {
-                            RefreshOutboundPickupRouteHold(retryJob);
-                        }
-
                         TryBeginConveyor(retryJob);
-                    }
-
-                    break;
-                case SimEventType.ConveyorSegmentComplete:
-                case SimEventType.ConveyorZoneComplete:
-                    if (TryGetJob(evt.JobId, evt.Type, out var zoneJob))
-                    {
-                        OnConveyorZoneComplete(zoneJob, evt.Payload);
                     }
 
                     break;
@@ -526,13 +505,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     }
 
                     break;
-                case SimEventType.OutboundPickupDeparture:
-                    if (TryGetJob(evt.JobId, evt.Type, out var outboundDepartJob))
-                    {
-                        ReleaseOutboundStackerAfterPickupDeparture(outboundDepartJob);
-                    }
-
-                    break;
                 case SimEventType.JobCompleted:
                     if (TryGetJob(evt.JobId, evt.Type, out var completedJob))
                     {
@@ -540,12 +512,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     }
 
                     break;
-                case SimEventType.CorridorLockCheck:
-                    if (TryGetJob(evt.JobId, evt.Type, out var corridorJob))
-                    {
-                        OnCorridorLockCheck(corridorJob);
-                    }
-
+                case SimEventType.ConveyorKernelTick:
+                    OnConveyorKernelTick();
                     break;
 
                 default:

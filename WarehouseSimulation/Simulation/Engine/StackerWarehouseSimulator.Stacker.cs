@@ -55,6 +55,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
+            if (!TryClaimOutboundPickup(job))
+            {
+                // 交互点上有箱（或有箱正等着进），先不派堆垛机；空出后重试。
+                return;
+            }
+
             var pickupNode = _conveyorTopology.GetNode(job.PickupPointIndex);
             var plan = StackerWorkPlanner.PlanOutbound(
                 _bindings, _conveyorTopology, _stackerCarriage, job, pickupNode);
@@ -274,7 +280,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
             else if (job.Direction == SimFlowDirection.Inbound)
             {
-                MarkCorridorLeftConveyor(job);
+                ReleasePrimaryGoal(job);
             }
 
             job.State = WarehouseJobState.StackerMove;

@@ -69,6 +69,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
         /// <summary>出库时堆垛机在取货点放货完成时刻（反向输送规划起点）。</summary>
         public double PickupCompleteSimTime { get; set; }
 
+        /// <summary>输送内核：货箱从起点（入库口 / 交互点）开始驶出的时刻。</summary>
+        public double ConveyorStartMoveSimTime { get; set; } = double.NaN;
+
+        /// <summary>输送内核：目标位置（取货点 / 出库口）上的货箱被取走的时刻。</summary>
+        public double ConveyorGoalReleaseSimTime { get; set; } = double.NaN;
+
         /// <summary>已确认入库口到目标货位拓扑可达（忽略取货点容量），避免每次重试再扫一遍。</summary>
         public bool InboundRouteReachableChecked { get; set; }
 

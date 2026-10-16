@@ -24,10 +24,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         [SerializeField, Label("进度控制")]
         private WarehouseSimProgressControlPart m_progressControl;
 
+        [SerializeField, Label("任务配置档")]
+        private WarehouseSimScenarioControlPart m_scenarioControl;
+
         public WarehouseSimRunner Runner => m_runner;
         public WarehouseSimPlaybackController Playback => m_playback;
         public WarehouseSimRunControlPart RunControl => m_runControl;
         public WarehouseSimPlaybackControlPart PlaybackControl => m_playbackControl;
         public WarehouseSimProgressControlPart ProgressControl => m_progressControl;
+        public WarehouseSimScenarioControlPart ScenarioControl => m_scenarioControl;
     }
 }

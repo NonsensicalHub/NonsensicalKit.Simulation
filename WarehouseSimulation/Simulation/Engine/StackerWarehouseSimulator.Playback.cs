@@ -54,8 +54,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private void OnJobCompleted(WarehouseJob job)
         {
             _completedCount++;
-            ForgetJobZoneResources(job);
-            MarkCorridorLeftConveyor(job);
             if (job.Direction == SimFlowDirection.Inbound)
             {
                 _inboundCompletedCount++;
@@ -65,10 +63,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (job.Direction != SimFlowDirection.Outbound)
             {
                 DecrementStackerActiveJobCount(job.AssignedStackerId);
-            }
-            else
-            {
-                ClearOutboundPickupHold(job);
+                if (_outboundWaitingCount > 0)
+                {
+                    // 入库占着的堆垛机空出来了：唤醒出库排队，否则出入库混合时出库请求可能永远不再被派单。
+                    ScheduleOutfeedQueueFill(_clock.Now);
+                }
             }
 
             job.State = WarehouseJobState.Completed;
@@ -235,6 +234,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             NormalizeConveyorSubTaskTimeline();
             RunOccupancySelfCheck(result);
             RunSegmentCoOccupancySelfCheck(result);
+            RunCargoSpacingSelfCheck(result);
             RunSubTaskTimelineSelfCheck(result);
         }
 
@@ -493,6 +493,28 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             MarkSelfCheckFailed(
                 result,
                 $"自检：路段同时占用 {overlaps.Count} 处（对向 {opposite}，同向 {sameDirection}）。");
+        }
+
+        private void RunCargoSpacingSelfCheck(SimRunResult result)
+        {
+            if (result == null || _conveyorTopology == null || _bindings?.ConveyorMap == null)
+            {
+                return;
+            }
+
+            var violations = SimCargoSpacingChecker.FindViolations(
+                _jobs.Values,
+                _bindings.ConveyorMap,
+                _conveyorTopology);
+            result.CargoSpacingViolations = violations;
+            if (violations.Count == 0)
+            {
+                return;
+            }
+
+            WarehouseSimLog.Error(
+                $"仿真后自检发现 {violations.Count} 段货物间距不足（中心距 < 单箱长度，回放会重叠；导出调试 Markdown 报告查看明细）。");
+            MarkSelfCheckFailed(result, $"自检：货物间距不足 {violations.Count} 段。");
         }
 
         private void RunSubTaskTimelineSelfCheck(SimRunResult result)

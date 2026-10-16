@@ -63,5 +63,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 
         /// <summary>复查任务通道锁：车尾已离开的路段释放锁并唤醒等锁任务。</summary>
         CorridorLockCheck,
+
+        /// <summary>新输送内核：推进输送内核到当前时刻（JobId=-1）。追加在末尾，不改已有序号。</summary>
+        ConveyorKernelTick,
     }
 }

@@ -145,6 +145,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     continue;
                 }
 
+                // 入库口附近（不足一个箱长）的节点 / 停留点上有货时不能放：放上去回放会重叠。
+                if (!TryClaimInfeedOrigin(portIndex, _nextJobId))
+                {
+                    continue;
+                }
+
                 _inboundWaitingCount--;
                 var processTags = PeekInboundProcessTags();
                 if (_inboundWaitingFlowEntryIndices.Count > 0)
@@ -269,6 +275,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
+            ReleaseInfeedOriginClaim(job);
             if (releaseResources)
             {
                 if (job.HasSlot)
@@ -284,7 +291,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
             }
 
-            ReleaseAllCorridorLocks(job);
             job.State = WarehouseJobState.FailedNoSlot;
             _failedNoSlot++;
             RecordFailure(reason);
@@ -419,9 +425,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return false;
             }
 
-            if (IsConveyorTransitCommitted(job))
+            if (IsPrimaryKernelJob(job) && _primaryKernel.IsSubmitted(job.JobId))
             {
-                return TryResumeConveyorSegments(job);
+                return true;
             }
 
             if (TryScheduleConveyorOnMap(job, out _, out _))
@@ -432,12 +438,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             if (IsConveyorTransitCommitted(job))
             {
-                var next = job.NextConveyorZoneIndex;
-                var chain = job.ConveyorPathZones;
-                var blockingResource = chain != null && next >= 0 && next < chain.Count
-                    ? chain[next].ResourceId
-                    : null;
-                MarkConveyorRoutePending(job, blockingResource);
+                // 路径已选但提交内核失败（错误已记日志），挂起等下一次唤醒重试。
+                MarkConveyorRoutePending(job);
                 return false;
             }
 
@@ -484,29 +486,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             MarkConveyorRoutePending(job);
-            return false;
-        }
-
-        private bool TryResumeConveyorSegments(WarehouseJob job)
-        {
-            var next = job.NextConveyorZoneIndex;
-            var total = job.ConveyorPathZones?.Count ?? 0;
-            if (next >= total)
-            {
-                return false;
-            }
-
-            if (TryScheduleConveyorZone(job, _clock.Now, out _, out _))
-            {
-                ClearConveyorRoutePending(job);
-                return true;
-            }
-
-            var chain = job.ConveyorPathZones;
-            var blockingResource = chain != null && next >= 0 && next < chain.Count
-                ? chain[next].ResourceId
-                : null;
-            MarkConveyorRoutePending(job, blockingResource);
             return false;
         }
 

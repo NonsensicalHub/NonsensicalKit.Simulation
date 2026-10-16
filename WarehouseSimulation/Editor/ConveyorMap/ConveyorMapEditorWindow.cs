@@ -879,7 +879,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
             EditorGUILayout.HelpBox(
                 $"输送时长 = {data.DistanceMeters:0.##} m ÷ {speed:0.##} m/s = {seconds:0.##} s\n" +
-                $"拥堵容量 = floor({data.DistanceMeters:0.##} ÷ {_map.CargoUnitLengthMeters:0.##}) = {capacity} 件" +
+                $"停留点 = {capacity} 个（两端各留 {ConveyorMapMath.GetEdgeEndMarginMeters(_map, data):0.##} m = 箱长 + 节点前额外留白，中间间距 ≥ 箱长）" +
                 gateNote,
                 MessageType.None);
 
@@ -906,6 +906,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             EditorGUILayout.PropertyField(
                 _serializedMap.FindProperty("CargoUnitLengthMeters"),
                 new GUIContent("单箱长度 (m)"));
+            EditorGUILayout.PropertyField(
+                _serializedMap.FindProperty("NodeStopExtraClearanceMeters"),
+                new GUIContent("节点前停车额外留白 (m)", "节点前后停车点中心到节点中心 = 单箱长度 + 本值；0 表示刚好一个箱长"));
             EditorGUILayout.PropertyField(
                 _serializedMap.FindProperty("DefaultEdgeDistanceMeters"),
                 new GUIContent("新建路段距离 (m)"));

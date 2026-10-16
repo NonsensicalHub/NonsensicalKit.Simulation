@@ -35,10 +35,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 ? map.CargoUnitLengthMeters
                 : 1.2f;
 
+        /// <summary>
+        /// 路段容量（停留点个数）：两端各留出 <see cref="GetEdgeEndMarginMeters"/>（≥ 一个箱长），
+        /// 中间停留点间距不小于一个箱长。放不下时至少 1 个（短路段由内核的车身间距规则保证不重叠）。
+        /// </summary>
         public static int GetSegmentCapacity(WarehouseConveyorMap map, SimConveyorMapEdge edge)
         {
             var unit = GetCargoOccupancyLengthMeters(map);
-            var cap = Math.Max(1, (int)Math.Floor(Math.Max(0f, edge.DistanceMeters) / unit));
+            var usable = Math.Max(0f, edge.DistanceMeters) - 2f * GetEdgeEndMarginMeters(map, edge);
+            var cap = usable < 0f ? 1 : Math.Max(1, (int)Math.Floor(usable / unit + 1e-4f) + 1);
             // 死胡同加工站（度数 1）的进出边：容量强制 1，避免多箱挤进后再折返对向卡死。
             if (IsDeadEndProcessSpurEdge(map, edge))
             {
@@ -144,9 +149,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         public static float GetZoneHopSeconds(WarehouseConveyorMap map, SimConveyorMapEdge edge) =>
             GetCargoTailClearanceSeconds(map, edge);
 
-        /// <summary>路段端部留白（米）：单箱长度的一半，供节点驶入/驶出，不参与停留点均分。</summary>
+        /// <summary>
+        /// 路段端部留白（米）：末端 / 首端停留点中心到节点中心的距离 = 单箱长度 + 节点前停车额外留白。
+        /// 这样节点上的货与节点前停车等待的货中心距不小于一个箱长（以前是半个箱长，回放会重叠）。
+        /// </summary>
         public static float GetEdgeEndMarginMeters(WarehouseConveyorMap map, SimConveyorMapEdge edge) =>
-            GetCargoOccupancyLengthMeters(map) * 0.5f;
+            GetCargoOccupancyLengthMeters(map) + GetNodeStopExtraClearanceMeters(map);
+
+        /// <summary>节点前停车额外留白（米，≥0）。</summary>
+        public static float GetNodeStopExtraClearanceMeters(WarehouseConveyorMap map) =>
+            map != null && map.NodeStopExtraClearanceMeters > 0f ? map.NodeStopExtraClearanceMeters : 0f;
 
         /// <summary>路段端部留白（归一化 0–1）。</summary>
         public static float GetEdgeEndMarginNormalized(WarehouseConveyorMap map, SimConveyorMapEdge edge)
