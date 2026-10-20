@@ -66,6 +66,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// <summary>是否已为该入库口排定 <see cref="SimEventType.InfeedPortFeed"/> 事件（防重复入队）。</summary>
         private bool[] _infeedPortFeedScheduled;
         private int[] _infeedPortOrderScratch;
+        private readonly HashSet<int> _allowedInfeedPortsScratch = new HashSet<int>();
         private int _infeedRoundRobinCursor;
 
         // —— 全局到货与进度计数 ——

@@ -102,7 +102,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private bool TryPlaceOneInboundFromQueue(int maxReservations)
         {
             var portCount = _conveyorTopology.InfeedNodeIndices.Count;
-            var access = ConveyorRouteAccess.FromTags(PeekInboundProcessTags());
+            var processTags = PeekInboundProcessTags();
+            var access = ConveyorRouteAccess.FromTags(processTags);
+            ConveyorProcessStationUtility.TryResolveSupportedInfeedPortUnion(
+                _conveyorTopology,
+                processTags,
+                _allowedInfeedPortsScratch,
+                out var restrictInfeedByProcessStation);
             var candidateCount = InfeedPortSelector.FillCandidateInfeedPorts(
                 _conveyorTopology,
                 _strategy,
@@ -115,6 +121,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             for (var i = 0; i < candidateCount; i++)
             {
                 var portIndex = _infeedPortOrderScratch[i];
+                if (restrictInfeedByProcessStation && !_allowedInfeedPortsScratch.Contains(portIndex))
+                {
+                    continue;
+                }
+
                 if (_infeedReservationCounts[portIndex] >= maxReservations)
                 {
                     continue;
@@ -152,7 +163,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
 
                 _inboundWaitingCount--;
-                var processTags = PeekInboundProcessTags();
                 if (_inboundWaitingFlowEntryIndices.Count > 0)
                 {
                     _inboundWaitingFlowEntryIndices.Dequeue();
@@ -170,11 +180,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return true;
             }
 
-            if (!ConveyorPathPlanner.HasOpenPickupRouteFromAnyInfeed(
-                    _conveyorTopology,
-                    _bindings,
-                    _pickupReservationCounts,
-                    access))
+            if (restrictInfeedByProcessStation && _allowedInfeedPortsScratch.Count == 0)
+            {
+                WarehouseSimLog.Detail(
+                    $"入库等候 {_inboundWaitingCount} 箱：加工站「支持的入库口」并集为空或无法解析，" +
+                    "无法放货。请检查加工站配置的入库口逻辑 ID。");
+                return false;
+            }
+
+            if (!HasOpenPickupRouteFromAllowedInfeeds(access, restrictInfeedByProcessStation))
             {
                 WarehouseSimLog.Detail(
                     $"入库等候 {_inboundWaitingCount} 箱：取货点预定已满（库内仍有空货位），" +
@@ -509,6 +523,34 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             return copy;
+        }
+
+        /// <summary>在加工站入库口限制下，是否仍有可到达取货点的入库口。</summary>
+        private bool HasOpenPickupRouteFromAllowedInfeeds(ConveyorRouteAccess access, bool restrictInfeedByProcessStation)
+        {
+            if (!restrictInfeedByProcessStation)
+            {
+                return ConveyorPathPlanner.HasOpenPickupRouteFromAnyInfeed(
+                    _conveyorTopology,
+                    _bindings,
+                    _pickupReservationCounts,
+                    access);
+            }
+
+            foreach (var portIndex in _allowedInfeedPortsScratch)
+            {
+                if (ConveyorPathPlanner.HasOpenPickupRouteFromInfeed(
+                        _conveyorTopology,
+                        _bindings,
+                        portIndex,
+                        _pickupReservationCounts,
+                        access))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private string[] PeekInboundProcessTags()

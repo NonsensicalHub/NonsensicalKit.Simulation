@@ -41,6 +41,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         [Tooltip("占用路口逻辑 ID（如 LR1104）。货物前往本加工站时，首次经过该路口独占占用，再次经过时释放，避免死胡同进站对向争用。留空则不启用。")]
         [Label("占用路口（逻辑 ID）")]
         public string ProcessOccupiedJunctionLogicalId;
+        [Tooltip("本加工站允许作为起点的入库口逻辑 ID 列表。带加工标签的入库任务会收集匹配站的并集，只从并集内选口；留空表示该站不限制入库口。旧地图默认空列表，行为与改前一致。")]
+        [Label("支持的入库口")]
+        public string[] SupportedInfeedLogicalIds;
 
         [Header("垂直提升机")]
         [Tooltip("同一物理提升机各层节点共用此 ID，用于设备互斥预约；留空则使用本节点逻辑 ID")]
@@ -61,6 +64,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         public int MaxReservations;
 
         [Header("堆垛机交互点")]
+        [Tooltip("出入库皆可：同一点既能入库交接也能出库交接；只能入库 / 只能出库：保持单向。")]
         [Label("交互模式")]
         public SimStackerInteractionMode StackerInteractionMode;
         [Min(0)]

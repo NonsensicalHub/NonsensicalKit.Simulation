@@ -104,6 +104,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     height += PropertyHeight(property, "ProcessTag");
                     height += PropertyHeight(property, "ProcessServiceSeconds");
                     height += PropertyHeight(property, "ProcessOccupiedJunctionLogicalId");
+                    height += PropertyHeight(property, "SupportedInfeedLogicalIds");
                     break;
                 case SimConveyorNodeKind.VerticalTransfer:
                     height += PropertyHeight(property, "TransferGroupId");
@@ -146,6 +147,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     y = DrawField(x, y, width, line, property, "ProcessTag");
                     y = DrawField(x, y, width, line, property, "ProcessServiceSeconds");
                     y = DrawField(x, y, width, line, property, "ProcessOccupiedJunctionLogicalId");
+                    y = DrawField(x, y, width, line, property, "SupportedInfeedLogicalIds");
                     break;
                 case SimConveyorNodeKind.VerticalTransfer:
                     y = DrawField(x, y, width, line, property, "TransferGroupId");

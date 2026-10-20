@@ -146,6 +146,160 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return searchTarget < 0 || toNodeIndex == searchTarget;
         }
 
+        /// <summary>
+        /// 根据所需加工标签，收集匹配停留加工站上「支持的入库口」逻辑 ID 的并集，并解析为入库口序号。
+        /// </summary>
+        /// <remarks>
+        /// 约定：某加工站 <c>SupportedInfeedLogicalIds</c> 为空或未配置 → 该站不限制入库口（不向并集贡献约束）。
+        /// 若所有匹配站均为空列表 → <paramref name="hasRestriction"/> 为 false，行为与旧版一致（可选任意入库口）。
+        /// 若至少有一个匹配站配置了非空列表 → 只允许并集内的入库口；解析不到任何有效入库口时并集为空，表示无可选口。
+        /// 直入任务（无加工标签）请勿调用，或调用后 <paramref name="hasRestriction"/> 为 false。
+        /// </remarks>
+        /// <returns>true 表示参数可用并已写入结果；false 表示 topology 无效。</returns>
+        public static bool TryResolveSupportedInfeedPortUnion(
+            ConveyorMapTopology topology,
+            string[] requiredProcessTags,
+            HashSet<int> allowedPortIndices,
+            out bool hasRestriction)
+        {
+            hasRestriction = false;
+            allowedPortIndices?.Clear();
+            if (topology?.InfeedNodeIndices == null || allowedPortIndices == null)
+            {
+                return false;
+            }
+
+            if (requiredProcessTags == null
+                || requiredProcessTags.Length == 0
+                || IsAllEmpty(requiredProcessTags)
+                || topology.ProcessStationNodeIndices == null)
+            {
+                return true;
+            }
+
+            var contributed = false;
+            for (var t = 0; t < requiredProcessTags.Length; t++)
+            {
+                var tag = requiredProcessTags[t]?.Trim();
+                if (string.IsNullOrEmpty(tag))
+                {
+                    continue;
+                }
+
+                for (var i = 0; i < topology.ProcessStationNodeIndices.Count; i++)
+                {
+                    var nodeIndex = topology.ProcessStationNodeIndices[i];
+                    ref var node = ref topology.GetNode(nodeIndex);
+                    if (!NodeIsDwellProcessStation(in node) || !TagsMatch(tag, node.ProcessTag))
+                    {
+                        continue;
+                    }
+
+                    if (!TryCollectConfiguredInfeedLogicalIds(in node, out var ids) || ids.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    contributed = true;
+                    AddMatchingInfeedPorts(topology, ids, allowedPortIndices);
+                }
+            }
+
+            hasRestriction = contributed;
+            return true;
+        }
+
+        /// <summary>入库口序号是否允许用于带加工标签的任务（无限制时恒为 true）。</summary>
+        public static bool IsInfeedPortAllowedForProcessTags(
+            ConveyorMapTopology topology,
+            string[] requiredProcessTags,
+            int infeedPortIndex,
+            HashSet<int> scratch)
+        {
+            if (scratch == null)
+            {
+                return true;
+            }
+
+            if (!TryResolveSupportedInfeedPortUnion(topology, requiredProcessTags, scratch, out var hasRestriction)
+                || !hasRestriction)
+            {
+                return true;
+            }
+
+            return scratch.Contains(infeedPortIndex);
+        }
+
+        private static bool TryCollectConfiguredInfeedLogicalIds(in SimConveyorMapNode node, out List<string> ids)
+        {
+            ids = null;
+            var raw = node.SupportedInfeedLogicalIds;
+            if (raw == null || raw.Length == 0)
+            {
+                return false;
+            }
+
+            List<string> list = null;
+            for (var i = 0; i < raw.Length; i++)
+            {
+                var id = raw[i]?.Trim();
+                if (string.IsNullOrEmpty(id))
+                {
+                    continue;
+                }
+
+                list ??= new List<string>();
+                var dup = false;
+                for (var j = 0; j < list.Count; j++)
+                {
+                    if (string.Equals(list[j], id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        dup = true;
+                        break;
+                    }
+                }
+
+                if (!dup)
+                {
+                    list.Add(id);
+                }
+            }
+
+            if (list == null || list.Count == 0)
+            {
+                return false;
+            }
+
+            ids = list;
+            return true;
+        }
+
+        private static void AddMatchingInfeedPorts(
+            ConveyorMapTopology topology,
+            List<string> logicalIds,
+            HashSet<int> allowedPortIndices)
+        {
+            var ports = topology.InfeedNodeIndices;
+            for (var p = 0; p < ports.Count; p++)
+            {
+                ref var infeed = ref topology.GetNode(ports[p]);
+                var infeedId = infeed.LogicalId?.Trim();
+                if (string.IsNullOrEmpty(infeedId))
+                {
+                    continue;
+                }
+
+                for (var i = 0; i < logicalIds.Count; i++)
+                {
+                    if (string.Equals(infeedId, logicalIds[i], StringComparison.OrdinalIgnoreCase))
+                    {
+                        allowedPortIndices.Add(p);
+                        break;
+                    }
+                }
+            }
+        }
+
         private static bool IsAllEmpty(string[] tags)
         {
             for (var i = 0; i < tags.Length; i++)

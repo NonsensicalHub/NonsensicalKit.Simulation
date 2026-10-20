@@ -1,11 +1,11 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
 {
     /// <summary>堆垛机交互点允许的货物流向。</summary>
     public enum SimStackerInteractionMode
     {
-        /// <summary>入库输送终点与出库输送起点均可使用。</summary>
+        /// <summary>同一交互点既可做入库交接（输送终点）也可做出库交接（输送起点）。</summary>
         [InspectorName("出入库皆可")]
         Both = 0,
 

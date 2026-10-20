@@ -13,6 +13,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
     /// 输送地图俯视编辑器。交互对齐工位俯视窗口：平移、缩放、拖拽连线、框选路段。
     /// 画布模式使用节点的排版坐标；场景俯视把同名锚点按世界 XZ 摆开。
     /// 视图旋转只改看图方向，方便对照 CAD，不改节点坐标。
+    /// 结构编辑走 Unity Undo（工具栏撤销/重做，Ctrl+Z / Ctrl+Y）。
     /// </summary>
     public sealed class ConveyorMapEditorWindow : EditorWindow
     {
@@ -30,6 +31,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         private const float FitPadding = 64f;
         private const float TargetNeighborPixels = 56f;
         private const float ViewCullPadding = 96f;
+        private const int MaxGridLinesPerAxis = 64;
         private const int DiscTextureSize = 64;
         private const int ArrowTextureWidth = 64;
         private const int ArrowTextureHeight = 58;
@@ -87,6 +89,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         private readonly Dictionary<long, Segment> _segmentByKey = new Dictionary<long, Segment>();
         private readonly List<long> _selectedKeys = new List<long>(32);
         private readonly HashSet<long> _selectedKeySet = new HashSet<long>();
+        private readonly List<int> _selectedNodes = new List<int>(32);
+        private readonly HashSet<int> _selectedNodeSet = new HashSet<int>();
+        private readonly List<int> _moveGroup = new List<int>(32);
+        private readonly List<Vector2> _moveGroupOrigins = new List<Vector2>(32);
         private readonly Dictionary<string, Transform> _anchors =
             new Dictionary<string, Transform>(StringComparer.Ordinal);
         private readonly Dictionary<string, int> _nodeIndexByNodeId =
@@ -103,6 +109,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         private int _graphStamp = int.MinValue;
         private bool _topologyReady;
         private bool _graphReady;
+        private Vector2[] _localPoints = Array.Empty<Vector2>();
+        private bool[] _localValid = Array.Empty<bool>();
+        private int _localCacheGraphStamp = int.MinValue;
+        private float _localCacheZoom;
+        private Vector2 _localCachePan;
+        private float _localCacheYaw;
+        private bool _localCacheScene;
         private int _canvasHotId;
         private static Texture2D _whiteDisc;
         private static Texture2D _whiteArrow;
@@ -210,7 +223,76 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             _anchorsDirty = true;
             _topologyReady = false;
             _graphReady = false;
+            // 撤销后选中索引可能越界，清掉无效选择。
+            ClampSelectionsAfterMapChange();
             Repaint();
+        }
+
+        /// <summary>
+        /// ScriptableObject 整表替换 Nodes/Edges 时用完整快照，比 RecordObject 更稳。
+        /// </summary>
+        private void RecordMapUndo(string undoName)
+        {
+            if (_map == null)
+            {
+                return;
+            }
+
+            Undo.RegisterCompleteObjectUndo(_map, undoName);
+        }
+
+        private void PerformEditorUndo()
+        {
+            Undo.PerformUndo();
+            // OnUndoRedo 会由 Unity 回调；此处再刷一次避免焦点在窗口时偶发不刷新。
+            OnUndoRedo();
+            SetStatus("已撤销");
+        }
+
+        private void PerformEditorRedo()
+        {
+            Undo.PerformRedo();
+            OnUndoRedo();
+            SetStatus("已重做");
+        }
+
+        private void ClampSelectionsAfterMapChange()
+        {
+            if (_map?.Nodes == null)
+            {
+                ClearNodeSelection();
+                ClearEdgeSelection();
+                return;
+            }
+
+            var n = _map.Nodes.Length;
+            if (_selectedNode >= n)
+            {
+                ClearNodeSelection();
+            }
+            else if (_selectedNodes.Count > 0)
+            {
+                for (var i = _selectedNodes.Count - 1; i >= 0; i--)
+                {
+                    if (_selectedNodes[i] < 0 || _selectedNodes[i] >= n)
+                    {
+                        _selectedNodeSet.Remove(_selectedNodes[i]);
+                        _selectedNodes.RemoveAt(i);
+                    }
+                }
+
+                if (_selectedNodes.Count == 0)
+                {
+                    _selectedNode = -1;
+                }
+                else if (_selectedNode < 0 || _selectedNode >= n || !_selectedNodeSet.Contains(_selectedNode))
+                {
+                    _selectedNode = _selectedNodes[_selectedNodes.Count - 1];
+                }
+            }
+
+            // 路段选择按拓扑重建后重算，避免悬空 key。
+            _topologyReady = false;
         }
 
         private double _nextSceneViewRepaint;
@@ -228,7 +310,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
-            _nextSceneViewRepaint = now + 0.25d;
+            // 场景俯视仅低频刷新锚点世界坐标，不重建拓扑索引。
+            _nextSceneViewRepaint = now + 0.33d;
+            _graphReady = false;
             Repaint();
         }
 
@@ -251,8 +335,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             }
 
             _serializedMap = _map != null ? new SerializedObject(_map) : null;
-            _selectedNode = -1;
+            ClearNodeSelection();
             ClearEdgeSelection();
+            ClearMoveGroup();
             ClearOneWayPathPick();
             _statusMessage = string.Empty;
             _anchorsDirty = true;
@@ -280,7 +365,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             {
                 _dragMode = DragMode.None;
                 _connectFrom = -1;
-                _moveIndex = -1;
+                ClearMoveGroup();
                 _canvasHotId = 0;
             }
 
@@ -322,6 +407,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         private void DrawToolbar()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            using (new EditorGUI.DisabledScope(_map == null))
+            {
+                if (GUILayout.Button(new GUIContent("撤销", "Ctrl+Z"), EditorStyles.toolbarButton, GUILayout.Width(40f)))
+                {
+                    PerformEditorUndo();
+                }
+
+                if (GUILayout.Button(new GUIContent("重做", "Ctrl+Y / Ctrl+Shift+Z"), EditorStyles.toolbarButton, GUILayout.Width(40f)))
+                {
+                    PerformEditorRedo();
+                }
+            }
+
+            GUILayout.Space(6f);
             EditorGUI.BeginChangeCheck();
             var nextMap = (WarehouseConveyorMap)EditorGUILayout.ObjectField(
                 _map, typeof(WarehouseConveyorMap), false, GUILayout.MinWidth(160f), GUILayout.MaxWidth(260f));
@@ -333,6 +432,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             if (GUILayout.Button("刷新", EditorStyles.toolbarButton, GUILayout.Width(44f)))
             {
                 _anchorsDirty = true;
+                _topologyReady = false;
+                _graphReady = false;
                 _serializedMap = _map != null ? new SerializedObject(_map) : null;
                 Repaint();
             }
@@ -355,22 +456,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             _showEdgeFlow = ToolbarToggle(_showEdgeFlow, "流向", 44f, PrefsShowFlow);
 
             GUILayout.Space(6f);
-            var connectOn = !_moveTool && !_oneWayPathTool;
-            var nextConnect = GUILayout.Toggle(connectOn, "拖:连线", EditorStyles.toolbarButton, GUILayout.Width(64f));
-            if (nextConnect && !connectOn)
-            {
-                _moveTool = false;
-                _oneWayPathTool = false;
-            }
-
+            // 三工具互斥：点哪个就用哪个。默认是连线，所以不点「移动」一拖就会连线。
+            var wantConnect = GUILayout.Toggle(
+                !_moveTool && !_oneWayPathTool, "拖:连线", EditorStyles.toolbarButton, GUILayout.Width(64f));
+            bool wantMove;
             using (new EditorGUI.DisabledScope(_sceneView))
             {
-                var nextMove = GUILayout.Toggle(_moveTool && !_sceneView, "移动", EditorStyles.toolbarButton, GUILayout.Width(44f));
-                if (nextMove && !_moveTool && !_sceneView)
-                {
-                    _moveTool = true;
-                    _oneWayPathTool = false;
-                }
+                wantMove = GUILayout.Toggle(
+                    _moveTool && !_sceneView, "移动", EditorStyles.toolbarButton, GUILayout.Width(44f));
             }
 
             var nextBi = GUILayout.Toggle(
@@ -381,23 +474,44 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 EditorPrefs.SetBool(PrefsBidirectional, _connectBidirectional);
             }
 
-            var nextOneWay = GUILayout.Toggle(
+            var wantOneWay = GUILayout.Toggle(
                 _oneWayPathTool, "路径单向", EditorStyles.toolbarButton, GUILayout.Width(72f));
-            if (nextOneWay != _oneWayPathTool)
+
+            if (wantMove && !_moveTool && !_sceneView)
             {
-                _oneWayPathTool = nextOneWay;
-                if (_oneWayPathTool)
+                _moveTool = true;
+                _oneWayPathTool = false;
+                ClearOneWayPathPick();
+            }
+            else if (wantOneWay && !_oneWayPathTool)
+            {
+                _oneWayPathTool = true;
+                _moveTool = false;
+                if (_selectedNode >= 0)
                 {
-                    _moveTool = false;
-                    if (_selectedNode >= 0)
-                    {
-                        _oneWayPathFrom = _selectedNode;
-                    }
+                    _oneWayPathFrom = _selectedNode;
                 }
-                else
-                {
-                    ClearOneWayPathPick();
-                }
+            }
+            else if (wantConnect && (_moveTool || _oneWayPathTool))
+            {
+                _moveTool = false;
+                _oneWayPathTool = false;
+                ClearOneWayPathPick();
+            }
+            else if (!wantMove && _moveTool && !_sceneView)
+            {
+                // 再次点「移动」可关掉，回到连线。
+                _moveTool = false;
+            }
+            else if (!wantOneWay && _oneWayPathTool)
+            {
+                _oneWayPathTool = false;
+                ClearOneWayPathPick();
+            }
+
+            if (_sceneView && _moveTool)
+            {
+                _moveTool = false;
             }
 
             GUILayout.Space(6f);
@@ -435,7 +549,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             DrawAddNodeButton("入库口", SimConveyorNodeKind.InfeedPort, 64f);
             DrawAddNodeButton("路口", SimConveyorNodeKind.Junction, 52f);
-            DrawAddNodeButton("堆垛机交互点", SimConveyorNodeKind.PickupPoint, 108f);
+            DrawAddPickupNodeButton("交互·双", SimStackerInteractionMode.Both, 64f);
+            DrawAddPickupNodeButton("交互·入", SimStackerInteractionMode.InboundOnly, 64f);
+            DrawAddPickupNodeButton("交互·出", SimStackerInteractionMode.OutboundOnly, 64f);
             DrawAddNodeButton("出库口", SimConveyorNodeKind.OutfeedPort, 64f);
             DrawAddNodeButton("加工站", SimConveyorNodeKind.ProcessStation, 64f);
             DrawAddNodeButton("提升机", SimConveyorNodeKind.VerticalTransfer, 64f);
@@ -491,18 +607,32 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             }
         }
 
+        private void DrawAddPickupNodeButton(string label, SimStackerInteractionMode mode, float width)
+        {
+            if (GUILayout.Button(label, EditorStyles.toolbarButton, GUILayout.Width(width)))
+            {
+                AddNode(SimConveyorNodeKind.PickupPoint, mode);
+            }
+        }
+
         private void DrawHint()
         {
             var place = _sceneView
-                ? "场景俯视：节点位置来自同名锚点"
-                : "画布：节点位置是排版坐标，可用「移动」拖动";
+                ? "场景俯视：节点位置来自同名锚点（不能拖移节点）"
+                : _moveTool
+                    ? "当前：移动（拖节点改位置）· 快捷键 2"
+                    : _oneWayPathTool
+                        ? "当前：路径单向 · 快捷键 3"
+                        : "当前：拖:连线（默认）· 快捷键 1 · 要挪节点请先点「移动」或按 2";
             var link = _oneWayPathTool
                 ? "依次点两个节点，最短路变成起点→终点的单向通路"
-                : _connectBidirectional
-                    ? "拖到另一节点会建双向路段"
-                    : "拖到另一节点建单向路段，按住 Shift 建反向";
+                : _moveTool
+                    ? "拖节点移动；框选或 Shift 多选后，拖其中一点整组平移"
+                    : _connectBidirectional
+                        ? "拖到另一节点会建双向路段"
+                        : "拖到另一节点建单向路段，按住 Shift 建反向";
             EditorGUILayout.LabelField(
-                $"{place} · {link} · 空白处框选路段 · Shift 加选 · 中键或 Alt 平移 · Q/E 或工具栏转 90° · 滚轮缩放",
+                $"{place} · {link} · 空白处框选 · Shift 加选 · 中键或 Alt 平移 · Q/E 旋转 · 滚轮缩放 · Ctrl+Z 撤销 · Ctrl+Y 重做",
                 EditorStyles.miniLabel);
         }
 
@@ -510,7 +640,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         {
             EnsureTopology();
             var nodeCount = _map.Nodes != null ? _map.Nodes.Length : 0;
-            var sel = _selectedNode >= 0 ? $" · 选中 {NodeLabel(_selectedNode)}" : string.Empty;
+            var sel = _selectedNodeSet.Count > 1
+                ? $" · 选中 {_selectedNodeSet.Count} 个节点"
+                : _selectedNode >= 0
+                    ? $" · 选中 {NodeLabel(_selectedNode)}"
+                    : string.Empty;
             var hover = _hoverIndex >= 0 ? $" · 悬停 {NodeLabel(_hoverIndex)}" : string.Empty;
             var edge = _selectedKeys.Count > 1
                 ? $" · 选中 {_selectedKeys.Count} 条路段"
@@ -578,12 +712,25 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             {
                 DrawEdgeSelectionPanel();
             }
+            else if (_selectedNodeSet.Count > 1)
+            {
+                EditorGUILayout.HelpBox(
+                    $"已选 {_selectedNodeSet.Count} 个节点。\n移动模式下拖其中任一节点，整组一起平移。\nShift 点选可加选/减选；空白处框选可圈选节点。",
+                    MessageType.Info);
+                if (_selectedNode >= 0 && _map.Nodes != null && _selectedNode < _map.Nodes.Length)
+                {
+                    EditorGUILayout.LabelField($"主选：{NodeLabel(_selectedNode)}", EditorStyles.miniBoldLabel);
+                    DrawNodeInspector();
+                }
+            }
             else if (_selectedNode < 0 || _map.Nodes == null || _selectedNode >= _map.Nodes.Length)
             {
                 EditorGUILayout.HelpBox(
                     _oneWayPathTool
                         ? "路径单向：先点起点，再点终点。两点间最短路会改成单向。\nEsc 取消起点。"
-                        : "从节点拖到另一个节点创建路段。\n空白处拖拽可框选路段，Delete 删除。\nShift 点选或框选为加选。\n画布模式下用「移动」拖动节点。",
+                        : _moveTool
+                            ? "移动模式：拖节点改位置；框选或多个 Shift 点选后，拖其中一点整组平移。\n点「拖:连线」或按 1 回到连线。"
+                            : "当前是连线模式（默认）：从节点拖到另一节点会创建路段。\n要移动节点：先点工具栏「移动」或按键盘 2，再拖节点。\n空白处拖拽可框选路段，Delete 删除。",
                     MessageType.Info);
             }
             else
@@ -626,8 +773,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             {
                 EditorUtility.SetDirty(_map);
                 _anchorsDirty = true;
-                _topologyReady = false;
-                _graphReady = false;
+                InvalidateTopologyAndGraph();
             }
         }
 
@@ -636,12 +782,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             var nodesProp = _serializedMap.FindProperty("Nodes");
             var element = nodesProp.GetArrayElementAtIndex(_selectedNode);
             var kindProp = element.FindPropertyRelative("Kind");
-            if (Event.current.type == EventType.Layout)
-            {
-                _inspectorKind = (SimConveyorNodeKind)kindProp.intValue;
-            }
-
-            var kind = _inspectorKind;
+            // 每帧直接读 Kind，避免 Layout 缓存导致选了加工站却画出别的类型面板，从而看不见「支持的入库口」。
+            var kind = (SimConveyorNodeKind)kindProp.intValue;
+            _inspectorKind = kind;
 
             EditorGUILayout.LabelField(NodeLabel(_selectedNode), EditorStyles.boldLabel);
             DrawProp(element, "Kind", "节点类型");
@@ -685,7 +828,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     DrawProp(element, "ProcessMode", "加工模式");
                     DrawProp(element, "ProcessTag", "加工标签");
                     DrawProp(element, "ProcessServiceSeconds", "加工服务时间（秒）");
-                    EditorGUILayout.Space(4f);
+                    EditorGUILayout.Space(6f);
+                    DrawSupportedInfeedLogicalIdsField(element);
+                    EditorGUILayout.Space(6f);
                     EditorGUILayout.LabelField("死胡同占用路口", EditorStyles.boldLabel);
                     EditorGUILayout.HelpBox(
                         "填写路口逻辑 ID（如 LR1104）。货物前往本站时，首次经过该路口独占，再次经过时释放，避免进站对向争用。留空则不启用。",
@@ -818,7 +963,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             var newFlow = EditorGUILayout.Popup("通行方向", flowMode, flowOptions);
             if (EditorGUI.EndChangeCheck() && newFlow != flowMode)
             {
-                Undo.RecordObject(_map, "修改通行方向");
+                RecordMapUndo("修改通行方向");
                 ConveyorMapEditorEdgeUtility.ApplySegmentFlowMode(_map, loId, hiId, newFlow);
                 EditorUtility.SetDirty(_map);
                 _serializedMap.Update();
@@ -859,9 +1004,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 new GUIContent("加工专用标签", "留空表示普通路段。填写后，只有带相同加工标签的货物才能走这条路段。"));
             if (EditorGUI.EndChangeCheck())
             {
+                // 属性修改与反向同步合并为一次撤销。
+                Undo.IncrementCurrentGroup();
+                var undoGroup = Undo.GetCurrentGroup();
                 _serializedMap.ApplyModifiedProperties();
+                RecordMapUndo("同步反向路段");
                 ConveyorMapEditorEdgeUtility.SyncReverseEdge(_map, _map.Edges[edgeIndex]);
                 EditorUtility.SetDirty(_map);
+                Undo.CollapseUndoOperations(undoGroup);
+                Undo.SetCurrentGroupName("修改路段属性");
                 _serializedMap.Update();
                 data = _map.Edges[edgeIndex];
             }
@@ -1000,6 +1151,306 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         }
 
         /// <summary>
+        /// 左侧配置页：加工站「支持的入库口」。始终展开手画列表，不依赖折叠的 PropertyField；
+        /// SerializedProperty 缺失时回退直接改 Nodes，避免编译后仍看不见。
+        /// </summary>
+        private void DrawSupportedInfeedLogicalIdsField(SerializedProperty element)
+        {
+            const string fieldName = "SupportedInfeedLogicalIds";
+            EditorGUILayout.LabelField("支持的入库口", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "可走本站加工的入库口逻辑 ID（多个）。带本站标签的入库任务只从这些口放货（多站取并集）。留空=不限制。",
+                MessageType.Info);
+
+            var prop = element != null ? element.FindPropertyRelative(fieldName) : null;
+            if (prop == null && _serializedMap != null)
+            {
+                // 新字段偶发找不到：重建 SerializedObject 再试一次
+                _serializedMap = new SerializedObject(_map);
+                _serializedMap.Update();
+                var nodesProp = _serializedMap.FindProperty("Nodes");
+                if (nodesProp != null
+                    && _selectedNode >= 0
+                    && _selectedNode < nodesProp.arraySize)
+                {
+                    element = nodesProp.GetArrayElementAtIndex(_selectedNode);
+                    prop = element.FindPropertyRelative(fieldName);
+                }
+            }
+
+            var infeedChoices = CollectInfeedLogicalIds();
+            if (prop != null && prop.isArray)
+            {
+                prop.isExpanded = true;
+                DrawSupportedInfeedArrayProperty(prop, infeedChoices);
+                return;
+            }
+
+            // 回退：直接改 map.Nodes，保证配置页一定能看见、能改
+            EditorGUILayout.HelpBox(
+                "序列化属性暂不可用，已用节点数组回退编辑。编译完成后点工具栏「刷新」可恢复正常序列化。",
+                MessageType.Warning);
+            DrawSupportedInfeedFallbackEditor(infeedChoices);
+        }
+
+        private void DrawSupportedInfeedArrayProperty(SerializedProperty prop, string[] infeedChoices)
+        {
+            EditorGUI.BeginChangeCheck();
+            var size = Mathf.Max(0, EditorGUILayout.IntField("数量", prop.arraySize));
+            if (size != prop.arraySize)
+            {
+                prop.arraySize = size;
+            }
+
+            for (var i = 0; i < prop.arraySize; i++)
+            {
+                var el = prop.GetArrayElementAtIndex(i);
+                EditorGUILayout.BeginHorizontal();
+                el.stringValue = EditorGUILayout.TextField($"入库口 {i + 1}", el.stringValue ?? string.Empty);
+                if (GUILayout.Button("×", EditorStyles.miniButton, GUILayout.Width(22f)))
+                {
+                    prop.DeleteArrayElementAtIndex(i);
+                    EditorGUILayout.EndHorizontal();
+                    break;
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                prop.serializedObject.ApplyModifiedProperties();
+                EditorUtility.SetDirty(_map);
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("添加空项", EditorStyles.miniButton))
+            {
+                var idx = prop.arraySize;
+                prop.arraySize++;
+                prop.GetArrayElementAtIndex(idx).stringValue = string.Empty;
+                prop.serializedObject.ApplyModifiedProperties();
+                EditorUtility.SetDirty(_map);
+            }
+
+            if (infeedChoices.Length > 0
+                && GUILayout.Button("追加入库口…", EditorStyles.miniButton))
+            {
+                ShowAddInfeedLogicalIdMenu(prop, infeedChoices);
+            }
+
+            if (prop.arraySize > 0 && GUILayout.Button("清空", EditorStyles.miniButton, GUILayout.Width(48f)))
+            {
+                prop.ClearArray();
+                prop.serializedObject.ApplyModifiedProperties();
+                EditorUtility.SetDirty(_map);
+            }
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawSupportedInfeedFallbackEditor(string[] infeedChoices)
+        {
+            if (_selectedNode < 0 || _map?.Nodes == null || _selectedNode >= _map.Nodes.Length)
+            {
+                return;
+            }
+
+            var node = _map.Nodes[_selectedNode];
+            var list = node.SupportedInfeedLogicalIds != null
+                ? new System.Collections.Generic.List<string>(node.SupportedInfeedLogicalIds)
+                : new System.Collections.Generic.List<string>();
+
+            EditorGUI.BeginChangeCheck();
+            var size = Mathf.Max(0, EditorGUILayout.IntField("数量", list.Count));
+            while (list.Count < size)
+            {
+                list.Add(string.Empty);
+            }
+
+            while (list.Count > size)
+            {
+                list.RemoveAt(list.Count - 1);
+            }
+
+            for (var i = 0; i < list.Count; i++)
+            {
+                EditorGUILayout.BeginHorizontal();
+                list[i] = EditorGUILayout.TextField($"入库口 {i + 1}", list[i] ?? string.Empty);
+                if (GUILayout.Button("×", EditorStyles.miniButton, GUILayout.Width(22f)))
+                {
+                    list.RemoveAt(i);
+                    EditorGUILayout.EndHorizontal();
+                    break;
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                ApplySupportedInfeedToNode(_selectedNode, list.ToArray());
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("添加空项", EditorStyles.miniButton))
+            {
+                list.Add(string.Empty);
+                ApplySupportedInfeedToNode(_selectedNode, list.ToArray());
+            }
+
+            if (infeedChoices.Length > 0
+                && GUILayout.Button("追加入库口…", EditorStyles.miniButton))
+            {
+                ShowAddInfeedLogicalIdMenuForNodeIndex(_selectedNode, infeedChoices, list);
+            }
+
+            if (list.Count > 0 && GUILayout.Button("清空", EditorStyles.miniButton, GUILayout.Width(48f)))
+            {
+                ApplySupportedInfeedToNode(_selectedNode, System.Array.Empty<string>());
+            }
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void ApplySupportedInfeedToNode(int nodeIndex, string[] ids)
+        {
+            if (_map?.Nodes == null || nodeIndex < 0 || nodeIndex >= _map.Nodes.Length)
+            {
+                return;
+            }
+
+            RecordMapUndo("Set SupportedInfeedLogicalIds");
+            var node = _map.Nodes[nodeIndex];
+            node.SupportedInfeedLogicalIds = ids ?? System.Array.Empty<string>();
+            _map.Nodes[nodeIndex] = node;
+            EditorUtility.SetDirty(_map);
+            _serializedMap = new SerializedObject(_map);
+            Repaint();
+        }
+
+        private string[] CollectInfeedLogicalIds()
+        {
+            if (_map?.Nodes == null || _map.Nodes.Length == 0)
+            {
+                return System.Array.Empty<string>();
+            }
+
+            var list = new System.Collections.Generic.List<string>();
+            for (var i = 0; i < _map.Nodes.Length; i++)
+            {
+                ref var n = ref _map.Nodes[i];
+                if (n.Kind != SimConveyorNodeKind.InfeedPort)
+                {
+                    continue;
+                }
+
+                var id = n.LogicalId?.Trim();
+                if (!string.IsNullOrEmpty(id) && !list.Contains(id))
+                {
+                    list.Add(id);
+                }
+            }
+
+            list.Sort(System.StringComparer.Ordinal);
+            return list.ToArray();
+        }
+
+        private static void ShowAddInfeedLogicalIdMenu(SerializedProperty arrayProp, string[] choices)
+        {
+            if (arrayProp == null || !arrayProp.isArray)
+            {
+                return;
+            }
+
+            var existing = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+            for (var i = 0; i < arrayProp.arraySize; i++)
+            {
+                var v = arrayProp.GetArrayElementAtIndex(i).stringValue?.Trim();
+                if (!string.IsNullOrEmpty(v))
+                {
+                    existing.Add(v);
+                }
+            }
+
+            var menu = new GenericMenu();
+            var added = false;
+            for (var i = 0; i < choices.Length; i++)
+            {
+                var choice = choices[i];
+                if (existing.Contains(choice))
+                {
+                    menu.AddDisabledItem(new GUIContent(choice + "（已有）"));
+                    continue;
+                }
+
+                added = true;
+                menu.AddItem(new GUIContent(choice), false, () =>
+                {
+                    var idx = arrayProp.arraySize;
+                    arrayProp.arraySize++;
+                    arrayProp.GetArrayElementAtIndex(idx).stringValue = choice;
+                    arrayProp.serializedObject.ApplyModifiedProperties();
+                });
+            }
+
+            if (!added)
+            {
+                menu.AddDisabledItem(new GUIContent("（无可追加入库口）"));
+            }
+
+            menu.ShowAsContext();
+        }
+
+        private void ShowAddInfeedLogicalIdMenuForNodeIndex(
+            int nodeIndex,
+            string[] choices,
+            System.Collections.Generic.List<string> current)
+        {
+            var existing = new System.Collections.Generic.HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+            if (current != null)
+            {
+                for (var i = 0; i < current.Count; i++)
+                {
+                    var v = current[i]?.Trim();
+                    if (!string.IsNullOrEmpty(v))
+                    {
+                        existing.Add(v);
+                    }
+                }
+            }
+
+            var menu = new GenericMenu();
+            var added = false;
+            for (var i = 0; i < choices.Length; i++)
+            {
+                var choice = choices[i];
+                if (existing.Contains(choice))
+                {
+                    menu.AddDisabledItem(new GUIContent(choice + "（已有）"));
+                    continue;
+                }
+
+                added = true;
+                menu.AddItem(new GUIContent(choice), false, () =>
+                {
+                    var next = current != null
+                        ? new System.Collections.Generic.List<string>(current)
+                        : new System.Collections.Generic.List<string>();
+                    next.Add(choice);
+                    ApplySupportedInfeedToNode(nodeIndex, next.ToArray());
+                });
+            }
+
+            if (!added)
+            {
+                menu.AddDisabledItem(new GUIContent("（无可追加入库口）"));
+            }
+
+            menu.ShowAsContext();
+        }
+
+        /// <summary>
         /// 加工站「占用路口」字段：优先用 SerializedProperty；找不到时回退直接改 Nodes 数组，避免静默不显示。
         /// </summary>
         private void DrawProcessOccupiedJunctionField(SerializedProperty element)
@@ -1045,7 +1496,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             EditorGUILayout.EndHorizontal();
             if (EditorGUI.EndChangeCheck())
             {
-                Undo.RecordObject(_map, "Set ProcessOccupiedJunctionLogicalId");
+                RecordMapUndo("Set ProcessOccupiedJunctionLogicalId");
                 node.ProcessOccupiedJunctionLogicalId = next?.Trim() ?? string.Empty;
                 _map.Nodes[_selectedNode] = node;
                 EditorUtility.SetDirty(_map);
@@ -1121,7 +1572,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
-            Undo.RecordObject(_map, "Set ProcessOccupiedJunctionLogicalId");
+            RecordMapUndo("Set ProcessOccupiedJunctionLogicalId");
             var node = _map.Nodes[nodeIndex];
             node.ProcessOccupiedJunctionLogicalId = logicalId ?? string.Empty;
             _map.Nodes[nodeIndex] = node;
@@ -1137,9 +1588,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             {
                 EditorGUILayout.PropertyField(prop, new GUIContent(label));
             }
-            else if (relativePath == "ProcessOccupiedJunctionLogicalId")
+            else if (relativePath == "ProcessOccupiedJunctionLogicalId"
+                     || relativePath == "SupportedInfeedLogicalIds")
             {
-                // 由 DrawProcessOccupiedJunctionField 兜底；此处不再静默跳过。
+                // 由专用绘制方法兜底；此处不再静默跳过。
                 EditorGUILayout.HelpBox($"缺少序列化字段：{relativePath}", MessageType.Warning);
             }
         }
@@ -1281,10 +1733,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     _hoverIndex = -1;
                 }
             }
-            else if (_dragMode == DragMode.Move && _moveIndex >= 0 && _dragMoved)
+            else if (_dragMode == DragMode.Move && _moveGroup.Count > 0 && _dragMoved)
             {
-                var graph = _moveOriginGraph + LocalDeltaToGraph(local - _moveOriginLocal);
-                WriteNodeCenter(_moveIndex, graph);
+                var delta = LocalDeltaToGraph(local - _moveOriginLocal);
+                for (var i = 0; i < _moveGroup.Count; i++)
+                {
+                    WriteNodeCenter(_moveGroup[i], _moveGroupOrigins[i] + delta);
+                }
             }
         }
 
@@ -1335,30 +1790,51 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     if (_hoverIndex >= 0)
                     {
                         ClearEdgeSelection();
-                        _selectedNode = _hoverIndex;
                         if (_oneWayPathTool)
                         {
+                            SetSingleNodeSelection(_hoverIndex);
                             HandleOneWayPathClick(_hoverIndex);
                             _dragMode = DragMode.None;
                         }
                         else if (_moveTool && !_sceneView)
                         {
-                            _dragMode = DragMode.Move;
-                            _moveIndex = _hoverIndex;
-                            TryGetGraphPosition(_hoverIndex, out _moveOriginGraph);
-                            _moveOriginLocal = local;
+                            if (additive)
+                            {
+                                ToggleNodeSelection(_hoverIndex);
+                            }
+                            else if (!IsNodeSelected(_hoverIndex))
+                            {
+                                // 点到未选中的点：只选它。
+                                SetSingleNodeSelection(_hoverIndex);
+                            }
+                            else
+                            {
+                                // 点到已多选中的点：保留整组，准备一起拖。
+                                _selectedNode = _hoverIndex;
+                            }
+
+                            if (IsNodeSelected(_hoverIndex))
+                            {
+                                BeginMoveDrag(_hoverIndex, local);
+                            }
+                            else
+                            {
+                                _dragMode = DragMode.None;
+                                ClearMoveGroup();
+                            }
                         }
                         else
                         {
+                            SetSingleNodeSelection(_hoverIndex);
                             _dragMode = DragMode.Connect;
                             _connectFrom = _hoverIndex;
                             _activeReverse = e.shift && !_connectBidirectional;
                         }
                     }
-                    else if (_showTopology && _hasHoverSegment)
+                    else if (_showTopology && _hasHoverSegment && !(_moveTool && !_sceneView))
                     {
                         SelectSegment(_hoverSegment.Key, additive);
-                        _selectedNode = -1;
+                        ClearNodeSelection();
                         _connectFrom = -1;
                         _dragMode = DragMode.None;
                     }
@@ -1366,7 +1842,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     {
                         if (!additive)
                         {
-                            _selectedNode = -1;
+                            ClearNodeSelection();
                             ClearEdgeSelection();
                             if (_oneWayPathTool)
                             {
@@ -1417,6 +1893,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 {
                     EditorUtility.SetDirty(_map);
                     _serializedMap?.Update();
+                    // 拖拽里只补丁了单点缓存；松手后让坐标戳失效，避免与 stamp 不一致。
+                    _graphStamp = unchecked(_graphStamp + 1);
+                    _localCacheGraphStamp = int.MinValue;
+                    ClearMoveGroup();
                 }
 
                 _dragMode = DragMode.None;
@@ -1431,6 +1911,28 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
         private bool HandleKeyDown(Event e)
         {
+            if (e.keyCode == KeyCode.Z && (e.control || e.command) && !e.alt)
+            {
+                if (e.shift)
+                {
+                    PerformEditorRedo();
+                }
+                else
+                {
+                    PerformEditorUndo();
+                }
+
+                e.Use();
+                return true;
+            }
+
+            if (e.keyCode == KeyCode.Y && (e.control || e.command) && !e.shift && !e.alt)
+            {
+                PerformEditorRedo();
+                e.Use();
+                return true;
+            }
+
             if (e.keyCode == KeyCode.Escape)
             {
                 _connectFrom = -1;
@@ -1440,7 +1942,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 }
                 else
                 {
-                    _selectedNode = -1;
+                    ClearNodeSelection();
                     ClearEdgeSelection();
                 }
 
@@ -1454,6 +1956,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 if (_hasEdgeSelection)
                 {
                     DeleteSelectedSegments();
+                    e.Use();
+                    return true;
+                }
+
+                if (_selectedNode >= 0)
+                {
+                    DeleteSelectedNode();
                     e.Use();
                     return true;
                 }
@@ -1553,7 +2062,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
         private void FinishBoxSelect()
         {
-            if (!_dragMoved || !_showTopology)
+            if (!_dragMoved)
             {
                 return;
             }
@@ -1564,11 +2073,56 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
+            // 移动模式：框选节点，便于整组拖拽。
+            if (_moveTool && !_sceneView)
+            {
+                EnsureLocalPoints();
+                if (!_boxSelectAdditive)
+                {
+                    ClearNodeSelection();
+                    ClearEdgeSelection();
+                }
+
+                var nodeHits = 0;
+                var lastHit = -1;
+                var count = _map?.Nodes?.Length ?? 0;
+                for (var i = 0; i < count; i++)
+                {
+                    if ((uint)i >= (uint)_localValid.Length || !_localValid[i])
+                    {
+                        continue;
+                    }
+
+                    var p = _localPoints[i];
+                    if (!box.Contains(p))
+                    {
+                        continue;
+                    }
+
+                    AddNodeSelection(i);
+                    lastHit = i;
+                    nodeHits++;
+                }
+
+                if (nodeHits > 0)
+                {
+                    _selectedNode = lastHit;
+                    ShowNotification(new GUIContent($"框选节点 {nodeHits} 个"));
+                }
+
+                return;
+            }
+
+            if (!_showTopology)
+            {
+                return;
+            }
+
             EnsureTopology();
             if (!_boxSelectAdditive)
             {
                 ClearEdgeSelection();
-                _selectedNode = -1;
+                ClearNodeSelection();
             }
 
             var hits = 0;
@@ -1586,7 +2140,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
             if (hits > 0)
             {
-                _selectedNode = -1;
+                ClearNodeSelection();
                 ShowNotification(new GUIContent($"框选路段 {hits} 条"));
             }
         }
@@ -1597,6 +2151,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             GUI.BeginClip(_canvasRect);
             // 线性空间里 Handles 会把亮黄画成深绿。纯色块走 DrawRect；
             // 圆和箭头用白底蒙版乘 GUI.color，和 DrawRect 同一条着色路径。
+            EnsureLocalPoints();
             DrawGrid();
             if (_showTopology)
             {
@@ -1645,13 +2200,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             var x0 = Mathf.Floor(minX / step) * step;
             var y0 = Mathf.Floor(minY / step) * step;
             var guard = 0;
-            for (var x = x0; x <= maxX + step * 0.01f && guard < 240; x += step, guard++)
+            for (var x = x0; x <= maxX + step * 0.01f && guard < MaxGridLinesPerAxis; x += step, guard++)
             {
                 DrawGuiLine(GraphToLocal(new Vector2(x, minY)), GraphToLocal(new Vector2(x, maxY)), GridColor, 1f);
             }
 
             guard = 0;
-            for (var y = y0; y <= maxY + step * 0.01f && guard < 240; y += step, guard++)
+            for (var y = y0; y <= maxY + step * 0.01f && guard < MaxGridLinesPerAxis; y += step, guard++)
             {
                 DrawGuiLine(GraphToLocal(new Vector2(minX, y)), GraphToLocal(new Vector2(maxX, y)), GridColor, 1f);
             }
@@ -1664,60 +2219,80 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
+            EnsureLocalPoints();
             var radius = GetNodeRadius();
             _hiddenAnchorCount = 0;
-            for (var i = 0; i < _map.Nodes.Length; i++)
+            // 先画普通节点，再画选中/悬停，避免新增或选中点被密集节点完全盖住。
+            for (var pass = 0; pass < 2; pass++)
             {
-                if (!TryGetGraphPosition(i, out var graph))
+                for (var i = 0; i < _map.Nodes.Length; i++)
                 {
-                    _hiddenAnchorCount++;
-                    continue;
-                }
+                    if ((uint)i >= (uint)_localValid.Length || !_localValid[i])
+                    {
+                        if (pass == 0)
+                        {
+                            _hiddenAnchorCount++;
+                        }
 
-                var p = GraphToLocal(graph);
-                if (!IsLocalVisible(p, ViewCullPadding))
-                {
-                    continue;
-                }
+                        continue;
+                    }
 
-                var selected = i == _selectedNode;
-                var hovered = i == _hoverIndex;
-                var connectFrom = _dragMode == DragMode.Connect && i == _connectFrom;
-                var dropTarget = _dragMode == DragMode.Connect && i == _hoverIndex && i != _connectFrom;
-                var oneWayFrom = _oneWayPathTool && i == _oneWayPathFrom;
-                var oneWayTo = _oneWayPathTool && _oneWayPathFrom >= 0 && i == _hoverIndex && i != _oneWayPathFrom;
-                var fill = NodeColor(in _map.Nodes[i]);
-                if (connectFrom || oneWayFrom)
-                {
-                    fill = new Color(0.18f, 0.55f, 0.28f, 1f);
-                }
+                    var selected = IsNodeSelected(i);
+                    var hovered = i == _hoverIndex;
+                    var connectFrom = _dragMode == DragMode.Connect && i == _connectFrom;
+                    var dropTarget = _dragMode == DragMode.Connect && i == _hoverIndex && i != _connectFrom;
+                    var oneWayFrom = _oneWayPathTool && i == _oneWayPathFrom;
+                    var oneWayTo = _oneWayPathTool && _oneWayPathFrom >= 0 && i == _hoverIndex && i != _oneWayPathFrom;
+                    var emphasize = selected || hovered || connectFrom || dropTarget || oneWayFrom || oneWayTo;
+                    if (pass == 0 && emphasize)
+                    {
+                        continue;
+                    }
 
-                if (dropTarget || oneWayTo)
-                {
-                    fill = new Color(0.95f, 0.75f, 0.2f, 1f);
-                }
+                    if (pass == 1 && !emphasize)
+                    {
+                        continue;
+                    }
 
-                var outline = selected || hovered || connectFrom || dropTarget || oneWayFrom || oneWayTo
-                    ? Color.white
-                    : new Color(0.75f, 0.86f, 0.94f, 0.9f);
-                if (dropTarget)
-                {
-                    DrawGuiDisc(p, radius + 6f, new Color(1f, 0.85f, 0.2f, 0.95f));
-                }
+                    var p = _localPoints[i];
+                    if (!IsLocalVisible(p, ViewCullPadding))
+                    {
+                        continue;
+                    }
 
-                DrawGuiDisc(p, radius + (selected ? 2.5f : 1.25f), outline);
-                DrawGuiDisc(p, radius, fill);
+                    var fill = NodeColor(in _map.Nodes[i]);
+                    if (connectFrom || oneWayFrom)
+                    {
+                        fill = new Color(0.18f, 0.55f, 0.28f, 1f);
+                    }
 
-                if (_map.Nodes[i].Kind == SimConveyorNodeKind.PickupPoint && !connectFrom && !dropTarget)
-                {
-                    var markRect = new Rect(p.x - 12f, p.y - 8f, 24f, 16f);
-                    GUI.Label(markRect, PickupMarkContent(_map.Nodes[i].StackerInteractionMode), GetLabelStyle());
-                }
+                    if (dropTarget || oneWayTo)
+                    {
+                        fill = new Color(0.95f, 0.75f, 0.2f, 1f);
+                    }
 
-                if (_showLabels || hovered || selected || connectFrom)
-                {
-                    var labelRect = new Rect(p.x - 80f, p.y + radius + 2f, 160f, 16f);
-                    GUI.Label(labelRect, NodeLabel(i), GetLabelStyle());
+                    var outline = emphasize
+                        ? Color.white
+                        : new Color(0.75f, 0.86f, 0.94f, 0.9f);
+                    if (dropTarget)
+                    {
+                        DrawGuiDisc(p, radius + 6f, new Color(1f, 0.85f, 0.2f, 0.95f));
+                    }
+
+                    DrawGuiDisc(p, radius + (selected ? 2.5f : 1.25f), outline);
+                    DrawGuiDisc(p, radius, fill);
+
+                    if (_map.Nodes[i].Kind == SimConveyorNodeKind.PickupPoint && !connectFrom && !dropTarget)
+                    {
+                        var markRect = new Rect(p.x - 12f, p.y - 8f, 24f, 16f);
+                        GUI.Label(markRect, PickupMarkContent(_map.Nodes[i].StackerInteractionMode), GetLabelStyle());
+                    }
+
+                    if (_showLabels || hovered || selected || connectFrom)
+                    {
+                        var labelRect = new Rect(p.x - 80f, p.y + radius + 2f, 160f, 16f);
+                        GUI.Label(labelRect, NodeLabel(i), GetLabelStyle());
+                    }
                 }
             }
         }
@@ -1733,13 +2308,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
         private void DrawSegment(Segment seg)
         {
-            if (!TryGetGraphPosition(seg.Lo, out var g0) || !TryGetGraphPosition(seg.Hi, out var g1))
+            EnsureLocalPoints();
+            if ((uint)seg.Lo >= (uint)_localValid.Length
+                || (uint)seg.Hi >= (uint)_localValid.Length
+                || !_localValid[seg.Lo]
+                || !_localValid[seg.Hi])
             {
                 return;
             }
 
-            var a = GraphToLocal(g0);
-            var b = GraphToLocal(g1);
+            var a = _localPoints[seg.Lo];
+            var b = _localPoints[seg.Hi];
             if (!IsSegmentVisible(a, b, 12f))
             {
                 return;
@@ -1938,7 +2517,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 menu.AddItem(new GUIContent($"选中 {NodeLabel(index)}"), false, () =>
                 {
                     ClearEdgeSelection();
-                    _selectedNode = index;
+                    SetSingleNodeSelection(index);
                     Repaint();
                 });
                 menu.AddItem(new GUIContent("聚焦场景锚点"), false, () => FrameAnchor(index));
@@ -1947,7 +2526,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     _oneWayPathTool = true;
                     _moveTool = false;
                     ClearEdgeSelection();
-                    _selectedNode = index;
+                    SetSingleNodeSelection(index);
                     _oneWayPathFrom = index;
                     SetStatus($"已选起点 {NodeLabel(index)}，再点终点即可改单向。");
                     Repaint();
@@ -1962,7 +2541,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
                 menu.AddItem(new GUIContent("删除节点"), false, () =>
                 {
-                    _selectedNode = index;
+                    SetSingleNodeSelection(index);
                     DeleteSelectedNode();
                 });
             }
@@ -2018,9 +2597,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             }
         }
 
-        private void AddNode(SimConveyorNodeKind kind)
+        private void AddNode(SimConveyorNodeKind kind) =>
+            AddNode(kind, SimStackerInteractionMode.Both);
+
+        private void AddNode(SimConveyorNodeKind kind, SimStackerInteractionMode pickupMode)
         {
-            Undo.RecordObject(_map, "添加节点");
+            RecordMapUndo("添加节点");
             var list = _map.Nodes != null
                 ? new List<SimConveyorMapNode>(_map.Nodes)
                 : new List<SimConveyorMapNode>();
@@ -2035,7 +2617,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             {
                 case SimConveyorNodeKind.PickupPoint:
                     node.StackerId = 0;
-                    node.StackerInteractionMode = SimStackerInteractionMode.Both;
+                    node.StackerInteractionMode = pickupMode;
                     break;
                 case SimConveyorNodeKind.ProcessStation:
                     node.ProcessMode = SimConveyorProcessMode.Dwell;
@@ -2046,20 +2628,28 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     break;
             }
 
-            var graph = ViewCenterGraph();
-            graph += new Vector2((list.Count % 5) * 28f, (list.Count % 5) * 18f);
+            var graph = FindFreeAddNodeGraphPosition(list);
             node.EditorPosition = graph - LegacyHalf;
             list.Add(node);
             _map.Nodes = list.ToArray();
             EditorUtility.SetDirty(_map);
+            InvalidateTopologyAndGraph();
             _serializedMap = new SerializedObject(_map);
             _deferApply = true;
             ClearEdgeSelection();
-            _selectedNode = list.Count - 1;
-            var message = $"已添加{KindLabel(kind)}：{logicalId}";
+            SetSingleNodeSelection(list.Count - 1);
+            var modeLabel = kind == SimConveyorNodeKind.PickupPoint
+                ? PickupModeLabel(pickupMode)
+                : KindLabel(kind);
+            var message = $"已添加{modeLabel}：{logicalId}";
             if (_sceneView)
             {
                 message += "。场景俯视只显示同名锚点，可关闭「场景俯视」查看画布位置。";
+            }
+            else
+            {
+                // 画布模式下立刻聚焦新节点，避免落在密集区以为没加上。
+                _fitPending = true;
             }
 
             SetStatus(message);
@@ -2078,14 +2668,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             var needForward = !ConveyorMapEditorEdgeUtility.HasDirectedEdge(_map, fromId, toId);
             var needBack = both && !ConveyorMapEditorEdgeUtility.HasDirectedEdge(_map, toId, fromId);
             SelectSegment(Pack(Math.Min(fromIndex, toIndex), Math.Max(fromIndex, toIndex)), false);
-            _selectedNode = -1;
+            ClearNodeSelection();
             if (!needForward && !needBack)
             {
                 SetStatus("该方向的路段已存在。");
                 return;
             }
 
-            Undo.RecordObject(_map, "连线");
+            RecordMapUndo("连线");
             var distance = ResolveNewDistance(fromId, toId);
             var edges = _map.Edges != null
                 ? new List<SimConveyorMapEdge>(_map.Edges)
@@ -2102,6 +2692,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
             _map.Edges = edges.ToArray();
             EditorUtility.SetDirty(_map);
+            InvalidateTopologyAndGraph();
             _serializedMap?.Update();
             _deferApply = true;
             var fromLabel = NodeLabel(fromIndex);
@@ -2151,7 +2742,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             }
 
             var label = NodeLabel(_selectedNode);
-            Undo.RecordObject(_map, "删除节点");
+            RecordMapUndo("删除节点");
             var id = _map.Nodes[_selectedNode].NodeId?.Trim();
             var nodes = new List<SimConveyorMapNode>(_map.Nodes);
             nodes.RemoveAt(_selectedNode);
@@ -2174,9 +2765,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             }
 
             EditorUtility.SetDirty(_map);
+            InvalidateTopologyAndGraph();
             _serializedMap = new SerializedObject(_map);
             _deferApply = true;
-            _selectedNode = -1;
+            ClearNodeSelection();
             ClearEdgeSelection();
             SetStatus($"已删除节点 {label}");
             Repaint();
@@ -2189,7 +2781,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
-            Undo.RecordObject(_map, _selectedKeys.Count > 1 ? "批量删除路段" : "删除路段");
+            RecordMapUndo(_selectedKeys.Count > 1 ? "批量删除路段" : "删除路段");
             var remove = new HashSet<long>(_selectedKeys);
             var kept = new List<SimConveyorMapEdge>(_map.Edges.Length);
             var removedPairs = new HashSet<long>();
@@ -2213,6 +2805,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
             _map.Edges = kept.ToArray();
             EditorUtility.SetDirty(_map);
+            InvalidateTopologyAndGraph();
             _serializedMap?.Update();
             _deferApply = true;
             ClearEdgeSelection();
@@ -2247,7 +2840,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
-            Undo.RecordObject(_map, targets.Count > 1 ? "批量反转路段" : "反转路段");
+            RecordMapUndo(targets.Count > 1 ? "批量反转路段" : "反转路段");
             var edges = _map.Edges;
             var reversed = 0;
             var consumed = new HashSet<long>();
@@ -2274,6 +2867,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
             _map.Edges = edges;
             EditorUtility.SetDirty(_map);
+            InvalidateTopologyAndGraph();
             _serializedMap?.Update();
             _deferApply = true;
             var text = $"已反转 {reversed} 条单向路段";
@@ -2316,7 +2910,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
-            Undo.RecordObject(_map, "最短路径改为单向");
+            RecordMapUndo("最短路径改为单向");
             var changed = ConveyorMapEditorEdgeUtility.ApplyOneWayAlongPath(_map, path);
             EditorUtility.SetDirty(_map);
             _serializedMap = new SerializedObject(_map);
@@ -2324,7 +2918,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             _topologyReady = false;
             EnsureTopology();
             SelectPathSegments(path);
-            _selectedNode = -1;
+            ClearNodeSelection();
             _oneWayPathFrom = fromIndex;
             UpdateOneWayPreview();
             var hops = path.Count - 1;
@@ -2458,7 +3052,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
-            Undo.RecordObject(_map, "自动排版");
+            RecordMapUndo("自动排版");
             var layers = ConveyorMapLayerLayoutUtility.ComputeLayers(_map);
             const float layerGapX = 220f;
             const float nodeGapY = 90f;
@@ -2473,6 +3067,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             }
 
             EditorUtility.SetDirty(_map);
+            InvalidateTopologyAndGraph();
             _serializedMap?.Update();
             _deferApply = true;
             _fitPending = true;
@@ -2521,7 +3116,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
             var median = MedianNearestGap(placed);
             var scale = median > 0.05f ? 140f / median : 40f;
-            Undo.RecordObject(_map, "按锚点重排画布");
+            RecordMapUndo("按锚点重排画布");
             var min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
             var graph = new Vector2[placed.Count];
             for (var i = 0; i < placed.Count; i++)
@@ -2538,6 +3133,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             }
 
             EditorUtility.SetDirty(_map);
+            InvalidateTopologyAndGraph();
             _serializedMap?.Update();
             _deferApply = true;
             SetStatus($"已按锚点重排 {indices.Count} 个节点的画布坐标。");
@@ -2557,7 +3153,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
-            Undo.RecordObject(_map, "从场景读取路段距离");
+            RecordMapUndo("从场景读取路段距离");
             if (!ConveyorMapSceneDistanceUtility.TryApplyEdgeDistanceFromScene(
                     _map,
                     _sceneAnchorRoot,
@@ -2584,7 +3180,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
-            Undo.RecordObject(_map, "批量从场景反推路段距离");
+            RecordMapUndo("批量从场景反推路段距离");
             var updated = ConveyorMapSceneDistanceUtility.ApplyAllEdgeDistancesFromScene(
                 _map,
                 _sceneAnchorRoot,
@@ -2663,18 +3259,41 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
         private void WriteNodeCenter(int index, Vector2 center)
         {
-            if (!TryGetNodeId(index, out var id))
+            if (_map?.Nodes == null || (uint)index >= (uint)_map.Nodes.Length)
             {
                 return;
             }
 
             if (!_moveUndoRecorded)
             {
-                Undo.RecordObject(_map, "移动节点");
+                RecordMapUndo(_moveGroup.Count > 1 ? "移动多个节点" : "移动节点");
                 _moveUndoRecorded = true;
             }
 
-            _map.SetNodePosition(id, center - LegacyHalf);
+            // 按索引写回，避免 NodeId 空白/Trim 不一致导致 SetNodePosition 静默失败。
+            var node = _map.Nodes[index];
+            node.EditorPosition = center - LegacyHalf;
+            _map.Nodes[index] = node;
+
+            // 拖拽中只改当前点缓存，禁止每像素全量重建双库图。
+            if (_graphPoints.Length == _map.Nodes.Length)
+            {
+                _graphPoints[index] = center;
+                _graphValid[index] = true;
+            }
+
+            if (_localPoints.Length == _map.Nodes.Length)
+            {
+                _localPoints[index] = GraphToLocal(center);
+                _localValid[index] = true;
+            }
+        }
+
+        private void InvalidateTopologyAndGraph()
+        {
+            _topologyReady = false;
+            _graphReady = false;
+            _localCacheGraphStamp = int.MinValue;
         }
 
         private void EnsureTopology()
@@ -2688,17 +3307,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 return;
             }
 
-            var stamp = ComputeTopologyStamp();
-            if (_topologyReady && stamp == _topologyStamp)
+            // 脏标记驱动重建；避免双库规模下每帧全量哈希 NodeId/LogicalId。
+            if (_topologyReady)
             {
                 return;
             }
 
             _topologyReady = true;
-            _topologyStamp = stamp;
+            _topologyStamp = ComputeTopologyStamp();
             _graphReady = false;
+            _localCacheGraphStamp = int.MinValue;
             RebuildNodeCache();
             RebuildSegments();
+            PruneEdgeSelection();
+            PruneNodeSelection();
         }
 
         private int ComputeTopologyStamp()
@@ -2903,7 +3525,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             }
 
             AddSegmentKey(key);
-            _selectedNode = -1;
+            ClearNodeSelection();
             Repaint();
         }
 
@@ -2931,6 +3553,132 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             _selectedKeySet.Clear();
         }
 
+        private bool IsNodeSelected(int index) => _selectedNodeSet.Contains(index);
+
+        private void ClearNodeSelection()
+        {
+            _selectedNodes.Clear();
+            _selectedNodeSet.Clear();
+            _selectedNode = -1;
+        }
+
+        private void ClearMoveGroup()
+        {
+            _moveGroup.Clear();
+            _moveGroupOrigins.Clear();
+            _moveIndex = -1;
+        }
+
+        private void SetSingleNodeSelection(int index)
+        {
+            _selectedNodes.Clear();
+            _selectedNodeSet.Clear();
+            if (index < 0)
+            {
+                _selectedNode = -1;
+                return;
+            }
+
+            _selectedNodes.Add(index);
+            _selectedNodeSet.Add(index);
+            _selectedNode = index;
+        }
+
+        private void AddNodeSelection(int index)
+        {
+            if (index < 0 || !_selectedNodeSet.Add(index))
+            {
+                return;
+            }
+
+            _selectedNodes.Add(index);
+            _selectedNode = index;
+        }
+
+        private void ToggleNodeSelection(int index)
+        {
+            if (index < 0)
+            {
+                return;
+            }
+
+            if (_selectedNodeSet.Contains(index))
+            {
+                _selectedNodeSet.Remove(index);
+                _selectedNodes.Remove(index);
+                if (_selectedNode == index)
+                {
+                    _selectedNode = _selectedNodes.Count > 0 ? _selectedNodes[_selectedNodes.Count - 1] : -1;
+                }
+            }
+            else
+            {
+                AddNodeSelection(index);
+            }
+        }
+
+        private void BeginMoveDrag(int primaryIndex, Vector2 local)
+        {
+            _dragMode = DragMode.Move;
+            _moveIndex = primaryIndex;
+            _moveOriginLocal = local;
+            ClearMoveGroup();
+            _moveIndex = primaryIndex;
+            EnsureGraphPoints();
+            if (!TryGetGraphPosition(primaryIndex, out _moveOriginGraph))
+            {
+                _dragMode = DragMode.None;
+                return;
+            }
+
+            // 整组：当前多选（至少含 primary）；否则只拖这一个。
+            if (_selectedNodeSet.Count > 0 && IsNodeSelected(primaryIndex))
+            {
+                for (var i = 0; i < _selectedNodes.Count; i++)
+                {
+                    var idx = _selectedNodes[i];
+                    if (!TryGetGraphPosition(idx, out var origin))
+                    {
+                        continue;
+                    }
+
+                    _moveGroup.Add(idx);
+                    _moveGroupOrigins.Add(origin);
+                }
+            }
+
+            if (_moveGroup.Count == 0)
+            {
+                _moveGroup.Add(primaryIndex);
+                _moveGroupOrigins.Add(_moveOriginGraph);
+            }
+        }
+
+        private void PruneNodeSelection()
+        {
+            var count = _map?.Nodes?.Length ?? 0;
+            for (var i = _selectedNodes.Count - 1; i >= 0; i--)
+            {
+                var idx = _selectedNodes[i];
+                if ((uint)idx < (uint)count)
+                {
+                    continue;
+                }
+
+                _selectedNodeSet.Remove(idx);
+                _selectedNodes.RemoveAt(i);
+            }
+
+            if (_selectedNode >= count)
+            {
+                _selectedNode = _selectedNodes.Count > 0 ? _selectedNodes[_selectedNodes.Count - 1] : -1;
+            }
+            else if (_selectedNode >= 0 && !_selectedNodeSet.Contains(_selectedNode))
+            {
+                _selectedNode = _selectedNodes.Count > 0 ? _selectedNodes[_selectedNodes.Count - 1] : -1;
+            }
+        }
+
         private void PruneEdgeSelection()
         {
             for (var i = _selectedKeys.Count - 1; i >= 0; i--)
@@ -2948,23 +3696,23 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         private bool TryHitSegment(Vector2 local, out Segment hit)
         {
             EnsureTopology();
-            EnsureGraphPoints();
+            EnsureLocalPoints();
             hit = default;
             var best = EdgeHitWidth;
             var found = false;
             for (var i = 0; i < _segments.Count; i++)
             {
                 var seg = _segments[i];
-                if ((uint)seg.Lo >= (uint)_graphValid.Length
-                    || (uint)seg.Hi >= (uint)_graphValid.Length
-                    || !_graphValid[seg.Lo]
-                    || !_graphValid[seg.Hi])
+                if ((uint)seg.Lo >= (uint)_localValid.Length
+                    || (uint)seg.Hi >= (uint)_localValid.Length
+                    || !_localValid[seg.Lo]
+                    || !_localValid[seg.Hi])
                 {
                     continue;
                 }
 
-                var a = GraphToLocal(_graphPoints[seg.Lo]);
-                var b = GraphToLocal(_graphPoints[seg.Hi]);
+                var a = _localPoints[seg.Lo];
+                var b = _localPoints[seg.Hi];
                 if (local.x < (a.x < b.x ? a.x : b.x) - best
                     || local.x > (a.x > b.x ? a.x : b.x) + best
                     || local.y < (a.y < b.y ? a.y : b.y) - best
@@ -2999,17 +3747,24 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
 
         private int HitTestNode(Vector2 local, float maxDist)
         {
-            EnsureGraphPoints();
+            EnsureLocalPoints();
             var best = -1;
             var bestSq = maxDist * maxDist;
-            for (var i = 0; i < _graphValid.Length; i++)
+            var pad = maxDist + 4f;
+            for (var i = 0; i < _localValid.Length; i++)
             {
-                if (!_graphValid[i])
+                if (!_localValid[i])
                 {
                     continue;
                 }
 
-                var delta = GraphToLocal(_graphPoints[i]) - local;
+                var p = _localPoints[i];
+                if (!IsLocalVisible(p, pad))
+                {
+                    continue;
+                }
+
+                var delta = p - local;
                 var distSq = delta.sqrMagnitude;
                 if (distSq > bestSq)
                 {
@@ -3039,21 +3794,22 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         private void EnsureGraphPoints()
         {
             EnsureTopology();
-            var refreshAnchors = _sceneView && _anchorsDirty;
-            if (refreshAnchors)
+            if (_sceneView && _anchorsDirty)
             {
                 EnsureAnchors();
+                _graphReady = false;
+                _localCacheGraphStamp = int.MinValue;
             }
 
             var count = _map?.Nodes?.Length ?? 0;
-            var stamp = ComputeGraphStamp();
-            if (!refreshAnchors && _graphReady && stamp == _graphStamp && _graphPoints.Length == count)
+            if (_graphReady && _graphPoints.Length == count)
             {
                 return;
             }
 
             _graphReady = true;
-            _graphStamp = stamp;
+            _graphStamp = ComputeGraphStamp();
+            _localCacheGraphStamp = int.MinValue;
             if (_graphPoints.Length != count)
             {
                 _graphPoints = new Vector2[count];
@@ -3090,6 +3846,43 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 }
             }
         }
+
+        private void EnsureLocalPoints()
+        {
+            EnsureGraphPoints();
+            var count = _graphPoints.Length;
+            if (_localPoints.Length != count)
+            {
+                _localPoints = new Vector2[count];
+                _localValid = new bool[count];
+                _localCacheGraphStamp = int.MinValue;
+            }
+
+            if (_localCacheGraphStamp == _graphStamp
+                && Mathf.Approximately(_localCacheZoom, _zoom)
+                && _localCachePan == _pan
+                && Mathf.Approximately(_localCacheYaw, _viewYawDegrees)
+                && _localCacheScene == _sceneView)
+            {
+                return;
+            }
+
+            _localCacheGraphStamp = _graphStamp;
+            _localCacheZoom = _zoom;
+            _localCachePan = _pan;
+            _localCacheYaw = _viewYawDegrees;
+            _localCacheScene = _sceneView;
+            for (var i = 0; i < count; i++)
+            {
+                var valid = _graphValid[i];
+                _localValid[i] = valid;
+                if (valid)
+                {
+                    _localPoints[i] = GraphToLocal(_graphPoints[i]);
+                }
+            }
+        }
+
 
         private int ComputeGraphStamp()
         {
@@ -3159,6 +3952,58 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         {
             EnsureTopology();
             return _gatedSegmentKeys.Contains(seg.Key);
+        }
+
+        /// <summary>
+        /// 在视口中心附近找一块不与现有节点中心重叠的落点，避免新增节点被完全盖住。
+        /// </summary>
+        private Vector2 FindFreeAddNodeGraphPosition(IReadOnlyList<SimConveyorMapNode> existing)
+        {
+            var origin = ViewCenterGraph();
+            var minSep = Mathf.Max(GetNodeRadius() * 2.5f / Mathf.Max(_zoom, 0.05f), 36f);
+            var minSepSq = minSep * minSep;
+            // 螺旋偏移：先试中心，再向外扩，保证双库密集区也能看见新点。
+            for (var ring = 0; ring < 24; ring++)
+            {
+                var steps = ring == 0 ? 1 : ring * 6;
+                for (var step = 0; step < steps; step++)
+                {
+                    Vector2 candidate;
+                    if (ring == 0)
+                    {
+                        candidate = origin;
+                    }
+                    else
+                    {
+                        var angle = (step / (float)steps) * Mathf.PI * 2f;
+                        var radius = ring * minSep;
+                        candidate = origin + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+                    }
+
+                    var blocked = false;
+                    if (existing != null)
+                    {
+                        for (var i = 0; i < existing.Count; i++)
+                        {
+                            var other = existing[i].EditorPosition + LegacyHalf;
+                            if ((other - candidate).sqrMagnitude < minSepSq)
+                            {
+                                blocked = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!blocked)
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            // 实在挤不下：仍相对中心做可见偏移，避免叠在同一像素。
+            var n = existing?.Count ?? 0;
+            return origin + new Vector2(minSep * (1.5f + n % 7), minSep * (1.2f + n % 5));
         }
 
         private Vector2 ViewCenterGraph()
@@ -3491,6 +4336,19 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     return OutboundMark;
                 default:
                     return BothMark;
+            }
+        }
+
+        private static string PickupModeLabel(SimStackerInteractionMode mode)
+        {
+            switch (mode)
+            {
+                case SimStackerInteractionMode.InboundOnly:
+                    return "堆垛机交互点·只能入库";
+                case SimStackerInteractionMode.OutboundOnly:
+                    return "堆垛机交互点·只能出库";
+                default:
+                    return "堆垛机交互点·出入库皆可";
             }
         }
 
@@ -3863,6 +4721,25 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             var length = delta.magnitude;
             if (length < 0.5f || width <= 0f || Event.current.type != EventType.Repaint)
             {
+                return;
+            }
+
+            // 正交线段走 DrawRect，避免每条边 GUIUtility.RotateAroundPivot。
+            var ax = Mathf.Abs(delta.x);
+            var ay = Mathf.Abs(delta.y);
+            if (ay <= ax * 0.02f)
+            {
+                var x0 = from.x < to.x ? from.x : to.x;
+                var y = (from.y + to.y) * 0.5f;
+                EditorGUI.DrawRect(new Rect(x0, y - width * 0.5f, length, width), color);
+                return;
+            }
+
+            if (ax <= ay * 0.02f)
+            {
+                var y0 = from.y < to.y ? from.y : to.y;
+                var x = (from.x + to.x) * 0.5f;
+                EditorGUI.DrawRect(new Rect(x - width * 0.5f, y0, width, length), color);
                 return;
             }
 
