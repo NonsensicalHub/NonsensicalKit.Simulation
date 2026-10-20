@@ -12,6 +12,11 @@ namespace NonsensicalKit.ScriptAnimation
     {
         protected override void AfterNoActiveClip(Playable playable, ScriptAnimActor actor, FrameData info)
         {
+            // 轨上还没有任何会写位置的 Clip，且接下来是「仅旋转」：不要钉 Home，
+            // 否则 Clip 开始前物体已被拉回落点，仅旋转看起来和维持位置一样。
+            if (LeavesPositionUntouched())
+                return;
+
             // 首个 Clip 之前：车体/机构回到组件 Home 与行驶默认态，避免任意 seek 残留
             if (actor is ForkliftAnim forklift)
                 forklift.ApplyDefaultTravelPose();
@@ -158,26 +163,77 @@ namespace NonsensicalKit.ScriptAnimation
             }
             var inputPlayable = (ScriptPlayable<RotateBehaviour>)input;
             RotateBehaviour behaviour = inputPlayable.GetBehaviour();
-            if (behaviour?.Data == null)
+            RotateClipData data = behaviour?.Data;
+            if (timelineClip?.asset is RotateClip rotateAsset && rotateAsset.Data != null)
+                data = rotateAsset.Data;
+            if (behaviour == null || data == null)
                 return true;
+
+            float normalized = NormalizedTime(inputPlayable, holdEnd);
+            if (!RotateSampler.HoldsPosition(data))
+            {
+                RotateSampler.Sample(rail, data, normalized);
+                TryApplyWorldRotationLock(rail);
+                return true;
+            }
+
             IExposedPropertyTable resolver = Director != null
                 ? Director
                 : (IExposedPropertyTable)null;
+            if (behaviour.Data == null)
+                behaviour.Data = data;
             if (info.seekOccurred)
                 behaviour.PositionResolved = false;
 
-            float normalized = NormalizedTime(inputPlayable, holdEnd);
-            // 任意 seek 须同时钉住落点；RotationOnly 也不再依赖场景当前位置
+            // 维持位置：任意 seek 都钉住开场落点，不读场景当前位置
             if (!behaviour.EnsurePositionResolved(timelineClip, rail, resolver))
                 return true;
             RotateSampler.Sample(
                 rail,
-                behaviour.Data,
+                data,
                 behaviour.CachedPosition,
                 normalized);
 
             TryApplyWorldRotationLock(rail);
             return true;
+        }
+
+        /// <summary>
+        /// 当前时间还没到任何会写位置的 Clip，且下一支是仅旋转：本轨不拥有位置。
+        /// </summary>
+        bool LeavesPositionUntouched()
+        {
+            if (Director == null || Clips == null)
+                return false;
+
+            double time = Director.time;
+            bool poseOwnerFinished = false;
+            TimelineClip next = null;
+            for (int i = 0; i < Clips.Length; i++)
+            {
+                TimelineClip clip = Clips[i];
+                if (clip == null || clip.asset is CommentClip)
+                    continue;
+
+                if (clip.end <= time + 1e-9)
+                {
+                    if (!IsRotationOnly(clip))
+                        poseOwnerFinished = true;
+                    continue;
+                }
+
+                if (next == null || clip.start < next.start)
+                    next = clip;
+            }
+
+            return !poseOwnerFinished && IsRotationOnly(next);
+        }
+
+        static bool IsRotationOnly(TimelineClip clip)
+        {
+            return clip?.asset is RotateClip rotate &&
+                   rotate.Data != null &&
+                   rotate.Data.PositionMode == RotatePositionMode.RotationOnly;
         }
 
         private bool ProcessThreePointTurn(

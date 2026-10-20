@@ -3,8 +3,9 @@ using UnityEngine;
 namespace NonsensicalKit.ScriptAnimation
 {
     /// <summary>
-    /// 原地旋转：默认维持进入 Clip 时的落点位置；
-    /// 「仅旋转」模式下不写位置。朝向 = RotationFromYaw(起始偏航角+ 有符号角 × 进度)。
+    /// 原地旋转：默认维持进入 Clip 时的落点位置。
+    /// 「仅旋转」只写 rotation，不写 position（落点由同帧其它轨或父节点决定）。
+    /// 朝向 = RotationFromYaw(起始偏航角 + 有符号角 × 进度)。
     /// </summary>
     public static class RotateSampler
     {
