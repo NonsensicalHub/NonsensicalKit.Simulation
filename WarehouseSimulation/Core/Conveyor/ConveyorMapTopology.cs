@@ -382,10 +382,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                         continue;
                     }
 
-                    if (!StackerColumnReachUtility.CanReachColumn(in def, node.PickupColumn))
+                    if (!StackerColumnReachUtility.CanUsePickupReferenceColumn(in def, node.PickupColumn))
                     {
+                        StackerColumnReachUtility.GetPickupReferenceColumnRange(in def, out var refMin, out var refMax);
                         error =
-                            $"堆垛机交互点 {SimEntityNaming.FormatLogicalId(in node, pickupIndices[i])} 的参考列 {node.PickupColumn} 不在堆垛机 {stackerId} 的伸叉列域内。";
+                            $"堆垛机交互点 {SimEntityNaming.FormatLogicalId(in node, pickupIndices[i])} 的参考列 {node.PickupColumn} 不在堆垛机 {stackerId} 取放货参考列域 [{refMin}, {refMax}]（巷道浅位 {def.AisleLeftColumn}/{def.AisleLeftColumn + 1}，FourColumns 时含左右深位）。";
                         return false;
                     }
 

@@ -230,14 +230,26 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             TryGetAllocator(bindings, topology, servingStackerId, out var allocator)
             && allocator.HasAllocatableFreeSlotForStacker(bindings, topology, servingStackerId);
 
-        public void Occupy(GridIndex slot)
+        public bool TryOccupy(GridIndex slot)
         {
-            if (_byWarehouse.TryGetValue(slot.WarehouseId, out var allocator))
+            if (!_byWarehouse.TryGetValue(slot.WarehouseId, out var allocator))
             {
-                allocator.Occupy(slot);
-                _packedDirty = true;
+                return false;
             }
+
+            if (!allocator.TryOccupy(slot))
+            {
+                return false;
+            }
+
+            _packedDirty = true;
+            return true;
         }
+
+        public void Occupy(GridIndex slot) => TryOccupy(slot);
+
+        public bool IsOccupied(GridIndex slot) =>
+            _byWarehouse.TryGetValue(slot.WarehouseId, out var allocator) && allocator.IsOccupied(slot);
 
         public void Release(GridIndex slot)
         {

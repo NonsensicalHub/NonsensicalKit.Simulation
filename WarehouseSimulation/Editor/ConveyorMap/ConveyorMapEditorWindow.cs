@@ -816,6 +816,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     DrawProp(element, "ForkDepthMeters", "伸叉深度（米）");
                     DrawProp(element, "PickupColumn", "参考列");
                     DrawProp(element, "PickupRow", "交互排");
+                    DrawProp(element, "PickupLevel", "交互层");
                     break;
                 case SimConveyorNodeKind.OutfeedPort:
                     EditorGUILayout.LabelField("出库口", EditorStyles.boldLabel);

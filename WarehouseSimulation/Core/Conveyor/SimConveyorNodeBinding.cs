@@ -16,7 +16,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             IStackerFleetDescriptor fleet,
             ConveyorMapTopology topology)
         {
-            if (node.PickupColumn > 0)
+            // PickupColumn==0 在「已绑定堆垛机且配置了伸叉深度」时表示真实的第 0 列，
+            // 不能再当成未配置（否则堆垛机 8 / 列 0 会走错推导）。
+            if (node.PickupColumn > 0
+                || (node.PickupColumn == 0 && node.StackerId >= 0 && HasForkDepth(in node)))
             {
                 return node.PickupColumn;
             }
@@ -66,20 +69,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 && StackerColumnReachUtility.TryGetDefinition(fleet, topology, node.StackerId, out var def))
             {
                 var pickupColumn = ResolvePickupColumn(node, fleet, topology);
-                if (pickupColumn > 0
-                    && StackerColumnReachUtility.CanReachColumn(in def, pickupColumn))
+                // pickupColumn 可为 0（堆垛机 8）；只要在列域内就用定义的巷道左列。
+                if (StackerColumnReachUtility.CanReachColumn(in def, pickupColumn))
                 {
                     return def.AisleLeftColumn;
                 }
 
-                if (pickupColumn > 0)
-                {
-                    var pickupIndex = ResolvePickupIndexOnStacker(node, fleet, topology);
-                    return StackerColumnReachUtility.InferAisleLeftColumnFromPickupColumn(
-                        pickupColumn, in def, pickupIndex);
-                }
-
-                return def.AisleLeftColumn;
+                var pickupIndex = ResolvePickupIndexOnStacker(node, fleet, topology);
+                return StackerColumnReachUtility.InferAisleLeftColumnFromPickupColumn(
+                    pickupColumn, in def, pickupIndex);
             }
 
             if (node.PickupColumn > 0)

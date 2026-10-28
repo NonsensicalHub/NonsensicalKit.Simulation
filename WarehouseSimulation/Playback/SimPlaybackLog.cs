@@ -8,6 +8,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
     {
         public const string Tag = "[SimPlayback]";
         public const string RouteTag = "[SimPlayback][Route]";
+        public const string CargoSyncTag = "[SimPlayback][CargoSync]";
 
         /// <summary>为 true 时输出 Info 级回放流水日志（默认关闭，减少 Console 噪音）。</summary>
         public static bool Verbose { get; set; }
@@ -20,6 +21,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
             }
 
             Debug.Log($"{Tag} {message}", context);
+        }
+
+        /// <summary>堆垛机放货与货位显示对时（始终记录，Console 过滤 CargoSync）。</summary>
+        public static void CargoSync(string message, Object context = null)
+        {
+            Debug.Log($"{CargoSyncTag} {message}", context);
         }
 
         /// <summary>寻路完成后输出完整路线（始终记录，便于排查路径问题）。</summary>

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using NaughtyAttributes;
 using UnityEngine;
@@ -270,7 +271,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
         }
 
-        [Button("导出 HTML 报告")]
+        [Button("导出可回放 HTML 报告")]
         public void ExportLastRunResult()
         {
             if (_isExporting)
@@ -299,13 +300,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             SimRunBackgroundExport.Outcome outcome = null;
             try
             {
+                var initialSlots = m_playbackEventSource != null
+                    ? m_playbackEventSource.InitialOccupiedSlots
+                    : null;
                 yield return SimRunBackgroundExport.Run(
                     this,
                     m_scenario,
                     LastSimulator,
                     _lastResult,
                     string.IsNullOrWhiteSpace(m_exportDirectory) ? null : m_exportDirectory,
-                    onComplete: o => outcome = o);
+                    onComplete: o => outcome = o,
+                    initialOccupiedSlots: initialSlots,
+                    scenarioDisplayName: !string.IsNullOrWhiteSpace(_scenarioJsonId)
+                        ? _scenarioJsonId
+                        : m_scenario != null ? m_scenario.name : null);
 
                 if (outcome?.Error != null)
                 {
@@ -315,7 +323,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
                 _lastResult.DebugReportPath = outcome.DebugReportPath;
                 Debug.Log(
-                    $"[WarehouseSimulation] 已导出仿真报告：{outcome.HtmlPath}\n" +
+                    $"[WarehouseSimulation] 已导出可回放报告：{outcome.HtmlPath}\n" +
                     $"  调试信息报告：{outcome.DebugReportPath}",
                     this);
             }
@@ -331,6 +339,59 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             RecordPlaybackAndSubTasks = m_recordPlaybackAndSubTasks,
             CollectWallClockProfile = m_collectWallClockProfile,
         };
+
+        /// <summary>从可回放 HTML 报告加载时间轴到事件源，并可供回放控制器播放。</summary>
+        public bool TryLoadReplayHtml(string path, out string error, out SimReplayHtmlCodec.Payload payload)
+        {
+            error = null;
+            payload = null;
+            if (_isRunning || _isExporting)
+            {
+                error = "仿真或导出进行中，无法加载回放。";
+                return false;
+            }
+
+            if (m_playbackEventSource == null)
+            {
+                error = "场景未配置回放事件源。";
+                return false;
+            }
+
+            if (!SimReplayHtmlCodec.TryLoadFromFile(path, out payload, out error))
+            {
+                return false;
+            }
+
+            m_scenario?.EnsureResolvedOnMainThread();
+            m_playbackEventSource.SetTimeline(
+                payload.Events,
+                payload.SubTasks,
+                payload.InitialOccupiedSlots,
+                m_grid,
+                m_scenario != null ? m_scenario.ResolvedHardwareBindings : null,
+                payload.TotalSimSeconds);
+
+            // 用摘要填一份轻量结果，方便 UI 显示「有结果」。
+            _lastResult = new SimRunResult
+            {
+                Success = true,
+                Message = string.IsNullOrEmpty(payload.Message)
+                    ? $"已从文件加载回放：{System.IO.Path.GetFileName(path)}"
+                    : payload.Message,
+                TargetJobCount = payload.TargetJobCount,
+                CompletedJobCount = payload.CompletedJobCount,
+                TotalSimSeconds = payload.TotalSimSeconds,
+                ThroughputPerHour = payload.ThroughputPerHour,
+            };
+            LastSimulator = null;
+
+            Debug.Log(
+                $"[WarehouseSimulation] 已加载可回放报告：{path}\n" +
+                $"  子任务 {payload.SubTasks?.Length ?? 0}，事件 {payload.Events?.Length ?? 0}，" +
+                $"仿真时长 {payload.TotalSimSeconds:F1}s",
+                this);
+            return true;
+        }
 
         [Button("打开报告目录")]
         public void OpenReportDirectory()

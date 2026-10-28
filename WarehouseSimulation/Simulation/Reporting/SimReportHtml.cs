@@ -152,28 +152,86 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             details.section-fold.card { padding-top: 12px; }
             details.section-fold.card > summary { margin: 0 18px; padding-bottom: 10px; }
             details.section-fold.card .fold-body { padding: 0 18px 16px; }
+            .topology-toolbar {
+              display: flex;
+              flex-wrap: wrap;
+              align-items: center;
+              gap: 10px 16px;
+              margin: 0 0 10px;
+            }
+            .topology-toggle {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              font-size: 13px;
+              color: var(--text);
+              cursor: pointer;
+              user-select: none;
+            }
+            .topology-legend {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 8px 14px;
+              margin: 0 0 10px;
+              font-size: 12px;
+              color: var(--muted);
+            }
+            .topology-legend-item {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+            }
+            .topology-legend-dot {
+              width: 10px;
+              height: 10px;
+              border-radius: 50%;
+              border: 1px solid #1e293b;
+              display: inline-block;
+            }
             .topology-svg {
               overflow: auto;
+              max-height: 70vh;
               border: 1px solid var(--border);
               border-radius: 8px;
               background: #fafbfc;
               margin-bottom: 16px;
             }
-            .topology-svg svg { display: block; min-width: 100%; height: auto; }
+            .topology-svg svg {
+              display: block;
+              width: 100%;
+              height: auto;
+              max-width: none;
+            }
             .topology-svg .topology-edge {
               stroke: #64748b;
-              stroke-width: 1.5;
+              stroke-width: 1.25;
               fill: none;
             }
-            .topology-svg .topology-edge-label rect {
-              fill: rgba(255,255,255,.94);
-              stroke: #cbd5e1;
-              stroke-width: 1;
+            .topology-svg .topology-edge:hover {
+              stroke: #0f172a;
+              stroke-width: 2.25;
             }
-            .topology-svg .topology-edge-label text {
-              fill: #475569;
+            .topology-svg .topology-node circle {
+              cursor: pointer;
+            }
+            .topology-svg .topology-node:hover circle {
+              stroke: #0f172a;
+              stroke-width: 2;
+            }
+            .topology-svg .topology-node-label {
+              display: none;
+              fill: #0f172a;
+              font-size: 9px;
+              font-weight: 600;
               font-family: 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
-              font-variant-numeric: tabular-nums;
+              paint-order: stroke;
+              stroke: rgba(255,255,255,.92);
+              stroke-width: 3px;
+              stroke-linejoin: round;
+              pointer-events: none;
+            }
+            .topology-svg svg.show-labels .topology-node-key .topology-node-label {
+              display: block;
             }
             .kv { width: auto; }
             .kv th { width: 140px; background: #f8fafc; }

@@ -70,14 +70,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         [Min(0)]
         [Label("堆垛机编号")]
         public int StackerId;
-        [Tooltip("堆垛机旁参考货位列，用于货位距离和底层排除。交互点可以不落在某一列中心，货叉伸出不由该列决定。")]
+        [Tooltip("堆垛机旁参考货位列，用于货位距离和底层排除。允许巷道左右浅位，以及 ColumnReach=FourColumns 时的左右深位（AisleLeft-1 / AisleLeft+2）。交互点可以不落在某一列中心，货叉伸出由伸叉深度（米）决定。")]
         [Label("参考列")]
         public int PickupColumn;
-        [Tooltip("相对巷道中心的货叉伸出距离（米）。正方向朝列号增大的一侧，负方向朝列号减小的一侧。0 表示仍按参考列的货位坐标伸叉。")]
+        [Tooltip("相对巷道中心的货叉伸出距离（米），原样灌入货叉关节（正负即关节正方向）。0 表示仍按参考列的货位坐标伸叉。")]
         [Label("伸叉深度（米）")]
         public float ForkDepthMeters;
         [Label("交互排")]
         public int PickupRow;
+        [Tooltip("堆垛机在交互点取放货的层号（与货位 Level 同索引）。石家庄双库输送线高度对应第 1 层，不是第 0 层（第 0 层在地面以下）。")]
+        [Min(0)]
+        [Label("交互层")]
+        public int PickupLevel;
 
         [Header("编辑器")]
         [Tooltip("节点在俯视编辑器画布中的排版坐标，仅用于可视化，不参与仿真")]

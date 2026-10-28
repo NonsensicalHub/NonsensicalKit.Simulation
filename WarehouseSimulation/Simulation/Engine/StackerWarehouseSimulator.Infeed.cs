@@ -162,20 +162,28 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     continue;
                 }
 
+                var job = new WarehouseJob(_nextJobId++, _clock.Now)
+                {
+                    Direction = SimFlowDirection.Inbound,
+                    RequiredProcessTags = CopyProcessTags(processTags),
+                    InfeedPortIndex = portIndex,
+                };
+                job.State = WarehouseJobState.PendingArrival;
+                _jobs[job.JobId] = job;
+                if (!PlaceJobOnInfeedPort(job, portIndex, slot, stackerId))
+                {
+                    // 占用失败（已有货/排除区）：不消耗等候队列，继续试其他口。
+                    _jobs.Remove(job.JobId);
+                    ReleaseInfeedOriginClaim(job);
+                    continue;
+                }
+
                 _inboundWaitingCount--;
                 if (_inboundWaitingFlowEntryIndices.Count > 0)
                 {
                     _inboundWaitingFlowEntryIndices.Dequeue();
                 }
 
-                var job = new WarehouseJob(_nextJobId++, _clock.Now)
-                {
-                    Direction = SimFlowDirection.Inbound,
-                    RequiredProcessTags = CopyProcessTags(processTags),
-                };
-                job.State = WarehouseJobState.PendingArrival;
-                _jobs[job.JobId] = job;
-                PlaceJobOnInfeedPort(job, portIndex, slot, stackerId);
                 _infeedRoundRobinCursor = (portIndex + 1) % portCount;
                 return true;
             }
@@ -253,13 +261,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 $"共 {remaining} 箱入库失败 t={_clock.Now:F2}s");
         }
 
-        private void PlaceJobOnInfeedPort(WarehouseJob job, int portIndex, GridIndex slot, int stackerId)
+        private bool PlaceJobOnInfeedPort(WarehouseJob job, int portIndex, GridIndex slot, int stackerId)
         {
+            // 放货前强制占用：已占用或不可存储则拒绝，避免两单叠放到同一货位。
+            if (!_slotAllocator.TryOccupy(slot))
+            {
+                WarehouseSimLog.Info(
+                    $"入库口放货拒绝：货位已不可用或已被占用 job={job.JobId} slot={slot} t={_clock.Now:F2}s");
+                return false;
+            }
+
             job.InfeedPortIndex = portIndex;
             job.TargetSlot = slot;
             job.HasSlot = true;
             job.AssignedStackerId = stackerId;
-            _slotAllocator.Occupy(slot);
             _infeedCargoOccupied[portIndex] = true;
             _infeedReservationCounts[portIndex]++;
             IncrementStackerActiveJobCount(stackerId);
@@ -276,6 +291,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             job.ArrivalTime = _clock.Now;
             RecordPlayback(job, SimPlaybackPhase.Arrived, job.AssignedStackerId, job.TargetSlot);
             BeginInfeed(job);
+            return true;
         }
 
         /// <summary>标记任务失败；<paramref name="releaseResources"/> 时释放已占货位与入库口。</summary>

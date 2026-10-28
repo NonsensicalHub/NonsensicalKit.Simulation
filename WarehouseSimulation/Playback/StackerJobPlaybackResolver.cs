@@ -104,11 +104,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
                 task.HasIdleStackerSlot = true;
             }
 
+            task.ReleaseCargoOnIdle = true;
             if (task.IsOutbound
                 && TryGetJobTasks(index, subTasks, last.JobId, out var jobTasks)
                 && SimSubTaskQuery.IsInOutboundConveyorVisualWindow(jobTasks, simTime))
             {
-                return false;
+                // 出库放货后输送线接管料箱。姿态仍停在收叉位，不能把“不回收料箱”做成回原点。
+                task.ReleaseCargoOnIdle = false;
             }
 
             return true;
@@ -287,7 +289,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
                 return false;
             }
 
-            idlePose = lastPlace.StackerToSlot;
+            // Place 的 From 是收叉后的车厢位置，To 是伸叉端点。空档停在 To 会把货叉再伸出去。
+            idlePose = lastPlace.StackerFromSlot;
             return true;
         }
 

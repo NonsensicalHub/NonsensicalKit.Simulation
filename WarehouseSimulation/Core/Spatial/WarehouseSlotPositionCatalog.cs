@@ -77,6 +77,31 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return false;
         }
 
+        /// <summary>读取指定仓库 .dat 中的 DSBL 结构禁用规则。</summary>
+        public bool TryGetSlotDisableRules(
+            int warehouseId,
+            out NonsensicalKit.DigitalTwin.Warehouse.WarehouseSlotDisableRule[] rules)
+        {
+            rules = null;
+            if (!_byWarehouse.TryGetValue(warehouseId, out var concrete) || concrete == null)
+            {
+                return false;
+            }
+
+            rules = concrete.SlotDisableRules;
+            return rules != null && rules.Length > 0;
+        }
+
+        public bool HasExactLocalPosition(GridIndex slot)
+        {
+            if (!TryGetIndex(slot.WarehouseId, out var index) || index == null)
+            {
+                return false;
+            }
+
+            return index.HasExactLocalPosition(slot);
+        }
+
         public bool TryGetLocalPosition(GridIndex slot, out Vector3 local)
         {
             local = default;

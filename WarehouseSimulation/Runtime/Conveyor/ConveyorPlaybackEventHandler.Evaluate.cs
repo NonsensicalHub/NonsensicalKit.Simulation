@@ -84,10 +84,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                         {
                             SnapCargoToPickup(jobId, active.PickupPointIndex);
                         }
-                        else
-                        {
-                            m_cargoRegistry?.Release(jobId);
-                        }
+
+                        // 入库放货后料箱留在堆垛机放下的位置。这里回收会在堆垛机处理之前把箱子收进池，货架 GPU 再晚一截才补上。
                         return;
                     case SimSubTaskKind.OutfeedService:
                         SnapCargoToOutfeed(jobId, active.OutfeedPortIndex);

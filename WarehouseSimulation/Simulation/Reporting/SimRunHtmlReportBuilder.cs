@@ -18,7 +18,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             StackerWarehouseSimulator simulator,
             SimRunResult result,
             string debugMarkdownFileName = null,
-            SimRunExportDisplayInfo displayInfo = default)
+            SimRunExportDisplayInfo displayInfo = default,
+            SimReplayHtmlCodec.Payload replayPayload = null)
         {
             if (simulator == null)
             {
@@ -39,6 +40,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var title = !string.IsNullOrEmpty(displayInfo.ScenarioName)
                 ? $"{flowLabel}仿真报告 — {displayInfo.ScenarioName}"
                 : $"{flowLabel}仿真报告";
+            if (replayPayload != null)
+            {
+                title += "（含回放）";
+            }
 
             var map = scenario?.ResolvedHardwareBindings?.ConveyorMap;
             ConveyorMapTopology.TryBuild(map, out var topology, out _);
@@ -47,7 +52,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var sb = new StringBuilder(128 * 1024);
             SimReportHtml.AppendDocumentStart(sb, title);
             AppendToolbar(sb);
-            AppendPageHeader(sb, scenario, result, displayInfo);
+            AppendPageHeader(sb, scenario, result, displayInfo, replayPayload != null);
             AppendSummarySection(sb, scenario, result, simulator, debugMarkdownFileName, resourceUtilizations);
             SimReportTopologyHtmlBuilder.AppendSection(sb, map, displayInfo.ConveyorMapName);
             AppendStatsCards(sb, result);
@@ -55,6 +60,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             AppendResourceWaitSection(sb, result);
             AppendCompletionSection(sb, result, map, topology);
             AppendJobSection(sb, subTasks, endSimTime, map, topology);
+            if (replayPayload != null)
+            {
+                SimReplayHtmlCodec.AppendEmbeddedReplay(sb, replayPayload);
+            }
+
             SimReportHtml.AppendDocumentEnd(sb);
             return sb.ToString();
         }
@@ -83,6 +93,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             sb.AppendLine("<a href=\"#utilization\">设备利用率</a>");
             sb.AppendLine("<a href=\"#completions\">完成明细</a>");
             sb.AppendLine("<a href=\"#jobs\">任务明细</a>");
+            sb.AppendLine("<a href=\"#replay-embed\">可回放数据</a>");
             sb.AppendLine("</div>");
         }
 
@@ -90,13 +101,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             StringBuilder sb,
             WarehouseSimScenario scenario,
             SimRunResult result,
-            SimRunExportDisplayInfo displayInfo)
+            SimRunExportDisplayInfo displayInfo,
+            bool includesReplay = false)
         {
             sb.AppendLine("<header>");
             var flowLabel = SimFlowPlanResolver.FormatFlowKindLabel(SimFlowPlanResolver.Resolve(scenario));
             sb.Append("<h1>");
             sb.Append(flowLabel);
-            sb.AppendLine("仿真任务报告</h1>");
+            sb.Append("仿真任务报告");
+            if (includesReplay)
+            {
+                sb.Append(" <span class=\"badge badge-ok\">含回放</span>");
+            }
+
+            sb.AppendLine("</h1>");
             sb.Append("<p class=\"meta\">导出时间（UTC+8）：");
             sb.Append(SimReportFormatting.FormatExportDateTime());
             sb.AppendLine("</p>");
@@ -445,41 +463,131 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             sb.Append(sorted.Count);
             sb.AppendLine(" 条记录</span></summary>");
             sb.AppendLine("<div class=\"fold-body\">");
-            SimReportHtml.AppendTableStart(sb);
-            SimReportHtml.AppendTableHead(
-                sb,
-                "任务", "流向", "完成(s)", "总耗时(s)", "服务(s)", "等待(s)",
-                "瓶颈", "货位", "堆垛机", "入/出库口", "堆垛机交互点");
-            sb.AppendLine("<tbody>");
+            sb.AppendLine("<div id=\"completions-root\"><p class=\"meta\">正在解压完成明细…</p></div>");
+            sb.AppendLine("<noscript><p><em>请启用 JavaScript 以查看完成明细。</em></p></noscript>");
 
+            var json = new StringBuilder(Math.Max(2048, sorted.Count * 96));
+            json.Append('[');
             for (var i = 0; i < sorted.Count; i++)
             {
+                if (i > 0)
+                {
+                    json.Append(',');
+                }
+
                 var c = sorted[i];
-                sb.AppendLine("<tr>");
-                AppendTd(sb, c.JobId.ToString(), numeric: true);
-                AppendTd(sb, c.Direction == SimFlowDirection.Outbound ? "出库" : "入库");
-                AppendTd(sb, c.CompletedAt.ToString("F2"), numeric: true);
-                AppendTd(sb, c.Duration.ToString("F2"), numeric: true);
-                AppendTd(sb, c.ServiceTime.ToString("F2"), numeric: true);
-                AppendTd(sb, c.WaitTime.ToString("F2"), numeric: true);
-                AppendTd(sb, string.IsNullOrEmpty(c.BottleneckResource) ? "—" : c.BottleneckResource);
-                AppendTd(sb, c.Slot.ToString());
-                AppendTd(sb, SimReportFormatting.FormatStacker(c.StackerId), numeric: true);
-                AppendTd(
-                    sb,
-                    c.Direction == SimFlowDirection.Outbound
-                        ? SimReportFormatting.FormatOutfeedPort(map, topology, c.OutfeedPortIndex)
-                        : SimReportFormatting.FormatInfeedPort(map, topology, c.InfeedPortIndex),
-                    numeric: true);
-                AppendTd(sb, SimReportFormatting.FormatPickupPoint(map, c.PickupPointIndex), numeric: true);
-                sb.AppendLine("</tr>");
+                var port = c.Direction == SimFlowDirection.Outbound
+                    ? SimReportFormatting.FormatOutfeedPort(map, topology, c.OutfeedPortIndex)
+                    : SimReportFormatting.FormatInfeedPort(map, topology, c.InfeedPortIndex);
+                var pickup = SimReportFormatting.FormatPickupPoint(map, c.PickupPointIndex);
+                var stacker = SimReportFormatting.FormatStacker(c.StackerId);
+                var bottleneck = string.IsNullOrEmpty(c.BottleneckResource) ? string.Empty : c.BottleneckResource;
+
+                json.Append('[');
+                json.Append(c.JobId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                json.Append(',');
+                json.Append(c.Direction == SimFlowDirection.Outbound ? 1 : 0);
+                json.Append(',');
+                json.Append(c.CompletedAt.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+                json.Append(',');
+                json.Append(c.Duration.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+                json.Append(',');
+                json.Append(c.ServiceTime.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+                json.Append(',');
+                json.Append(c.WaitTime.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+                json.Append(',');
+                AppendJsonString(json, bottleneck);
+                json.Append(',');
+                AppendJsonString(json, c.Slot.ToString());
+                json.Append(',');
+                AppendJsonString(json, stacker);
+                json.Append(',');
+                AppendJsonString(json, port);
+                json.Append(',');
+                AppendJsonString(json, pickup);
+                json.Append(']');
             }
 
-            sb.AppendLine("</tbody>");
-            SimReportHtml.AppendTableEnd(sb);
+            json.Append(']');
+            SimReportGzipHtml.AppendGzipJsonScript(sb, "completions-data", json.ToString());
+            sb.AppendLine("<script>");
+            // Gunzip helper 可能已由任务章节注入；此处再写一次无害且保证单独打开时可用。
+            sb.AppendLine(SimReportGzipHtml.GunzipScript);
+            sb.AppendLine(CompletionsRenderScript);
+            sb.AppendLine("</script>");
             sb.AppendLine("</div></details>");
         }
 
+        private static void AppendJsonString(StringBuilder json, string value)
+        {
+            json.Append('"');
+            if (!string.IsNullOrEmpty(value))
+            {
+                for (var i = 0; i < value.Length; i++)
+                {
+                    var ch = value[i];
+                    switch (ch)
+                    {
+                        case '"': json.Append("\\\""); break;
+                        case '\\': json.Append("\\\\"); break;
+                        case '\n': json.Append("\\n"); break;
+                        case '\r': json.Append("\\r"); break;
+                        case '\t': json.Append("\\t"); break;
+                        default:
+                            if (ch < 0x20)
+                            {
+                                json.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "\\u{0:x4}", (int)ch);
+                            }
+                            else
+                            {
+                                json.Append(ch);
+                            }
+
+                            break;
+                    }
+                }
+            }
+
+            json.Append('"');
+        }
+
+        private const string CompletionsRenderScript = @"
+(async function(){
+  var dataEl=document.getElementById('completions-data');
+  var root=document.getElementById('completions-root');
+  if(!dataEl||!root)return;
+  var rows;
+  try{rows=await nkLoadEmbeddedJson(dataEl);}catch(e){
+    root.innerHTML='<p><em>完成明细解析失败：'+String(e&&e.message?e.message:e)+'</em></p>';
+    return;
+  }
+  if(!rows||!rows.length){root.innerHTML='<p><em>无完成记录</em></p>';return;}
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/""/g,'&quot;');}
+  function dash(s){return (s==null||s==='')?'—':esc(s);}
+  var h='<div class=""table-wrap""><table><thead><tr>'+
+    '<th>任务</th><th>流向</th><th>完成(s)</th><th>总耗时(s)</th><th>服务(s)</th><th>等待(s)</th>'+
+    '<th>瓶颈</th><th>货位</th><th>堆垛机</th><th>入/出库口</th><th>堆垛机交互点</th>'+
+    '</tr></thead><tbody>';
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i];
+    h+='<tr>'+
+      '<td class=""num"">'+esc(r[0])+'</td>'+
+      '<td>'+(r[1]?('出库'):('入库'))+'</td>'+
+      '<td class=""num"">'+esc(r[2])+'</td>'+
+      '<td class=""num"">'+esc(r[3])+'</td>'+
+      '<td class=""num"">'+esc(r[4])+'</td>'+
+      '<td class=""num"">'+esc(r[5])+'</td>'+
+      '<td>'+dash(r[6])+'</td>'+
+      '<td>'+dash(r[7])+'</td>'+
+      '<td class=""num"">'+dash(r[8])+'</td>'+
+      '<td class=""num"">'+dash(r[9])+'</td>'+
+      '<td class=""num"">'+dash(r[10])+'</td>'+
+      '</tr>';
+  }
+  h+='</tbody></table></div>';
+  root.innerHTML=h;
+})();
+";
         private static void AppendJobSection(
             StringBuilder sb,
             IReadOnlyList<SimSubTask> subTasks,
@@ -487,24 +595,27 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             WarehouseConveyorMap map,
             ConveyorMapTopology topology)
         {
-            sb.AppendLine("<details id=\"jobs\" class=\"section-fold card\" open>");
-            sb.AppendLine("<summary><span class=\"fold-title\">任务与子任务明细</span></summary>");
-            sb.AppendLine("<div class=\"fold-body\">");
-            sb.AppendLine("<p class=\"hint\">点击任务行展开子任务时间轴；可用顶部搜索框按编号或货位筛选。</p>");
-
             if (subTasks == null || subTasks.Count == 0)
             {
-                sb.AppendLine("<p><em>无子任务记录</em></p>");
-                sb.AppendLine("</section>");
+                SimCargoJobHtmlReportBuilder.AppendJobsShell(sb, "[]");
                 return;
             }
 
             var jobIds = CollectJobIds(subTasks);
             jobIds.Sort();
 
+            // 预估：每任务约数百字节紧凑 JSON，远小于原 HTML 表格。
+            var json = new StringBuilder(Math.Max(4096, jobIds.Count * 512));
+            json.Append('[');
+            var written = 0;
             for (var i = 0; i < jobIds.Count; i++)
             {
                 var jobId = jobIds[i];
+                if (written > 0)
+                {
+                    json.Append(',');
+                }
+
                 if (!SimCargoJobValidationReportBuilder.TryBuild(
                         subTasks,
                         jobId,
@@ -513,19 +624,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         map,
                         topology))
                 {
-                    sb.Append("<details class=\"job\" data-search=\"");
-                    sb.Append(SimReportHtml.Escape($"任务 {jobId}"));
-                    sb.AppendLine("\">");
-                    sb.Append("<summary>任务 ");
-                    sb.Append(jobId);
-                    sb.AppendLine(" —无法构建报告</summary></details>");
+                    // 无法构建时仍保留占位条目，便于筛选看到该任务号
+                    json.Append("{\"i\":");
+                    json.Append(jobId);
+                    json.Append(",\"o\":0,\"s\":\"—\",\"p\":\"—\",\"k\":\"—\",\"r\":\"—\",\"a\":0,\"b\":0,\"d\":0,\"n\":0,\"q\":\"无法构建报告\",\"g\":[],\"u\":[]}");
+                    written++;
                     continue;
                 }
 
-                SimCargoJobHtmlReportBuilder.AppendJobSection(sb, s_scratchReport, map, topology);
+                SimCargoJobHtmlReportBuilder.AppendJobJsonObject(json, s_scratchReport, map, topology);
+                written++;
             }
 
-            sb.AppendLine("</div></details>");
+            json.Append(']');
+            SimCargoJobHtmlReportBuilder.AppendJobsShell(sb, json.ToString());
         }
 
         private static List<int> CollectJobIds(IReadOnlyList<SimSubTask> subTasks)

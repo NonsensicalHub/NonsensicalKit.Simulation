@@ -629,6 +629,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     StackerToUsesForkDepth = stackerToUsesForkDepth,
                     StackerToForkDepthMeters = stackerToForkDepthMeters,
                     HasStackerPose = hasStackerPose,
+                    HasCargoHandover = kind is SimSubTaskKind.StackerPick or SimSubTaskKind.StackerPlace,
+                    CargoHandoverSimTime = kind is SimSubTaskKind.StackerPick or SimSubTaskKind.StackerPlace
+                        ? StackerCargoHandover.FromPhase(startSimTime, endSimTime)
+                        : 0d,
                     PathNodeIndices = pathCopy,
                     SegmentSchedule = scheduleCopy,
                 });

@@ -53,7 +53,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
         int CountOccupiedStorageSlots(bool[] occupied);
 
+        /// <summary>标记占用；已占用或不可存储时返回 false。</summary>
+        bool TryOccupy(GridIndex slot);
+
         void Occupy(GridIndex slot);
+
+        /// <summary>货位当前是否已占用（含排除区打标占用）。</summary>
+        bool IsOccupied(GridIndex slot);
 
         void Release(GridIndex slot);
 

@@ -95,6 +95,45 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return column >= min && column <= max;
         }
 
+        /// <summary>
+        /// 交互点参考列域：巷道左右浅位（AisleLeft、AisleLeft+1）始终允许
+        /// （含单向堆垛机货位对侧交互点）；并与货位 <see cref="GetColumnRange"/> 取并集，
+        /// 故 <see cref="SimStackerColumnReach.FourColumns"/> 时左右深位
+        /// （AisleLeft-1、AisleLeft+2）也可作取放货参考列。
+        /// 与货位可达 <see cref="CanReachColumn"/> 分开：交互点可超出单向货位列域。
+        /// </summary>
+        public static void GetPickupReferenceColumnRange(
+            in SimStackerDefinition def,
+            out int minColumn,
+            out int maxColumn)
+        {
+            minColumn = def.AisleLeftColumn;
+            maxColumn = def.AisleLeftColumn + 1;
+            GetColumnRange(in def, out var reachMin, out var reachMax);
+            if (reachMin < minColumn)
+            {
+                minColumn = reachMin;
+            }
+
+            if (reachMax > maxColumn)
+            {
+                maxColumn = reachMax;
+            }
+        }
+
+        public static bool CanUsePickupReferenceColumn(in SimStackerDefinition def, int column)
+        {
+            GetPickupReferenceColumnRange(in def, out var min, out var max);
+            return column >= min && column <= max;
+        }
+
+        /// <summary>
+        /// 无堆垛机定义时：按两深度包络（AisleLeft-1 .. AisleLeft+2）判断，
+        /// 与 <see cref="SimStackerColumnReach.FourColumns"/> 列距一致。
+        /// </summary>
+        public static bool CanUsePickupReferenceColumn(int aisleLeftColumn, int column) =>
+            column >= aisleLeftColumn - 1 && column <= aisleLeftColumn + 2;
+
         public static int ClampColumn(in SimStackerDefinition def, int column) =>
             ClampColumn(def.AisleLeftColumn, def.ColumnReach, def.ServingSide, column);
 

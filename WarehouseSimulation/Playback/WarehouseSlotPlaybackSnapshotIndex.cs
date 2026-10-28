@@ -136,8 +136,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
                         task.Kind,
                         task.JobId));
 
-                    // 取货完成前货位仍应有货，与堆垛机 AttachCargo 时刻（Pick 结束）对齐。
-                    _occupancyChanges.Add(new OccupancyChange(task.EndSimTime, task.Slot, remove: true));
+                    // 伸叉到位、料箱挂上货叉时货位清空，与 AttachCargo 同一进度，不要等到整段 Pick 结束。
+                    _occupancyChanges.Add(new OccupancyChange(StackerCargoHandover.Resolve(in task), task.Slot, remove: true));
                 }
 
                 if (highlightOnStackerMove && task.Kind == SimSubTaskKind.StackerMove)
@@ -151,7 +151,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
                         task.JobId));
                 }
 
-                if (task.Kind is SimSubTaskKind.StackerPlace or SimSubTaskKind.Completed)
+                if (task.Kind == SimSubTaskKind.StackerPlace)
+                {
+                    var remove = _outboundJobIds.Contains(task.JobId);
+                    // 入库：伸叉到位就在货位显示，与 PlaceCargoAtSlot 同一进度。
+                    // 出库放货不改货架（取货时已清），仍记在段末作兜底。
+                    var time = remove ? task.EndSimTime : StackerCargoHandover.Resolve(in task);
+                    _occupancyChanges.Add(new OccupancyChange(time, task.Slot, remove));
+                }
+
+                if (task.Kind == SimSubTaskKind.Completed)
                 {
                     var remove = _outboundJobIds.Contains(task.JobId);
                     _occupancyChanges.Add(new OccupancyChange(task.EndSimTime, task.Slot, remove));

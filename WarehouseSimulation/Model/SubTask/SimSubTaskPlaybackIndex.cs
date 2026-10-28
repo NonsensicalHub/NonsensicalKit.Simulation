@@ -135,7 +135,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
                     continue;
                 }
 
-                if (!found || task.StartSimTime >= active.StartSimTime)
+                if (!found || SimSubTaskQuery.PreferAsActiveStackerSubTask(in task, in active))
                 {
                     active = task;
                     found = true;

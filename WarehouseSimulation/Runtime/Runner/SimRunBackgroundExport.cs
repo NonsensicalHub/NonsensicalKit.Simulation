@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -27,7 +28,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             StackerWarehouseSimulator simulator,
             SimRunResult result,
             string directory,
-            Action<Outcome> onComplete)
+            Action<Outcome> onComplete,
+            IReadOnlyList<GridIndex> initialOccupiedSlots = null,
+            string scenarioDisplayName = null)
         {
             if (simulator == null || result == null)
             {
@@ -39,7 +42,19 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
 
             scenario?.EnsureResolvedOnMainThread();
-            var displayInfo = SimRunExportDisplayInfo.Capture(scenario);
+            var displayInfo = SimRunExportDisplayInfo.Capture(scenario, scenarioDisplayName);
+
+            // 主线程拷贝回放快照，避免后台序列化时与后续运行互相踩。
+            var eventsCopy = CopyList(simulator.LastPlaybackEvents);
+            var subTasksCopy = CopyList(simulator.LastSubTasks);
+            var initialCopy = CopyList(initialOccupiedSlots);
+            var replayPayload = SimReplayHtmlCodec.BuildPayload(
+                eventsCopy,
+                subTasksCopy,
+                initialCopy,
+                result.TotalSimSeconds,
+                result,
+                displayInfo.ScenarioName);
 
             string resolvedDirectory;
             try
@@ -54,14 +69,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
             var sw = Stopwatch.StartNew();
             var lastProgressLog = sw.Elapsed;
-            Debug.Log("[WarehouseSimulation] 报告导出已在后台线程启动…", host);
+            Debug.Log("[WarehouseSimulation] 报告导出已在后台线程启动（含回放数据）…", host);
 
             var task = Task.Run(() => SimRunExporter.ExportLastRunAtDirectory(
                 scenario,
                 simulator,
                 result,
                 resolvedDirectory,
-                displayInfo: displayInfo));
+                displayInfo: displayInfo,
+                replayPayload: replayPayload));
 
             while (!task.IsCompleted)
             {
@@ -104,6 +120,22 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
 
             onComplete?.Invoke(outcome);
+        }
+
+        private static List<T> CopyList<T>(IReadOnlyList<T> source)
+        {
+            if (source == null || source.Count == 0)
+            {
+                return new List<T>();
+            }
+
+            var list = new List<T>(source.Count);
+            for (var i = 0; i < source.Count; i++)
+            {
+                list.Add(source[i]);
+            }
+
+            return list;
         }
     }
 }

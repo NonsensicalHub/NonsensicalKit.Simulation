@@ -55,7 +55,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             float normalizedTime,
             bool isLoaded,
             out float levelFraction,
-            out float rowFraction)
+            out float rowFraction,
+            int warehouseId = 0)
         {
             normalizedTime = Math.Clamp(normalizedTime, 0f, 1f);
             if (kinematics == null)
@@ -66,9 +67,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             }
 
             var levelDist = SlotPositionMath.ComputeLevelDistance(
-                positions, railColumn, fromLevel, toLevel);
+                positions, railColumn, fromLevel, toLevel, warehouseId);
             var rowDist = SlotPositionMath.ComputeRowDistance(
-                positions, railColumn, toLevel, fromRow, toRow);
+                positions, railColumn, toLevel, fromRow, toRow, warehouseId);
 
             var verticalSpeed = ResolveVerticalSpeed(kinematics, isLoaded);
             var depthSpeed = ResolveDepthSpeed(kinematics, isLoaded);

@@ -31,14 +31,21 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             _activeAisleLeftColumn = _definition.AisleLeftColumn;
             if (!TryGetPickupNodeFromJob(in task, out var node))
             {
-                _railColumn = _activeAisleLeftColumn;
+                if (_railColumn != _activeAisleLeftColumn)
+                {
+                    _railColumn = _activeAisleLeftColumn;
+                    CalibrateJointInitialValues();
+                }
+
                 return;
             }
 
+            // 巷道左列可为 0（二号库堆垛机 8），不能再用 > 0 判断。
             var aisle = SimConveyorNodeBinding.ResolvePickupAisleLeftColumn(node, _bindings, _topology);
-            if (aisle > 0)
+            _activeAisleLeftColumn = aisle;
+            if (_railColumn == _activeAisleLeftColumn)
             {
-                _activeAisleLeftColumn = aisle;
+                return;
             }
 
             _railColumn = _activeAisleLeftColumn;
@@ -54,7 +61,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
 
             var pickupColumn = SimConveyorNodeBinding.ResolvePickupColumn(node, _bindings, _topology);
-            pickup = new GridIndex(_pickupLevel, pickupColumn, node.PickupRow, task.TargetSlot.Depth);
+            // 地图交互层优先；未标（0）时用 Handler 上的取货默认层。
+            var level = node.PickupLevel > 0 ? node.PickupLevel : System.Math.Max(0, _pickupLevel);
+            pickup = new GridIndex(level, pickupColumn, node.PickupRow, task.TargetSlot.Depth);
             return true;
         }
 

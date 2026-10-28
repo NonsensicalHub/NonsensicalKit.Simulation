@@ -36,20 +36,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             {
                 cargo = m_cargoRegistry.Acquire(jobId);
             }
-            if (cargo == null)
+            if (cargo == null || IsCarriedByStacker(cargo))
             {
                 return;
-            }
-            if (cargo.parent != null)
-            {
-                cargo.SetParent(null, true);
             }
             cargo.gameObject.SetActive(true);
             cargo.position = position;
         }
         private void DetachCargo(int jobId)
         {
-            if (m_cargoRegistry.TryGet(jobId, out var cargo) && cargo != null)
+            if (m_cargoRegistry.TryGet(jobId, out var cargo) && cargo != null && !IsCarriedByStacker(cargo))
             {
                 cargo.gameObject.SetActive(false);
             }
@@ -64,17 +60,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 }
                 cargo = m_cargoRegistry.Acquire(jobId);
             }
-            if (cargo == null || !_anchorIndex.TryGet(nodeId, out var tf))
+            if (cargo == null || IsCarriedByStacker(cargo) || !_anchorIndex.TryGet(nodeId, out var tf))
             {
                 return;
-            }
-            if (cargo.parent != null)
-            {
-                cargo.SetParent(null, true);
             }
             cargo.gameObject.SetActive(true);
             cargo.position = tf.position;
         }
+
+        /// <summary>已挂到货叉（或其它载体）上的料箱由父节点带走，输送线不再写世界坐标。</summary>
+        private static bool IsCarriedByStacker(Transform cargo) =>
+            cargo != null && cargo.parent != null;
         private bool TryGetAnchor(int nodeIndex, out Transform transform)
         {
             transform = null;

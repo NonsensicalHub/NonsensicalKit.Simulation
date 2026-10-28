@@ -95,6 +95,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     height += PropertyHeight(property, "ForkDepthMeters");
                     height += PropertyHeight(property, "PickupColumn");
                     height += PropertyHeight(property, "PickupRow");
+                    height += PropertyHeight(property, "PickupLevel");
                     break;
                 case SimConveyorNodeKind.OutfeedPort:
                     height += PropertyHeight(property, "OutfeedServiceSeconds");
@@ -138,6 +139,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                     y = DrawField(x, y, width, line, property, "ForkDepthMeters");
                     y = DrawField(x, y, width, line, property, "PickupColumn");
                     y = DrawField(x, y, width, line, property, "PickupRow");
+                    y = DrawField(x, y, width, line, property, "PickupLevel");
                     break;
                 case SimConveyorNodeKind.OutfeedPort:
                     y = DrawField(x, y, width, line, property, "OutfeedServiceSeconds");

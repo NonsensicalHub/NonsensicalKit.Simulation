@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using NonsensicalKit.DigitalTwin.Warehouse;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
@@ -102,12 +103,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
             if (!grid.AutoExcludePickupPointZones)
             {
+                AppendDatSlotDisableRuleZones(list, grid, bindings, warehouseId, restrictToWarehouse);
+                AppendMissingBinExclusionZones(list, grid, bindings, warehouseId);
                 return list.Count > 0 ? list.ToArray() : System.Array.Empty<SimSlotExclusionZone>();
             }
 
             var map = bindings?.ConveyorMap;
             if (map?.Nodes == null)
             {
+                AppendDatSlotDisableRuleZones(list, grid, bindings, warehouseId, restrictToWarehouse);
+                AppendMissingBinExclusionZones(list, grid, bindings, warehouseId);
                 return list.Count > 0 ? list.ToArray() : System.Array.Empty<SimSlotExclusionZone>();
             }
 
@@ -147,22 +152,33 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
                 TryAddPickupExclusionZone(list, seen, pickupColumn, pickupRow, bottomLevelEnd);
 
-                if (rearColumnCount <= 0 || rearColumns == null)
-                {
-                    continue;
-                }
-
                 if (StackerColumnReachUtility.TryGetDefinition(bindings, topology, node.StackerId, out var stackerDef))
                 {
-                    StackerColumnReachUtility.CollectRearStorageColumns(
-                        pickupColumn, in stackerDef, rearColumnCount, rearColumns);
-                    for (var rearIndex = 0; rearIndex < rearColumns.Count; rearIndex++)
+                    // 交互列在货位列域外（对侧取放货，如单向机货位列0、交互列1）时，
+                    // CollectRear 会因列域校验直接跳过；仍须排除该机可达货位列在交互排上的底层。
+                    if (!StackerColumnReachUtility.CanReachColumn(in stackerDef, pickupColumn))
                     {
-                        TryAddPickupExclusionZone(
-                            list, seen, rearColumns[rearIndex], pickupRow, bottomLevelEnd);
+                        StackerColumnReachUtility.GetColumnRange(in stackerDef, out var reachMin, out var reachMax);
+                        for (var reachCol = reachMin; reachCol <= reachMax; reachCol++)
+                        {
+                            TryAddPickupExclusionZone(list, seen, reachCol, pickupRow, bottomLevelEnd);
+                        }
+                    }
+                    else if (rearColumnCount > 0 && rearColumns != null)
+                    {
+                        StackerColumnReachUtility.CollectRearStorageColumns(
+                            pickupColumn, in stackerDef, rearColumnCount, rearColumns);
+                        for (var rearIndex = 0; rearIndex < rearColumns.Count; rearIndex++)
+                        {
+                            TryAddPickupExclusionZone(
+                                list, seen, rearColumns[rearIndex], pickupRow, bottomLevelEnd);
+                        }
                     }
                 }
             }
+
+            AppendDatSlotDisableRuleZones(list, grid, bindings, warehouseId, restrictToWarehouse);
+            AppendMissingBinExclusionZones(list, grid, bindings, warehouseId);
 
             return list.Count > 0 ? list.ToArray() : System.Array.Empty<SimSlotExclusionZone>();
         }
@@ -203,6 +219,172 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             }
 
             return true;
+        }
+
+
+        /// <summary>
+        /// .dat 中缺失的货位（无精确 bin）并入排除区。
+        /// SimulationTest 等库第一排底层往往在布局里删掉 bin，却仍留在网格尺寸里；
+        /// 若不排除，分配器会选中它们，运动再轴向合成坐标，看起来就像放到「排除货位」或叠到邻位货物上。
+        /// </summary>
+        private static void AppendMissingBinExclusionZones(
+            List<SimSlotExclusionZone> list,
+            WarehouseGridConfig grid,
+            IWarehouseSimulationBindings bindings,
+            int warehouseId)
+        {
+            if (list == null || grid == null || bindings == null)
+            {
+                return;
+            }
+
+            bindings.EnsureSlotPositionsLoaded();
+            var positions = bindings.SlotPositions;
+            if (positions == null || !positions.IsReady)
+            {
+                return;
+            }
+
+            for (var row = 0; row < grid.RowCount; row++)
+            {
+                for (var col = 0; col < grid.ColumnCount; col++)
+                {
+                    for (var level = 0; level < grid.LevelCount; level++)
+                    {
+                        var slot = new GridIndex(level, col, row, 0, warehouseId);
+                        if (positions.HasExactLocalPosition(slot))
+                        {
+                            continue;
+                        }
+
+                        list.Add(new SimSlotExclusionZone
+                        {
+                            ColumnStart = col,
+                            ColumnEnd = col,
+                            LevelStart = level,
+                            LevelEnd = level,
+                            RowStart = row,
+                            RowEnd = row,
+                        });
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 合并 .dat DSBL 结构禁用规则到排除区，使入库分配与 WarehouseManager 视觉禁用一致。
+        /// 例：第一排下面几层（Row[0,0]+Level[0,2]）在 .dat 已禁用时，仿真不得再分配放货。
+        /// </summary>
+        private static void AppendDatSlotDisableRuleZones(
+            List<SimSlotExclusionZone> list,
+            WarehouseGridConfig grid,
+            IWarehouseSimulationBindings bindings,
+            int warehouseId,
+            bool restrictToWarehouse)
+        {
+            if (list == null || grid == null || bindings == null)
+            {
+                return;
+            }
+
+            bindings.EnsureSlotPositionsLoaded();
+            if (bindings.SlotPositions == null)
+            {
+                return;
+            }
+
+            if (!TryResolveSlotDisableRules(
+                    bindings.SlotPositions,
+                    warehouseId,
+                    restrictToWarehouse,
+                    out var rules)
+                || rules == null
+                || rules.Length == 0)
+            {
+                return;
+            }
+
+            for (var i = 0; i < rules.Length; i++)
+            {
+                var rule = rules[i];
+                if (rule == null || !rule.Enabled || !rule.HasAnyConstraint)
+                {
+                    continue;
+                }
+
+                // 无深度维的网格排除：Depth 约束忽略（禁用任意 Depth 的同层列排）。
+                var columnStart = rule.ConstrainColumn ? System.Math.Min(rule.ColumnMin, rule.ColumnMax) : 0;
+                var columnEnd = rule.ConstrainColumn
+                    ? System.Math.Max(rule.ColumnMin, rule.ColumnMax)
+                    : grid.ColumnCount - 1;
+                var levelStart = rule.ConstrainLevel ? System.Math.Min(rule.LevelMin, rule.LevelMax) : 0;
+                var levelEnd = rule.ConstrainLevel
+                    ? System.Math.Max(rule.LevelMin, rule.LevelMax)
+                    : grid.LevelCount - 1;
+                var rowStart = 0;
+                var rowEnd = -1;
+                if (rule.ConstrainRow)
+                {
+                    rowStart = System.Math.Min(rule.RowMin, rule.RowMax);
+                    rowEnd = System.Math.Max(rule.RowMin, rule.RowMax);
+                }
+
+                if (columnEnd < 0 || levelEnd < 0 || columnStart > columnEnd || levelStart > levelEnd)
+                {
+                    continue;
+                }
+
+                columnStart = System.Math.Clamp(columnStart, 0, grid.ColumnCount - 1);
+                columnEnd = System.Math.Clamp(columnEnd, 0, grid.ColumnCount - 1);
+                levelStart = System.Math.Clamp(levelStart, 0, grid.LevelCount - 1);
+                levelEnd = System.Math.Clamp(levelEnd, 0, grid.LevelCount - 1);
+                if (rowEnd >= 0)
+                {
+                    rowStart = System.Math.Clamp(rowStart, 0, grid.RowCount - 1);
+                    rowEnd = System.Math.Clamp(rowEnd, 0, grid.RowCount - 1);
+                }
+
+                list.Add(new SimSlotExclusionZone
+                {
+                    ColumnStart = columnStart,
+                    ColumnEnd = columnEnd,
+                    LevelStart = levelStart,
+                    LevelEnd = levelEnd,
+                    RowStart = rowStart,
+                    RowEnd = rowEnd,
+                });
+            }
+        }
+
+        private static bool TryResolveSlotDisableRules(
+            ISlotPositionIndex positions,
+            int warehouseId,
+            bool restrictToWarehouse,
+            out WarehouseSlotDisableRule[] rules)
+        {
+            rules = null;
+            if (positions is WarehouseSlotPositionCatalog catalog)
+            {
+                if (restrictToWarehouse)
+                {
+                    return catalog.TryGetSlotDisableRules(warehouseId, out rules);
+                }
+
+                if (catalog.TryGetSlotDisableRules(warehouseId, out rules))
+                {
+                    return true;
+                }
+
+                return catalog.TryGetSlotDisableRules(0, out rules);
+            }
+
+            if (positions is SlotPositionIndex single)
+            {
+                rules = single.SlotDisableRules;
+                return rules != null && rules.Length > 0;
+            }
+
+            return false;
         }
 
         private static void TryAddPickupExclusionZone(

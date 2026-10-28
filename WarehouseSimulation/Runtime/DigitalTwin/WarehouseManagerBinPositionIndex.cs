@@ -31,6 +31,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
         public int WarehouseId => _hasWarehouseOverride ? _activeWarehouseId : m_warehouseId;
 
+        /// <summary>索引上序列化的数字孪生仓库。世界坐标用它的 Transform，不随 <see cref="UseWarehouse"/> 更换。</summary>
+        public WarehouseManager BoundManager => m_warehouseManager;
+
         public bool IsReady => ResolvePositions().IsReady;
 
         /// <summary>指定本次解析使用的仓库号，并在仓库变化时丢掉已解析的坐标索引。</summary>
@@ -67,17 +70,45 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         public bool TryGetWorldPosition(GridIndex slot, out Vector3 world)
         {
             world = default;
-            if (!TryGetLocalPosition(slot, out var local))
+            // 精确货位优先；缺失时用轴向合成局部坐标再变换到世界，
+            // 避免关节绑定在「HasLocal 靠合成、World 却失败」时把局部增量当成世界方向，
+            // 把行走轴与伸叉轴绑反，放货时 X 走到无货位处。
+            if (!TryGetLocalPosition(slot, out var local)
+                && !Positions.TryGetAxisPosition(slot.Level, slot.Column, slot.Row, out local))
             {
                 return false;
             }
 
+            return TryLocalToWorld(local, out world);
+        }
+
+        /// <summary>
+        /// 把仓库局部坐标（.dat / 轴合成）转到世界坐标。堆垛机新驱动用 L/R/F 合成点对齐时需要。
+        /// </summary>
+        public bool TryLocalToWorld(Vector3 local, out Vector3 world)
+        {
+            world = default;
             if (m_warehouseManager == null)
             {
                 return false;
             }
 
             world = m_warehouseManager.transform.TransformPoint(local);
+            return true;
+        }
+
+        /// <summary>
+        /// 世界坐标 → 仓库局部（.dat 轴向空间）。Carriage 收叉时用：只改 Fork 分量、保持当前排/层。
+        /// </summary>
+        public bool TryWorldToLocal(Vector3 world, out Vector3 local)
+        {
+            local = default;
+            if (m_warehouseManager == null)
+            {
+                return false;
+            }
+
+            local = m_warehouseManager.transform.InverseTransformPoint(world);
             return true;
         }
 

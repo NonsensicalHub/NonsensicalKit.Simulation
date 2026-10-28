@@ -14,6 +14,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Playback
         public bool IsOutbound;
         public GridIndex IdleStackerSlot;
         public bool HasIdleStackerSlot;
+
+        /// <summary>空闲恢复时是否回收料箱。出库放货后、任务结束前由输送线接管，此时为 false。</summary>
+        public bool ReleaseCargoOnIdle;
     }
 
     public enum StackerJobMacroPhase

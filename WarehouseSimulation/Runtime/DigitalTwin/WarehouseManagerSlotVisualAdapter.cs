@@ -38,6 +38,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 HideHighlight();
             }
 
+            // 必须先清空：0% 初始占用时 OccupiedSlots 为空，旧逻辑直接 return 会留下
+            // WarehouseManager 默认「显示全部货物」的满库视觉（双库里常见一只库被清、另一只仍满）。
+            ClearAllOccupied();
             if (snapshot.OccupiedSlots == null || snapshot.OccupiedSlots.Count == 0)
             {
                 return;
@@ -46,34 +49,48 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             ApplyOccupancyBatch(snapshot.OccupiedSlots, occupied: true);
         }
 
-        public void ApplyHighlight(GridIndex slot)
+        /// <summary>清空该 WarehouseManager 全部货位货物显示（不依赖网格配置）。</summary>
+        public void ClearAllOccupied()
         {
             if (!EnsureReady())
             {
                 return;
+            }
+
+            _manager.ClearAllCargo(autoUpdate: true);
+        }
+
+        public bool ApplyHighlight(GridIndex slot)
+        {
+            if (!EnsureReady())
+            {
+                return false;
             }
 
             _manager.LocateHighlightBin(WarehouseGridIndexMapping.ToInt4(slot));
+            return true;
         }
 
-        public void HideHighlight()
+        public bool HideHighlight()
         {
             if (!EnsureReady())
             {
-                return;
+                return false;
             }
 
             _manager.HideHighlightBin();
+            return true;
         }
 
-        public void SetOccupied(GridIndex slot, bool occupied)
+        public bool SetOccupied(GridIndex slot, bool occupied)
         {
             if (!EnsureReady())
             {
-                return;
+                return false;
             }
 
             _manager.SetCargoState(WarehouseGridIndexMapping.ToInt4(slot), occupied, autoUpdate: true);
+            return true;
         }
 
         public void ApplyOccupancyBatch(IReadOnlyCollection<GridIndex> slots, bool occupied)

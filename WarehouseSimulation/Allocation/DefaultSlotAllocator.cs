@@ -227,11 +227,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             return false;
         }
 
-        public void Occupy(GridIndex slot)
+        public bool TryOccupy(GridIndex slot)
         {
             if (_grid == null || _occupied == null)
             {
-                return;
+                return false;
             }
 
             var idx = ToFlatIndex(_grid, slot.Level, slot.Column, slot.Row);
@@ -239,12 +239,26 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                 || _occupied[idx]
                 || !SlotGridUtility.IsStorageSlot(_grid, slot.Level, slot.Column, slot.Row, _exclusionZones))
             {
-                return;
+                return false;
             }
 
             _occupied[idx] = true;
             _freeCountByColumn[slot.Column]--;
             TotalFreeCount--;
+            return true;
+        }
+
+        public void Occupy(GridIndex slot) => TryOccupy(slot);
+
+        public bool IsOccupied(GridIndex slot)
+        {
+            if (_grid == null || _occupied == null)
+            {
+                return false;
+            }
+
+            var idx = ToFlatIndex(_grid, slot.Level, slot.Column, slot.Row);
+            return idx >= 0 && idx < _occupied.Length && _occupied[idx];
         }
 
         public void Release(GridIndex slot)

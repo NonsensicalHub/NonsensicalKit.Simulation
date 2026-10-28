@@ -3,6 +3,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
     /// <summary>子任务类型分组，供仿真记录、回放与报告共用。</summary>
     public static class SimSubTaskKinds
     {
+        /// <summary>
+        /// 与堆垛机回放 <c>ApplyForkExtendThenRetract</c> 的伸叉结束进度一致。
+        /// 取货：此后料箱已绑在叉上；放货：此后料箱已解绑/入库。
+        /// </summary>
+        public const float StackerForkCargoAttachProgress = 0.55f;
+
         public static bool IsJunction(SimSubTaskKind kind) =>
             kind is SimSubTaskKind.JunctionEnter
                 or SimSubTaskKind.JunctionWait
@@ -75,15 +81,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
                 or SimSubTaskKind.SegmentQueue;
 
         /// <summary>
-        /// 取货完成至放货完成之间：料箱应挂在堆垛机叉上，由堆垛机回放接管可视，输送线回放不应 Detach/Hide。
+        /// 取货绑叉之后至放货解绑之前：料箱应挂在堆垛机叉上，由堆垛机回放接管可视，
+        /// 输送线回放不应 Snap/Detach/Hide（否则收叉时空叉、货留在取货点或被隐藏）。
         /// </summary>
         public static bool IsStackerForkCargoWindow(in SimSubTask active, double simTime) =>
-            active.Kind switch
-            {
-                SimSubTaskKind.StackerPick => active.NormalizedProgress(simTime) >= 0.999f,
-                SimSubTaskKind.StackerMove => true,
-                SimSubTaskKind.StackerPlace => active.NormalizedProgress(simTime) < 0.999f,
-                _ => false,
-            };
+            StackerCargoHandover.IsHeldByStacker(in active, simTime);
     }
 }

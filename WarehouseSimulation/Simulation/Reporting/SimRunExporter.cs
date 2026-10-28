@@ -19,8 +19,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             StackerWarehouseSimulator simulator,
             SimRunResult result,
             string debugMarkdownFileName = null,
-            SimRunExportDisplayInfo displayInfo = default) =>
-            SimRunHtmlReportBuilder.Build(scenario, simulator, result, debugMarkdownFileName, displayInfo);
+            SimRunExportDisplayInfo displayInfo = default,
+            SimReplayHtmlCodec.Payload replayPayload = null) =>
+            SimRunHtmlReportBuilder.Build(scenario, simulator, result, debugMarkdownFileName, displayInfo, replayPayload);
 
         /// <summary>生成面向开发者的调试信息 Markdown 报告文本。</summary>
         public static string BuildDebugMarkdownReport(
@@ -113,7 +114,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             SimRunResult result,
             string resolvedDirectory,
             string fileName = null,
-            SimRunExportDisplayInfo displayInfo = default)
+            SimRunExportDisplayInfo displayInfo = default,
+            SimReplayHtmlCodec.Payload replayPayload = null)
         {
             if (string.IsNullOrWhiteSpace(resolvedDirectory))
             {
@@ -130,7 +132,19 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var debugFileName = BuildDefaultFileName(scenarioName, "debug", ".md", stamp);
             var debugMarkdown = BuildDebugMarkdownReport(scenario, simulator, result, userFileName, displayInfo);
             var debugPath = ExportMarkdownToFile(debugMarkdown, resolvedDirectory, debugFileName);
-            var userHtml = BuildHtmlReport(scenario, simulator, result, debugFileName, displayInfo);
+
+            if (replayPayload == null && simulator != null)
+            {
+                replayPayload = SimReplayHtmlCodec.BuildPayload(
+                    simulator.LastPlaybackEvents,
+                    simulator.LastSubTasks,
+                    null,
+                    result?.TotalSimSeconds ?? 0d,
+                    result,
+                    scenarioName);
+            }
+
+            var userHtml = BuildHtmlReport(scenario, simulator, result, debugFileName, displayInfo, replayPayload);
             var htmlPath = ExportHtmlToFile(userHtml, resolvedDirectory, userFileName);
             return (htmlPath, debugPath);
         }

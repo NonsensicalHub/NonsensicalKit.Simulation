@@ -22,7 +22,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             ConveyorMapName = conveyorMapName;
         }
 
-        public static SimRunExportDisplayInfo Capture(WarehouseSimScenario scenario)
+        public static SimRunExportDisplayInfo Capture(WarehouseSimScenario scenario, string scenarioNameOverride = null)
         {
             if (scenario == null)
             {
@@ -30,8 +30,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             var map = scenario.ResolvedHardwareBindings?.ConveyorMap;
+            var scenarioName = !string.IsNullOrWhiteSpace(scenarioNameOverride)
+                ? scenarioNameOverride.Trim()
+                : scenario.name;
             return new SimRunExportDisplayInfo(
-                scenario.name,
+                scenarioName,
                 scenario.Hardware != null ? scenario.Hardware.name : null,
                 scenario.Strategy != null ? scenario.Strategy.name : null,
                 map != null ? map.name : null);

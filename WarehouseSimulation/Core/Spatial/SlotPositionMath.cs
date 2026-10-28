@@ -5,7 +5,7 @@ using NonsensicalKit.Simulation.WarehouseSimulation.Model;
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
 {
     /// <summary>
-    /// 基于货位坐标索引的距离计算（与 WarehouseManager .dat 坐标系一致）。
+    /// 基于货位坐标索引的距离计算（轴向跟随 <see cref="SlotLocalAxisMapping"/>）。
     /// </summary>
     public static class SlotPositionMath
     {
@@ -22,7 +22,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 throw BuildMissingPositionException(fromLevel, railColumn, 0, toLevel, railColumn, 0);
             }
 
-            return Mathf.Abs(to.y - from.y);
+            var axes = SlotLocalAxisMappingCache.Resolve(index);
+            return Mathf.Abs(axes.LevelOf(to) - axes.LevelOf(from));
         }
 
         public static float ComputeRowDistance(
@@ -39,7 +40,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 throw BuildMissingPositionException(level, railColumn, fromRow, level, railColumn, toRow);
             }
 
-            return Mathf.Abs(to.z - from.z);
+            var axes = SlotLocalAxisMappingCache.Resolve(index);
+            return Mathf.Abs(axes.RowOf(to) - axes.RowOf(from));
         }
 
         public static float ComputeManhattanDistance(

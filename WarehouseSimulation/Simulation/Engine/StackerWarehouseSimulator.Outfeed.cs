@@ -284,7 +284,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (job.AssignedStackerId >= 0 && job.PickupPointIndex >= 0)
             {
                 var pickupNode = _conveyorTopology.GetNode(job.PickupPointIndex);
-                _stackerCarriage.SetCarriagePosition(job.AssignedStackerId, pickupNode.PickupRow, 0);
+                _stackerCarriage.SetCarriagePosition(
+                    job.AssignedStackerId,
+                    pickupNode.PickupRow,
+                    System.Math.Max(0, pickupNode.PickupLevel));
             }
 
             RecordPlayback(job, SimPlaybackPhase.StackerPlace, job.AssignedStackerId, job.TargetSlot);

@@ -87,6 +87,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
 
         /// <summary>是否已写入 <see cref="StackerFromSlot"/> / <see cref="StackerToSlot"/>。</summary>
         public bool HasStackerPose;
+
+        /// <summary>取货或放货阶段是否写了货物交接仿真时刻。</summary>
+        public bool HasCargoHandover;
+
+        /// <summary>货物归属切换的仿真时刻。早于阶段结束，晚于阶段开始。</summary>
+        public double CargoHandoverSimTime;
         public int[] PathNodeIndices;
 
         /// <summary>输送路段预约表（在首次路径相关子任务上附带）。</summary>
@@ -167,7 +173,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
                     continue;
                 }
 
-                if (!found || task.StartSimTime >= active.StartSimTime)
+                if (!found || PreferAsActiveStackerSubTask(in task, in active))
                 {
                     active = task;
                     found = true;
@@ -175,6 +181,23 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
             }
 
             return found;
+        }
+
+        /// <summary>
+        /// 同一时刻多段重叠时，正在做的动作优先于后一任务的等待。
+        /// 后一箱从到取货点就开始记等待，这段时间会盖住前一箱还没放完的伸叉；
+        /// 若按较晚的开始时间选中等待，堆垛机会被拉到另一排，料箱再补到货位上。
+        /// </summary>
+        public static bool PreferAsActiveStackerSubTask(in SimSubTask candidate, in SimSubTask current)
+        {
+            var candidateWaits = candidate.Kind == SimSubTaskKind.StackerWait;
+            var currentWaits = current.Kind == SimSubTaskKind.StackerWait;
+            if (candidateWaits != currentWaits)
+            {
+                return !candidateWaits;
+            }
+
+            return candidate.StartSimTime >= current.StartSimTime;
         }
 
         public static bool HasStarted(IReadOnlyList<SimSubTask> subTasks, int jobId, double simTime)

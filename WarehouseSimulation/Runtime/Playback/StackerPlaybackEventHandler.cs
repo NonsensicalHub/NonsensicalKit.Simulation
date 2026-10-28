@@ -51,16 +51,24 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private bool _loggedEvaluateSkip;
         private bool _rigsInitialized;
         private readonly HashSet<int> _missingPositionWarehouses = new();
+        private readonly HashSet<int> _missingExplicitStackers = new();
+        private readonly HashSet<int> _mismatchedPositionManagers = new();
+        private readonly HashSet<int> _outboundJobIds = new();
+        private readonly Dictionary<GridIndex, SimSubTask> _duePlaceBySlot = new();
+        private readonly WarehouseSlotPlaybackSnapshotIndex _duePlaceOccupancy = new();
+        private bool _duePlaceBuilt;
 
         private struct IdleStamp
         {
             public bool HasLast;
             public int JobId;
             public double EndTime;
+            public bool ReleaseCargo;
 
             public bool Matches(in IdleStamp other) =>
                 HasLast == other.HasLast
                 && JobId == other.JobId
+                && ReleaseCargo == other.ReleaseCargo
                 && System.Math.Abs(EndTime - other.EndTime) < 1e-4;
         }
 
@@ -80,6 +88,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             _idleStamps.Clear();
             _configuredTimeline = null;
             _lastEvaluateSimTime = double.NaN;
+            _duePlaceOccupancy.ResetPlaybackCursor();
+            _outboundJobIds.Clear();
+            _duePlaceBySlot.Clear();
+            _duePlaceBuilt = false;
             StopAllRigMotion();
             ConfigureAllRigs();
         }
@@ -107,9 +119,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
             _loggedEvaluateSkip = false;
 
-            if (!_subTaskIndex.IsCurrentSource(subTasks))
+            if (!_duePlaceBuilt || !_subTaskIndex.IsCurrentSource(subTasks))
             {
                 _subTaskIndex.Build(subTasks);
+                _duePlaceOccupancy.Build(subTasks, highlightOnStackerMove: false);
+                _outboundJobIds.Clear();
+                _outboundJobIds.UnionWith(SimSubTaskQuery.BuildOutboundJobIds(subTasks));
+                _duePlaceBuilt = true;
             }
 
             if (_executorList.Count == 0)
@@ -157,6 +173,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     HasLast = hasLast,
                     JobId = hasLast ? last.JobId : 0,
                     EndTime = hasLast ? last.TaskEndSimTime : 0d,
+                    ReleaseCargo = hasLast && last.ReleaseCargoOnIdle,
                 };
                 if (_idleStamps.TryGetValue(stackerId, out var applied) && applied.Matches(stamp))
                 {
@@ -173,6 +190,67 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 }
 
                 _idleStamps[stackerId] = stamp;
+            }
+
+            CatchUpDueInboundPlaces(simTime);
+        }
+
+        /// <summary>
+        /// 倍速或跳帧可能整段跨过伸叉提交点。货位快照已经占上的入库货，把场景料箱补停进去，避免货架 GPU 再画一只。
+        /// </summary>
+        private void CatchUpDueInboundPlaces(double simTime)
+        {
+            var occupied = _duePlaceOccupancy.BuildAt(simTime).OccupiedSlots;
+            if (occupied == null || occupied.Count == 0)
+            {
+                return;
+            }
+
+            _duePlaceBySlot.Clear();
+            for (var i = 0; i < _executorList.Count; i++)
+            {
+                var executor = _executorList[i];
+                if (executor == null
+                    || !_subTaskIndex.TryGetStackerTasks(executor.StackerId, out var tasks)
+                    || tasks == null)
+                {
+                    continue;
+                }
+
+                for (var t = 0; t < tasks.Count; t++)
+                {
+                    var place = tasks[t];
+                    if (place.Kind != SimSubTaskKind.StackerPlace
+                        || _outboundJobIds.Contains(place.JobId)
+                        || !occupied.Contains(place.Slot)
+                        || simTime + 1e-4 < StackerCargoHandover.Resolve(in place))
+                    {
+                        continue;
+                    }
+
+                    if (!_duePlaceBySlot.TryGetValue(place.Slot, out var existing)
+                        || place.EndSimTime >= existing.EndSimTime)
+                    {
+                        _duePlaceBySlot[place.Slot] = place;
+                    }
+                }
+            }
+
+            foreach (var pair in _duePlaceBySlot)
+            {
+                var place = pair.Value;
+                if (!_executors.TryGetValue(place.StackerId, out var executor) || executor == null)
+                {
+                    continue;
+                }
+
+                var visual = place.HasStackerPose ? place.StackerToSlot : place.Slot;
+                executor.EnsureInboundCargoParked(
+                    place.JobId,
+                    place.Slot,
+                    visual,
+                    in place,
+                    simTime);
             }
         }
 
@@ -296,10 +374,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private void ConfigureRig(JointControllerStackerJobRigPlayback rig)
         {
             var warehouseId = 0;
+            var hasExplicitDefinition = HasExplicitStackerDefinition(rig.StackerId);
             if (m_bindings != null
                 && StackerColumnReachUtility.TryGetDefinition(m_bindings, _topology, rig.StackerId, out var definition))
             {
                 warehouseId = definition.WarehouseId;
+            }
+
+            if (HasWarehouseList && !hasExplicitDefinition && _missingExplicitStackers.Add(rig.StackerId))
+            {
+                SimPlaybackLog.Warn(
+                    $"堆垛机 {rig.StackerId} 没有显式仓库定义，回放按仓库 {warehouseId} 绑定。多仓库请在 Fleet 填写 WarehouseId。",
+                    this);
             }
 
             rig.Configure(
@@ -315,6 +401,25 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
         private bool HasWarehouseList => m_warehouses != null && m_warehouses.Length > 0;
 
+        private bool HasExplicitStackerDefinition(int stackerId)
+        {
+            var definitions = m_bindings?.Fleet?.StackerDefinitions;
+            if (definitions == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < definitions.Length; i++)
+            {
+                if (definitions[i].StackerId == stackerId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private WarehouseManagerBinPositionIndex ResolvePositionIndex(int warehouseId)
         {
             if (HasWarehouseList)
@@ -328,6 +433,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     }
 
                     binding.PositionIndex.UseWarehouse(warehouseId);
+                    if (binding.PositionIndex.BoundManager != binding.Manager
+                        && _mismatchedPositionManagers.Add(warehouseId))
+                    {
+                        SimPlaybackLog.Warn(
+                            $"仓库 {warehouseId} 的货位索引与回放绑定不是同一个数字孪生仓库，世界坐标会按索引上的仓库变换。",
+                            this);
+                    }
+
                     return binding.PositionIndex;
                 }
             }

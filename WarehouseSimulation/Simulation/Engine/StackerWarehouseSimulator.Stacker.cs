@@ -19,9 +19,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// 在取货点启动堆垛机阶段：预约堆垛机与巷道资源，并排定驶向 → 取货 → 移动 → 放货四个离散事件。
         /// </summary>
         /// <remarks>
-        /// 若输送阶段已在取货点 zone 写入堆垛机连续占用（<c>ApplyPickupStackerReserve</c>），
-        /// 此处复用已有预约窗，避免重复 <see cref="ReservationTable.TryReserve"/> 产生幽灵占用。
+        /// 时长、阶段端点和计划尾来自同一份 <see cref="StackerWorkPlan"/>。
+        /// 下一项作业的起点是这份计划的结束排/层，不是堆垛机此刻的物理位置。
+        /// 已有且时长一致的预约窗会复用，避免再写一段占用。
         /// 实际开始晚于 <c>_clock.Now</c> 时累计等待时间并记录 <see cref="SimSubTaskKind.StackerWait"/>。
+        /// 等待姿态停在计划起点，不覆盖前一作业还在走的轨迹。
         /// </remarks>
         private void TryBeginStackerPhase(WarehouseJob job)
         {
@@ -41,8 +43,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var pickupNode = _conveyorTopology.GetNode(job.PickupPointIndex);
             var plan = StackerWorkPlanner.PlanInbound(
                 _bindings, _conveyorTopology, _stackerCarriage, job, pickupNode);
-            BeginStackerPhase(job, plan, commitCarriageBooking: !HasPlannedStackerReservation(
-                job, _clock.Now, plan.TotalSeconds));
+            BeginStackerPhase(job, plan);
         }
 
         private void TryBeginOutboundStackerPhase(WarehouseJob job)
@@ -64,18 +65,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var pickupNode = _conveyorTopology.GetNode(job.PickupPointIndex);
             var plan = StackerWorkPlanner.PlanOutbound(
                 _bindings, _conveyorTopology, _stackerCarriage, job, pickupNode);
-            BeginStackerPhase(job, plan, commitCarriageBooking: true);
+            BeginStackerPhase(job, plan);
         }
 
-        private void BeginStackerPhase(WarehouseJob job, in StackerWorkPlan plan, bool commitCarriageBooking)
+        private void BeginStackerPhase(WarehouseJob job, in StackerWorkPlan plan)
         {
             var stackerId = job.AssignedStackerId;
             var total = plan.TotalSeconds;
             var resources = BuildStackerResources(job, stackerId, job.TargetSlot.Column);
-            var pickupNode = _conveyorTopology.GetNode(job.PickupPointIndex);
-            var pickupForkDepth = SimConveyorNodeBinding.HasForkDepth(in pickupNode);
-            var poses = StackerSubTaskPoseBuilder.Build(
-                _bindings, _conveyorTopology, job, pickupNode);
+            var poses = plan.Poses;
             var desired = _clock.Now;
             double actualStart;
             if (HasPlannedStackerReservation(job, desired, total))
@@ -85,19 +83,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             else if (resources.Length > 0)
             {
                 actualStart = _reservations.ReserveAtEarliestAll(desired, total, resources);
-                job.StackerReserveStart = actualStart;
-                job.StackerReserveEnd = actualStart + total;
             }
             else
             {
                 actualStart = desired;
-                job.StackerReserveStart = actualStart;
-                job.StackerReserveEnd = actualStart + total;
             }
 
-            // 取货点 zone 的整段占用（驶入 + 驶向/取/移/放）已在输送调度阶段（ApplyPickupStackerReserve）写入，
-            // 此处不再重复预约，否则会与已有占用冲突并顺延出一段幽灵占用，误阻后续箱进入。
+            // 取货点 zone 占用由输送调度写入。这里只提交与本计划时长相同的堆垛机/巷道区间，不再另算一套阶段。
 
+            var approachFrom = plan.StartPose;
             var wait = actualStart - desired;
             if (wait > 1e-9)
             {
@@ -106,8 +100,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     ?? job.AisleResourceId
                     ?? job.StackerResourceId;
                 RecordPlayback(job, SimPlaybackPhase.StackerWait, stackerId, job.TargetSlot);
-                var waitPose = StackerSubTaskPoseBuilder.ResolveCarriagePose(
-                    _stackerCarriage, stackerId, poses.RailColumn);
                 RecordSubTask(
                     job,
                     SimSubTaskKind.StackerWait,
@@ -115,8 +107,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     actualStart,
                     stackerId,
                     job.TargetSlot,
-                    stackerFromSlot: waitPose,
-                    stackerToSlot: waitPose,
+                    stackerFromSlot: approachFrom,
+                    stackerToSlot: approachFrom,
                     stackerRailColumn: poses.RailColumn,
                     hasStackerPose: true);
             }
@@ -131,8 +123,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             job.ScheduledCompleteTime = job.StackerReserveEnd;
 
             var cursor = actualStart;
-            var approachFrom = StackerSubTaskPoseBuilder.ResolveCarriagePose(
-                _stackerCarriage, stackerId, poses.RailColumn);
             var needsApproach = !StackerSubTaskPoseBuilder.CarriagePosesEqual(
                 approachFrom, poses.ApproachTo);
             if (needsApproach && plan.ApproachSeconds > 1e-6f)
@@ -162,17 +152,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             job.ServiceTimeAccum += plan.PickSeconds;
             var pickEnd = cursor + plan.PickSeconds;
-            var pickFrom = poses.PickFrom;
-            if (!needsApproach || plan.ApproachSeconds <= 1e-6f)
-            {
-                var pickStartCarriage = StackerSubTaskPoseBuilder.ResolveCarriagePose(
-                    _stackerCarriage, stackerId, poses.RailColumn);
-                if (!StackerSubTaskPoseBuilder.CarriagePosesEqual(pickStartCarriage, poses.PickFrom))
-                {
-                    pickFrom = pickStartCarriage;
-                }
-            }
-
             RecordSubTask(
                 job,
                 SimSubTaskKind.StackerPick,
@@ -180,12 +159,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 pickEnd,
                 stackerId,
                 job.TargetSlot,
-                stackerFromSlot: pickFrom,
+                stackerFromSlot: poses.PickFrom,
                 stackerToSlot: poses.PickTo,
                 stackerRailColumn: poses.RailColumn,
                 hasStackerPose: true,
-                stackerToUsesForkDepth: pickupForkDepth && job.Direction != SimFlowDirection.Outbound,
-                stackerToForkDepthMeters: pickupNode.ForkDepthMeters);
+                stackerToUsesForkDepth: plan.PickUsesForkDepth,
+                stackerToForkDepthMeters: plan.PickForkDepthMeters);
             _queue.Enqueue(new ScheduledSimEvent(pickEnd, SimEventType.StackerPickComplete, job.JobId));
 
             job.ServiceTimeAccum += plan.MoveSeconds;
@@ -216,15 +195,21 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 stackerToSlot: poses.PlaceTo,
                 stackerRailColumn: poses.RailColumn,
                 hasStackerPose: true,
-                stackerToUsesForkDepth: pickupForkDepth && job.Direction == SimFlowDirection.Outbound,
-                stackerToForkDepthMeters: pickupNode.ForkDepthMeters);
+                stackerToUsesForkDepth: plan.PlaceUsesForkDepth,
+                stackerToForkDepthMeters: plan.PlaceForkDepthMeters);
             _queue.Enqueue(new ScheduledSimEvent(placeEnd, SimEventType.StackerPlaceComplete, job.JobId));
 
-            if (commitCarriageBooking)
-            {
-                _stackerCarriage.CommitBooking(stackerId, placeEnd, plan.EndRow, plan.EndLevel);
-            }
+            _stackerCarriage.CommitBooking(stackerId, placeEnd, plan.EndRow, plan.EndLevel);
+            WarehouseSimLog.Detail(
+                $"堆垛机计划 job={job.JobId} stacker={stackerId} 仓库={plan.WarehouseId} " +
+                $"起点=R{plan.StartRow}L{plan.StartLevel} 终点=R{plan.EndRow}L{plan.EndLevel} " +
+                $"t={actualStart:F3}-{placeEnd:F3} " +
+                $"取货交接={StackerCargoHandover.FromPhase(cursor, pickEnd):F3} " +
+                $"放货交接={StackerCargoHandover.FromPhase(moveEnd, placeEnd):F3}");
         }
+
+
+        // 伸叉侧向只认配置的 ForkDepthMeters（原样）；货位侧用 Absolute，不再提供列相对轨道的符号推断。
 
         private string[] BuildStackerResources(WarehouseJob job, int stackerId, int column)
         {

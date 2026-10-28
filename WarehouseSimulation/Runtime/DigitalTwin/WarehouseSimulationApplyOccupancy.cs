@@ -70,7 +70,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 m_eventSource.InitialOccupiedSlots);
 
             var adapter = EnsureAdapter();
-            if (snapshot.OccupiedSlots != null)
+            // 先清空默认满库显示，再按快照点亮；0% 时 OccupiedSlots 为空，只清空。
+            adapter.ClearAllOccupied();
+            if (snapshot.OccupiedSlots != null && snapshot.OccupiedSlots.Count > 0)
             {
                 adapter.ApplyOccupancyBatch(snapshot.OccupiedSlots, occupied: true);
             }
