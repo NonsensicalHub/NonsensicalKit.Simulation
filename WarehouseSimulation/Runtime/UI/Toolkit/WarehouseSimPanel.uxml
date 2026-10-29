@@ -1,0 +1,135 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="WarehouseSimPanel.uss" />
+    <ui:VisualElement name="root" class="root" picking-mode="Ignore">
+        <ui:VisualElement name="workspace" class="workspace" picking-mode="Ignore">
+
+            <!-- ===== 仿真窗口（上方） ===== -->
+            <ui:VisualElement name="sim-dock" class="dock-row dock-sim" picking-mode="Ignore">
+                <ui:Button name="sim-edge" text="仿真" class="panel-edge panel-edge-sim" tooltip="展开 / 收起仿真窗口" />
+                <ui:VisualElement name="sim-panels" class="panels is-open" picking-mode="Ignore">
+                    <ui:VisualElement name="sim-window" class="panel panel-main panel-sim" picking-mode="Position">
+                        <ui:VisualElement class="panel-header">
+                            <ui:Label name="sim-title" text="仿真" class="title" />
+                            <ui:Button name="sim-collapse" text="收起" class="mini" tooltip="收起为侧边按钮" />
+                        </ui:VisualElement>
+                        <ui:Label name="sim-status" text="尚未运行仿真。" class="status" />
+                        <ui:ScrollView name="sim-scroll" class="main-scroll">
+                            <ui:VisualElement name="preset-box" class="card">
+                                <ui:Label text="配置档" class="block-title" />
+                                <ui:DropdownField name="preset" label="" class="field preset-field task-input" />
+                                <ui:TextField name="preset-name" label="名称" class="field task-input" />
+                                <ui:VisualElement class="row">
+                                    <ui:Button name="preset-new" text="新建" class="quiet row-button task-input" />
+                                    <ui:Button name="preset-save" text="保存" class="quiet row-button task-input" />
+                                    <ui:Button name="preset-copy" text="另存为" class="quiet row-button task-input" />
+                                    <ui:Button name="preset-delete" text="删除" class="quiet row-button task-input" />
+                                </ui:VisualElement>
+                                <ui:Label name="preset-status" text="正在读取配置档。" class="hint preset-status" />
+                                <ui:Label name="task-preview" text="正在读取任务配置。" class="task-preview" />
+                                <ui:Button name="toggle-config" text="编辑任务配置" class="quiet" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement name="run-card" class="card card-actions">
+                                <ui:Label text="运行" class="block-title" />
+                                <ui:Button name="run" text="运行仿真" class="action" />
+                                <ui:ProgressBar name="run-progress" title="0/0" low-value="0" high-value="100" value="0" class="run-progress" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement name="empty-card" class="card empty-card">
+                                <ui:Label text="还没有仿真结果。选好配置档后点「运行仿真」。回放请用下方窗口的「加载回放」。" class="hint" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement name="result-card" class="block card">
+                                <ui:Label text="结果" class="block-title" />
+                                <ui:Label name="result-source" text="" class="result-source" />
+                                <ui:Label name="summary" text="尚无仿真结果。" class="summary" />
+                                <ui:VisualElement class="row">
+                                    <ui:Button name="export" text="导出可回放报告" class="quiet row-button" tooltip="写出 HTML：浏览器可看，Unity 可加载回放" />
+                                    <ui:Button name="open-report" text="报告目录" class="quiet row-button" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:ScrollView>
+                    </ui:VisualElement>
+
+                    <ui:VisualElement name="config-panel" class="panel panel-config" picking-mode="Position">
+                        <ui:VisualElement name="config-header" class="config-header">
+                            <ui:Label text="任务配置" class="config-title" />
+                            <ui:Button name="close-config" text="收起" class="mini" />
+                        </ui:VisualElement>
+                        <ui:Label name="task-note" text="改的是当前配置档（JSON，可在 Web 保存）。切换档位会整套换上流程、占用和策略。" class="hint" />
+                        <ui:Label name="task-missing" text="未指定仿真任务。" class="hint task-missing" />
+                        <ui:ScrollView name="config-scroll" class="config-scroll">
+                            <ui:VisualElement name="task-form" class="task-form">
+                                <ui:Label text="初始状态" class="section" />
+                                <ui:Label name="occupancy-label" text="初始占用 0%" class="speed-label" />
+                                <ui:Slider name="occupancy" low-value="0" high-value="100" value="0" class="speed-slider task-input" />
+                                <ui:Toggle name="occupancy-random" label="随机选取货位" class="field task-input" />
+                                <ui:Label text="流程计划" class="section" />
+                                <ui:IntegerField name="flow-seed" label="随机种子" value="42" class="field task-input" />
+                                <ui:VisualElement name="flow-list" />
+                                <ui:Button name="flow-add" text="添加一段流程" class="quiet task-input" />
+                                <ui:Label name="strategy-note" text="策略" class="section" />
+                                <ui:DropdownField name="placement" label="放置策略" class="field task-input" />
+                                <ui:DropdownField name="port" label="端口选择" class="field task-input" />
+                                <ui:DropdownField name="routing" label="输送路径" class="field task-input" />
+                                <ui:VisualElement name="route-weights">
+                                    <ui:FloatField name="route-distance" label="距离权重" value="1" class="field task-input" />
+                                    <ui:FloatField name="route-congested" label="拥堵权重" value="5" class="field task-input" />
+                                    <ui:FloatField name="route-total" label="在途权重" value="1" class="field task-input" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:ScrollView>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- ===== 回放窗口（下方） ===== -->
+            <ui:VisualElement name="replay-dock" class="dock-row dock-replay" picking-mode="Ignore">
+                <ui:Button name="replay-edge" text="回放" class="panel-edge panel-edge-replay" tooltip="展开 / 收起回放窗口" />
+                <ui:VisualElement name="replay-panels" class="panels panels-replay is-open" picking-mode="Ignore">
+                    <ui:VisualElement name="replay-window" class="panel panel-main panel-replay" picking-mode="Position">
+                        <ui:VisualElement class="panel-header">
+                            <ui:Label name="replay-title" text="回放" class="title" />
+                            <ui:Button name="replay-collapse" text="收起" class="mini" tooltip="收起为侧边按钮" />
+                        </ui:VisualElement>
+                        <ui:Label name="replay-status" text="暂无回放数据。" class="status" />
+                        <ui:ScrollView name="replay-scroll" class="main-scroll replay-scroll">
+                            <ui:VisualElement name="replay-info-card" class="card">
+                                <ui:Label text="当前回放" class="block-title" />
+                                <ui:Label name="replay-info" text="配置：—&#10;来源：—&#10;任务：—&#10;时长：—" class="replay-info" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement name="load-card" class="card card-actions">
+                                <ui:Label text="文件" class="block-title" />
+                                <ui:Button name="load-replay" text="加载回放…" class="quiet" tooltip="选择含回放数据的 HTML 报告，直接播放" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement name="replay-empty-card" class="card empty-card">
+                                <ui:Label text="暂无回放。先在上方跑完仿真，或点「加载回放」打开以前导出的可回放 HTML。" class="hint" />
+                            </ui:VisualElement>
+
+                            <ui:VisualElement name="playback-card" class="block card">
+                                <ui:Label text="播放" class="block-title" />
+                                <ui:Label name="time" text="00:00 / 00:00" class="time" />
+                                <ui:Slider name="timeline" low-value="0" high-value="1" value="0" class="timeline-slider" />
+                                <ui:VisualElement class="row">
+                                    <ui:Button name="play" text="播放" class="playback play" />
+                                    <ui:Button name="stop" text="回到开头" class="playback stop" />
+                                </ui:VisualElement>
+                                <ui:Label name="speed-label" text="倍速 60x" class="speed-label" />
+                                <ui:Slider name="speed" low-value="1" high-value="120" value="60" class="speed-slider" />
+                                <ui:VisualElement class="row">
+                                    <ui:Button name="speed-1" text="1x" class="chip" />
+                                    <ui:Button name="speed-10" text="10x" class="chip" />
+                                    <ui:Button name="speed-60" text="60x" class="chip" />
+                                    <ui:Button name="speed-120" text="120x" class="chip" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:ScrollView>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

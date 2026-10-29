@@ -2,7 +2,8 @@
     "name": "WarehouseSimulation.Editor",
     "rootNamespace": "NonsensicalKit.Simulation.WarehouseSimulation.Editor",
     "references": [
-        "WarehouseSimulation"
+        "WarehouseSimulation",
+        "WarehouseSimulation.Runtime"
     ],
     "includePlatforms": [
         "Editor"
