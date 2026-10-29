@@ -207,6 +207,54 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             }
         }
 
+        /// <summary>
+        /// 四列双深的一对货位：远离巷道的是深位，紧邻巷道的是浅位。
+        /// <paramref name="columnIsFar"/> 为 true 时 <paramref name="partnerColumn"/> 是浅位，否则是深位。
+        /// 单列、双列伸叉没有前后身位，返回 false。
+        /// </summary>
+        public static bool TryGetDoubleDepthPartner(
+            in SimStackerDefinition def,
+            int column,
+            out int partnerColumn,
+            out bool columnIsFar)
+        {
+            partnerColumn = -1;
+            columnIsFar = false;
+            if (def.ColumnReach != SimStackerColumnReach.FourColumns)
+            {
+                return false;
+            }
+
+            var aisleLeft = def.AisleLeftColumn;
+            if (column == aisleLeft - 1)
+            {
+                partnerColumn = aisleLeft;
+                columnIsFar = true;
+                return true;
+            }
+
+            if (column == aisleLeft)
+            {
+                partnerColumn = aisleLeft - 1;
+                return true;
+            }
+
+            if (column == aisleLeft + 1)
+            {
+                partnerColumn = aisleLeft + 2;
+                return true;
+            }
+
+            if (column == aisleLeft + 2)
+            {
+                partnerColumn = aisleLeft + 1;
+                columnIsFar = true;
+                return true;
+            }
+
+            return false;
+        }
+
         /// <summary>堆垛机旁取货点：0=伸叉覆盖最左货位列，1=空隙右侧货位列（单向时恒为最左/唯一列）。</summary>
         public static int GetEntrancePickupColumn(in SimStackerDefinition def, int pickupIndexOnStacker) =>
             GetEntrancePickupColumn(def.AisleLeftColumn, def.ColumnReach, def.ServingSide, pickupIndexOnStacker);

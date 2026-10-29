@@ -251,8 +251,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             if (!TryBuildCarriageJointValues(fromLevel, fromRow, fromRailColumn, out var fromAxes)
                 || !TryBuildCarriageJointValues(toLevel, toRow, toRailColumn, out var toAxes))
             {
-                LogMotionResolveSkipOnce(
-                    $"Carriage L{fromLevel}R{fromRow}→L{toLevel}R{toRow} rail={toRailColumn}");
                 return false;
             }
 
@@ -311,8 +309,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     out var toAxes,
                     treatRailColumnAsCarriage: toTreatRailColumnAsCarriage && !toUsesForkDepth))
             {
-                LogMotionResolveSkipOnce(
-                    $"Full C{fromColumn}L{fromLevel}R{fromRow}→C{toColumn}L{toLevel}R{toRow}");
                 return false;
             }
 
@@ -484,19 +480,5 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
         private bool TryBuildCarriageJointValues(int level, int row, out StackerAxisValueResolver.StackerAxisValues axes) =>
             TryBuildCarriageJointValues(level, row, _railColumn, out axes);
-
-        private void LogMotionResolveSkipOnce(string detail)
-        {
-            if (_loggedMotionResolveSkip)
-            {
-                return;
-            }
-
-            _loggedMotionResolveSkip = true;
-            SimPlaybackLog.Warn(
-                $"JointStackerRig 堆垛机 {m_stackerId} 无法解析关节目标（{detail}），" +
-                "请检查仓库数据或货位坐标索引是否就绪。",
-                this);
-        }
     }
 }

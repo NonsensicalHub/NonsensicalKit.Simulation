@@ -145,8 +145,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     out var extended,
                     treatRailColumnAsCarriage: false))
             {
-                LogMotionResolveSkipOnce(
-                    $"Fork C{from.Column}L{from.Level}R{from.Row}→C{to.Column}L{to.Level}R{to.Row}");
                 return;
             }
 

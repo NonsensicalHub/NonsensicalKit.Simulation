@@ -79,6 +79,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
             public bool Placed;
             /// <summary>占起点时一并拿的锁：驶离起点时若下一步不再需要就释放。</summary>
             public HashSet<string> OriginLocks;
+            public int ActiveIndex = -1;
         }
 
         private sealed class LockState
@@ -102,7 +103,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
         private readonly List<Cargo> _active = new List<Cargo>();
         private readonly Dictionary<string, int> _zoneOwner = new Dictionary<string, int>(StringComparer.Ordinal);
         private readonly Dictionary<string, LockState> _locks = new Dictionary<string, LockState>(StringComparer.Ordinal);
-        private readonly List<Ev> _events = new List<Ev>();
+        private readonly List<Ev> _heap = new List<Ev>();
+        private readonly List<Ev> _batch = new List<Ev>();
+        private readonly List<Ev> _dueArrives = new List<Ev>();
+        private readonly List<Ev> _deferred = new List<Ev>();
+        private readonly List<Cargo> _candidates = new List<Cargo>();
+        // 每个位置离它不足一个箱长的其他位置。第一次询问时建好，之后挡车只查这张表。
+        private readonly Dictionary<string, List<string>> _closeTo =
+            new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        private readonly List<string> _indexedZones = new List<string>();
         // 锁的等待者（被对向持有挡住）：防止同向源源不断续上导致对向饿死。
         private readonly Dictionary<string, Dictionary<int, (int Direction, double Since)>> _lockWaiters =
             new Dictionary<string, Dictionary<int, (int Direction, double Since)>>(StringComparer.Ordinal);
@@ -121,18 +130,61 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
         /// </summary>
         public Func<string, string, bool> ZonesTooClose;
 
+        private static readonly Comparison<Cargo> CandidateOrder = (a, b) =>
+        {
+            var w = a.WaitingSince.CompareTo(b.WaitingSince);
+            return w != 0 ? w : a.Seq.CompareTo(b.Seq);
+        };
+
+        private static readonly Comparison<Ev> BatchByKindThenSeq = (a, b) =>
+        {
+            var c = a.Kind.CompareTo(b.Kind);
+            return c != 0 ? c : a.Seq.CompareTo(b.Seq);
+        };
+
+        private static readonly Comparison<Ev> ArriveBySeqDescending = (a, b) => b.Seq.CompareTo(a.Seq);
+
         private bool IsBlockedByNeighbour(string zoneKey, int selfId)
         {
-            if (ZonesTooClose == null) return false;
-            foreach (var pair in _zoneOwner)
+            if (ZonesTooClose == null || string.IsNullOrEmpty(zoneKey)) return false;
+            var near = CloseZones(zoneKey);
+            for (var i = 0; i < near.Count; i++)
             {
-                if (pair.Value != selfId && !string.Equals(pair.Key, zoneKey, StringComparison.Ordinal) && ZonesTooClose(zoneKey, pair.Key))
+                if (_zoneOwner.TryGetValue(near[i], out var owner) && owner != selfId)
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        /// <summary>与旧实现一致：只记录 ZonesTooClose(询问位置, 已占用位置) 为真的邻居。</summary>
+        private List<string> CloseZones(string zoneKey)
+        {
+            if (_closeTo.TryGetValue(zoneKey, out var known))
+            {
+                return known;
+            }
+
+            var mine = new List<string>();
+            for (var i = 0; i < _indexedZones.Count; i++)
+            {
+                var other = _indexedZones[i];
+                if (ZonesTooClose(zoneKey, other))
+                {
+                    mine.Add(other);
+                }
+
+                if (ZonesTooClose(other, zoneKey))
+                {
+                    _closeTo[other].Add(zoneKey);
+                }
+            }
+
+            _closeTo[zoneKey] = mine;
+            _indexedZones.Add(zoneKey);
+            return mine;
         }
         public IReadOnlyList<string> Violations => _violations;
         public int ActiveCount => _active.Count;
@@ -163,7 +215,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
                 ReadyTime = Fill(n),
             };
             _cargos[cargoId] = c;
-            _active.Add(c);
+            AddActive(c);
             Push(c.ReadyAt, EvKind.Ready, cargoId, null);
         }
 
@@ -217,7 +269,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
             }
 
             _cargos[cargoId] = c;
-            _active.Add(c);
+            AddActive(c);
             if (n == 1)
             {
                 c.AtGoal = true;
@@ -342,20 +394,21 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
             FreeZone(c, c.Steps[c.Current].ZoneKey);
             foreach (var key in new List<string>(c.HeldLocks)) ReleaseLock(c, key);
             c.Done = true;
-            _active.Remove(c);
+            RemoveActive(c);
             _cargos.Remove(cargoId);
             Dispatch();
         }
 
         public bool TryPeekNextEventTime(out double time)
         {
-            time = double.PositiveInfinity;
-            for (var i = 0; i < _events.Count; i++)
+            if (_heap.Count == 0)
             {
-                if (_events[i].Time < time) time = _events[i].Time;
+                time = double.PositiveInfinity;
+                return false;
             }
 
-            return _events.Count > 0;
+            time = _heap[0].Time;
+            return true;
         }
 
         public List<ZoneKernelOutput> DrainOutputs()
@@ -383,18 +436,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
 
                 _now = Math.Max(_now, t);
                 // 同一时刻的事件全部处理后再派发（到达先于锁释放先于就绪）。
-                var batch = new List<Ev>();
-                for (var i = _events.Count - 1; i >= 0; i--)
+                _batch.Clear();
+                while (_heap.Count > 0 && _heap[0].Time <= t + Eps)
                 {
-                    if (_events[i].Time <= t + Eps)
-                    {
-                        batch.Add(_events[i]);
-                        _events.RemoveAt(i);
-                    }
+                    _batch.Add(HeapPop());
                 }
 
-                batch.Sort((a, b) => a.Kind != b.Kind ? a.Kind.CompareTo(b.Kind) : a.Seq.CompareTo(b.Seq));
-                foreach (var ev in batch) Handle(ev);
+                _batch.Sort(BatchByKindThenSeq);
+                for (var i = 0; i < _batch.Count; i++) Handle(_batch[i]);
                 Dispatch();
             }
 
@@ -450,41 +499,67 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
             while (progressed && guard++ < 100000)
             {
                 progressed = false;
-                var candidates = new List<Cargo>();
-                foreach (var c in _active)
+                _candidates.Clear();
+                for (var i = 0; i < _active.Count; i++)
                 {
+                    var c = _active[i];
                     if (!c.Moving && !c.AtGoal && c.ReadyAt <= _now + Eps && c.Current + 1 < c.Steps.Length)
                     {
-                        candidates.Add(c);
+                        _candidates.Add(c);
                     }
                 }
 
-                candidates.Sort((a, b) =>
-                {
-                    var w = a.WaitingSince.CompareTo(b.WaitingSince);
-                    return w != 0 ? w : a.Seq.CompareTo(b.Seq);
-                });
+                _candidates.Sort(CandidateOrder);
 
-                foreach (var c in candidates)
+                for (var i = 0; i < _candidates.Count; i++)
                 {
-                    if (TryStartMove(c))
+                    if (TryStartMove(_candidates[i]))
                     {
                         progressed = true;
                     }
                 }
 
-                // 零时长 hop：同一时刻立即到达，再派发一轮。
-                for (var i = _events.Count - 1; i >= 0; i--)
+                // 零时长 hop：同一时刻立即到达，再派发一轮。后入队的先处理，与原先从队尾摘事件一致。
+                if (ConsumeDueArrives())
                 {
-                    var ev = _events[i];
-                    if (ev.Kind == EvKind.Arrive && ev.Time <= _now + Eps)
-                    {
-                        _events.RemoveAt(i);
-                        Handle(ev);
-                        progressed = true;
-                    }
+                    progressed = true;
                 }
             }
+        }
+
+        private bool ConsumeDueArrives()
+        {
+            _dueArrives.Clear();
+            _deferred.Clear();
+            while (_heap.Count > 0 && _heap[0].Time <= _now + Eps)
+            {
+                var ev = HeapPop();
+                if (ev.Kind == EvKind.Arrive)
+                {
+                    _dueArrives.Add(ev);
+                }
+                else
+                {
+                    _deferred.Add(ev);
+                }
+            }
+
+            if (_dueArrives.Count > 1)
+            {
+                _dueArrives.Sort(ArriveBySeqDescending);
+            }
+
+            for (var i = 0; i < _dueArrives.Count; i++)
+            {
+                Handle(_dueArrives[i]);
+            }
+
+            for (var i = 0; i < _deferred.Count; i++)
+            {
+                HeapPush(_deferred[i]);
+            }
+
+            return _dueArrives.Count > 0;
         }
 
         private bool TryStartMove(Cargo c)
@@ -611,7 +686,105 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
 
         private void Push(double t, EvKind kind, int cargoId, string key)
         {
-            _events.Add(new Ev { Time = t, Kind = kind, CargoId = cargoId, Key = key, Seq = _seq++ });
+            HeapPush(new Ev { Time = t, Kind = kind, CargoId = cargoId, Key = key, Seq = _seq++ });
+        }
+
+        private static int CompareEv(Ev a, Ev b)
+        {
+            var c = a.Time.CompareTo(b.Time);
+            if (c != 0)
+            {
+                return c;
+            }
+
+            c = ((int)a.Kind).CompareTo((int)b.Kind);
+            if (c != 0)
+            {
+                return c;
+            }
+
+            return a.Seq.CompareTo(b.Seq);
+        }
+
+        private void HeapPush(Ev ev)
+        {
+            _heap.Add(ev);
+            var i = _heap.Count - 1;
+            while (i > 0)
+            {
+                var parent = (i - 1) >> 1;
+                if (CompareEv(_heap[i], _heap[parent]) >= 0)
+                {
+                    break;
+                }
+
+                (_heap[i], _heap[parent]) = (_heap[parent], _heap[i]);
+                i = parent;
+            }
+        }
+
+        private Ev HeapPop()
+        {
+            var ev = _heap[0];
+            var last = _heap.Count - 1;
+            if (last == 0)
+            {
+                _heap.RemoveAt(0);
+                return ev;
+            }
+
+            _heap[0] = _heap[last];
+            _heap.RemoveAt(last);
+            var i = 0;
+            var count = _heap.Count;
+            while (true)
+            {
+                var left = (i << 1) + 1;
+                if (left >= count)
+                {
+                    break;
+                }
+
+                var right = left + 1;
+                var smallest = right < count && CompareEv(_heap[right], _heap[left]) < 0 ? right : left;
+                if (CompareEv(_heap[i], _heap[smallest]) <= 0)
+                {
+                    break;
+                }
+
+                (_heap[i], _heap[smallest]) = (_heap[smallest], _heap[i]);
+                i = smallest;
+            }
+
+            return ev;
+        }
+
+        private void AddActive(Cargo cargo)
+        {
+            cargo.ActiveIndex = _active.Count;
+            _active.Add(cargo);
+        }
+
+        private void RemoveActive(Cargo cargo)
+        {
+            var index = cargo.ActiveIndex;
+            var last = _active.Count - 1;
+            if (index < 0 || index > last || _active[index] != cargo)
+            {
+                _active.Remove(cargo);
+                cargo.ActiveIndex = -1;
+                return;
+            }
+
+            if (index != last)
+            {
+                var swap = _active[last];
+                _active[index] = swap;
+                swap.ActiveIndex = index;
+            }
+
+            _active.RemoveAt(last);
+            cargo.ActiveIndex = -1;
         }
 
         /// <summary>没有待处理事件却仍有未到目标的货物时，给出等待关系（疑似死锁）。</summary>
@@ -626,13 +799,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
                 var step = c.Steps[next];
                 sb.Append($"cargo={c.Id} 在步{c.Current} 等 {step.ZoneKey}");
                 if (_zoneOwner.TryGetValue(step.ZoneKey, out var o) && o != c.Id) sb.Append($"(被 {o} 占)");
-                if (ZonesTooClose != null)
+                if (ZonesTooClose != null && !string.IsNullOrEmpty(step.ZoneKey))
                 {
-                    foreach (var pair in _zoneOwner)
+                    var near = CloseZones(step.ZoneKey);
+                    for (var i = 0; i < near.Count; i++)
                     {
-                        if (pair.Value != c.Id && !string.Equals(pair.Key, step.ZoneKey, StringComparison.Ordinal) && ZonesTooClose(step.ZoneKey, pair.Key))
+                        if (_zoneOwner.TryGetValue(near[i], out var owner) && owner != c.Id)
                         {
-                            sb.Append($" 车距<{pair.Key}@{pair.Value}>");
+                            sb.Append($" 车距<{near[i]}@{owner}>");
                         }
                     }
                 }

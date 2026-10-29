@@ -73,6 +73,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Tests
                     RandomQuantityMin = 2,
                     RandomQuantityMax = 3,
                     RequiredProcessTags = new[] { "wrap" },
+                    AllowedWarehouseIds = new[] { 1, 0, 1 },
                 },
                 new SimFlowPlanEntryDto
                 {
@@ -120,6 +121,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Tests
                 || back.FlowPlan[0].RequiredProcessTags[0] != "wrap")
             {
                 return "tags";
+            }
+
+            if (!SimWarehouseRestriction.Same(back.FlowPlan[0].AllowedWarehouseIds, new[] { 0, 1 }))
+            {
+                return "warehouses";
+            }
+
+            var runtime = WarehouseSimScenarioJson.ConvertFlowPlan(back.FlowPlan);
+            if (runtime == null
+                || runtime.Length != 2
+                || !SimWarehouseRestriction.Same(runtime[0].AllowedWarehouseIds, new[] { 0, 1 })
+                || SimWarehouseRestriction.IsRestricted(runtime[1].AllowedWarehouseIds))
+            {
+                return "runtime warehouses";
             }
 
             return null;

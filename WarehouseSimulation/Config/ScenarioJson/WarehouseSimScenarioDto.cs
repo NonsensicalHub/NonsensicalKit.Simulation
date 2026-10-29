@@ -50,6 +50,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
     public sealed class SimFlowPlanEntryDto
     {
         public string Direction = "Inbound";
+
+        /// <summary>限定仓库号。空或 null 表示不限制。</summary>
+        public int[] AllowedWarehouseIds;
+
         public int Quantity = 100;
         public float StartDelaySeconds;
         public string ScheduleMode = "Instant";

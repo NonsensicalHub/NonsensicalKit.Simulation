@@ -27,6 +27,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
         }
 
+        private static readonly Comparison<SimSubTask> SubTaskOrder = (a, b) =>
+        {
+            var start = a.StartSimTime.CompareTo(b.StartSimTime);
+            return start != 0 ? start : a.SubTaskId.CompareTo(b.SubTaskId);
+        };
+
         public static bool TryBuild(
             IReadOnlyList<SimSubTask> subTasks,
             int jobId,
@@ -40,10 +46,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return false;
             }
 
-            report.Clear();
-            report.JobId = jobId;
-            report.SimTime = simTime;
-
             var jobTasks = new List<SimSubTask>();
             for (var i = 0; i < subTasks.Count; i++)
             {
@@ -53,18 +55,32 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
             }
 
-            if (jobTasks.Count == 0)
+            return TryBuildJobTasks(jobTasks, jobId, simTime, report, map, topology, includeNarrative: true);
+        }
+
+        /// <summary>
+        /// 用已经按任务归好的子任务建报告。大批量导出先分组再调用，避免每个任务都重扫全表。
+        /// </summary>
+        internal static bool TryBuildJobTasks(
+            List<SimSubTask> jobTasks,
+            int jobId,
+            double simTime,
+            SimCargoJobValidationReport report,
+            WarehouseConveyorMap map = null,
+            ConveyorMapTopology topology = null,
+            bool includeNarrative = false)
+        {
+            if (report == null || jobTasks == null || jobTasks.Count == 0 || jobId < 0)
             {
                 return false;
             }
 
-            jobTasks.Sort((a, b) =>
-            {
-                var start = a.StartSimTime.CompareTo(b.StartSimTime);
-                return start != 0 ? start : a.SubTaskId.CompareTo(b.SubTaskId);
-            });
+            report.Clear();
+            report.JobId = jobId;
+            report.SimTime = simTime;
+            jobTasks.Sort(SubTaskOrder);
 
-            report.HasStarted = SimSubTaskQuery.HasStarted(subTasks, jobId, simTime);
+            report.HasStarted = simTime >= jobTasks[0].StartSimTime - 1e-6;
             report.IsOutbound = SimSubTaskQuery.IsOutboundJob(jobTasks);
             ExtractJobContext(jobTasks, report, map, topology);
             var formatContext = new FormatContext(map, topology, report.SegmentSchedule);
@@ -101,7 +117,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             report.JobDurationSeconds = Math.Max(0, report.JobEndSimTime - report.JobStartSimTime);
-            report.FullReportText = FormatFullReport(formatContext, report);
+            if (includeNarrative)
+            {
+                report.FullReportText = FormatFullReport(formatContext, report);
+            }
+
             return true;
         }
 

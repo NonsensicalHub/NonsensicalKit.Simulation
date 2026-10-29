@@ -63,6 +63,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
         void Release(GridIndex slot);
 
+        /// <summary>入库货已放到货架上。双深浅位要等同格深位落稳后才能再分配。</summary>
+        void NotifyInboundPlaced(GridIndex slot);
+
         /// <summary>是否存在任一堆垛机伸叉范围内仍有库存的货位。</summary>
         bool HasRetrievableOccupiedSlot(IWarehouseSimulationBindings bindings, ConveyorMapTopology topology);
 

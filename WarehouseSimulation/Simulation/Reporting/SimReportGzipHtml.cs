@@ -50,12 +50,22 @@ async function nkLoadEmbeddedJson(el){
             string jsonText,
             string scriptType = "application/json")
         {
-            if (sb == null)
+            AppendGzipJsonScript(sb, elementId, writer => writer.Write(jsonText ?? "null"), scriptType);
+        }
+
+        /// <summary>边生成 JSON 边 gzip，避免先拼出整份文本再复制成字节数组。</summary>
+        public static void AppendGzipJsonScript(
+            StringBuilder sb,
+            string elementId,
+            Action<TextWriter> writeJson,
+            string scriptType = "application/json")
+        {
+            if (sb == null || writeJson == null)
             {
                 return;
             }
 
-            var payload = ToGzipBase64(jsonText ?? "null");
+            var payload = ToGzipBase64(writeJson);
             sb.Append("<script type=\"");
             sb.Append(scriptType);
             sb.Append("\" id=\"");
@@ -91,12 +101,24 @@ async function nkLoadEmbeddedJson(el){
         {
             raw ??= Array.Empty<byte>();
             using var output = new MemoryStream(Math.Max(64, raw.Length / 4));
-            using (var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
+            using (var gzip = new GZipStream(output, CompressionLevel.Fastest, leaveOpen: true))
             {
                 gzip.Write(raw, 0, raw.Length);
             }
 
             return output.ToArray();
+        }
+
+        private static string ToGzipBase64(Action<TextWriter> writeJson)
+        {
+            using var output = new MemoryStream();
+            using (var gzip = new GZipStream(output, CompressionLevel.Fastest, leaveOpen: true))
+            using (var writer = new StreamWriter(gzip, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), 65536, leaveOpen: true))
+            {
+                writeJson(writer);
+            }
+
+            return Convert.ToBase64String(output.ToArray());
         }
     }
 }

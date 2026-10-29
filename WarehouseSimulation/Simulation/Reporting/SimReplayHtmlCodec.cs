@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -119,8 +120,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             var compact = ToCompact(payload);
-            var compactJson = JsonTool.SerializeObject(compact);
-            var compressed = Gzip(Encoding.UTF8.GetBytes(compactJson));
+            var compressed = GzipCompact(compact);
             var envelope = new Envelope
             {
                 Magic = Magic,
@@ -452,7 +452,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
             }
 
-            var key = JsonTool.SerializeObject(schedule);
+            var key = BuildScheduleKey(schedule);
             if (!keyToIndex.TryGetValue(key, out var index))
             {
                 index = schedules.Count;
@@ -554,6 +554,434 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             return slots;
+        }
+
+        private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+
+        [ThreadStatic]
+        private static char[] t_digits;
+
+        private static byte[] GzipCompact(CompactBody compact)
+        {
+            using var output = new MemoryStream();
+            using (var gzip = new GZipStream(output, CompressionLevel.Fastest, leaveOpen: true))
+            using (var writer = new StreamWriter(gzip, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), 65536, leaveOpen: true))
+            {
+                WriteCompact(writer, compact);
+            }
+
+            return output.ToArray();
+        }
+
+        private static string BuildScheduleKey(ConveyorSegmentScheduleEntry[] schedule)
+        {
+            var sb = new StringBuilder(schedule.Length * 48);
+            for (var i = 0; i < schedule.Length; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(';');
+                }
+
+                var entry = schedule[i];
+                sb.Append(entry.FromNodeIndex).Append(',')
+                    .Append(entry.ToNodeIndex).Append(',')
+                    .Append(entry.PathEdgeIndex).Append(',')
+                    .Append(entry.SlotIndex).Append(',')
+                    .Append(entry.DesiredEntrySimTime.ToString("G17", Inv)).Append(',')
+                    .Append(entry.EntrySimTime.ToString("G17", Inv)).Append(',')
+                    .Append(entry.ExitSimTime.ToString("G17", Inv)).Append(',')
+                    .Append(entry.OccupancyEndSimTime.ToString("G17", Inv));
+                var stops = entry.StopArriveSimTimes;
+                if (stops == null)
+                {
+                    continue;
+                }
+
+                for (var s = 0; s < stops.Length; s++)
+                {
+                    sb.Append('|').Append(stops[s].ToString("G17", Inv));
+                }
+            }
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 手写与 Newtonsoft 默认可对上的字段名，边写边压缩。
+        /// 反序列化按名字取字段，不依赖属性顺序。
+        /// </summary>
+        private static void WriteCompact(TextWriter w, CompactBody body)
+        {
+            w.Write('{');
+            WriteStringProp(w, "Magic", body.Magic, first: true);
+            WriteIntProp(w, "Version", body.Version);
+            WriteDoubleProp(w, "TotalSimSeconds", body.TotalSimSeconds);
+            WriteStringProp(w, "ScenarioName", body.ScenarioName ?? string.Empty);
+            WriteIntProp(w, "CompletedJobCount", body.CompletedJobCount);
+            WriteIntProp(w, "TargetJobCount", body.TargetJobCount);
+            WriteDoubleProp(w, "ThroughputPerHour", body.ThroughputPerHour);
+            if (body.Message == null)
+            {
+                w.Write(",\"Message\":null");
+            }
+            else
+            {
+                WriteStringProp(w, "Message", body.Message);
+            }
+
+            w.Write(",\"Events\":[]");
+            w.Write(",\"SubTasks\":");
+            WriteSubTasks(w, body.SubTasks);
+            w.Write(",\"InitialOccupiedPacked\":");
+            WriteIntArray(w, body.InitialOccupiedPacked);
+            w.Write(",\"Paths\":");
+            WriteJaggedInts(w, body.Paths);
+            w.Write(",\"Schedules\":");
+            WriteSchedules(w, body.Schedules);
+            w.Write(",\"JobIdsForPaths\":");
+            WriteIntArray(w, body.JobIdsForPaths);
+            w.Write(",\"PathIndexByJob\":");
+            WriteIntArray(w, body.PathIndexByJob);
+            w.Write(",\"JobIdsForSchedules\":");
+            WriteIntArray(w, body.JobIdsForSchedules);
+            w.Write(",\"ScheduleIndexByJob\":");
+            WriteIntArray(w, body.ScheduleIndexByJob);
+            w.Write('}');
+        }
+
+        private static void WriteSubTasks(TextWriter w, SimSubTask[] tasks)
+        {
+            w.Write('[');
+            if (tasks != null)
+            {
+                for (var i = 0; i < tasks.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        w.Write(',');
+                    }
+
+                    WriteSubTask(w, tasks[i]);
+                }
+            }
+
+            w.Write(']');
+        }
+
+        private static void WriteSubTask(TextWriter w, SimSubTask task)
+        {
+            w.Write("{\"SubTaskId\":");
+            WriteInt(w, task.SubTaskId);
+            w.Write(",\"JobId\":");
+            WriteInt(w, task.JobId);
+            w.Write(",\"Kind\":");
+            WriteInt(w, (int)task.Kind);
+            w.Write(",\"StartSimTime\":");
+            WriteDouble(w, task.StartSimTime);
+            w.Write(",\"EndSimTime\":");
+            WriteDouble(w, task.EndSimTime);
+            w.Write(",\"StackerId\":");
+            WriteInt(w, task.StackerId);
+            w.Write(",\"Slot\":");
+            WriteGrid(w, task.Slot);
+            w.Write(",\"InfeedPortIndex\":");
+            WriteInt(w, task.InfeedPortIndex);
+            w.Write(",\"OutfeedPortIndex\":");
+            WriteInt(w, task.OutfeedPortIndex);
+            w.Write(",\"PickupPointIndex\":");
+            WriteInt(w, task.PickupPointIndex);
+            w.Write(",\"FromNodeIndex\":");
+            WriteInt(w, task.FromNodeIndex);
+            w.Write(",\"ToNodeIndex\":");
+            WriteInt(w, task.ToNodeIndex);
+            w.Write(",\"SegmentSlotIndex\":");
+            WriteInt(w, task.SegmentSlotIndex);
+            w.Write(",\"StackerFromSlot\":");
+            WriteGrid(w, task.StackerFromSlot);
+            w.Write(",\"StackerToSlot\":");
+            WriteGrid(w, task.StackerToSlot);
+            w.Write(",\"StackerRailColumn\":");
+            WriteInt(w, task.StackerRailColumn);
+            w.Write(",\"StackerToUsesForkDepth\":");
+            w.Write(task.StackerToUsesForkDepth ? "true" : "false");
+            w.Write(",\"StackerToForkDepthMeters\":");
+            WriteDouble(w, task.StackerToForkDepthMeters);
+            w.Write(",\"HasStackerPose\":");
+            w.Write(task.HasStackerPose ? "true" : "false");
+            w.Write(",\"HasCargoHandover\":");
+            w.Write(task.HasCargoHandover ? "true" : "false");
+            w.Write(",\"CargoHandoverSimTime\":");
+            WriteDouble(w, task.CargoHandoverSimTime);
+            w.Write(",\"PathNodeIndices\":");
+            WriteIntArray(w, task.PathNodeIndices);
+            w.Write(",\"SegmentSchedule\":");
+            if (task.SegmentSchedule == null)
+            {
+                w.Write("null");
+            }
+            else
+            {
+                WriteScheduleArray(w, task.SegmentSchedule);
+            }
+
+            w.Write('}');
+        }
+
+        private static void WriteSchedules(TextWriter w, ConveyorSegmentScheduleEntry[][] schedules)
+        {
+            w.Write('[');
+            if (schedules != null)
+            {
+                for (var i = 0; i < schedules.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        w.Write(',');
+                    }
+
+                    WriteScheduleArray(w, schedules[i]);
+                }
+            }
+
+            w.Write(']');
+        }
+
+        private static void WriteScheduleArray(TextWriter w, ConveyorSegmentScheduleEntry[] schedule)
+        {
+            if (schedule == null)
+            {
+                w.Write("null");
+                return;
+            }
+
+            w.Write('[');
+            for (var i = 0; i < schedule.Length; i++)
+            {
+                if (i > 0)
+                {
+                    w.Write(',');
+                }
+
+                var entry = schedule[i];
+                w.Write("{\"FromNodeIndex\":");
+                WriteInt(w, entry.FromNodeIndex);
+                w.Write(",\"ToNodeIndex\":");
+                WriteInt(w, entry.ToNodeIndex);
+                w.Write(",\"PathEdgeIndex\":");
+                WriteInt(w, entry.PathEdgeIndex);
+                w.Write(",\"SlotIndex\":");
+                WriteInt(w, entry.SlotIndex);
+                w.Write(",\"DesiredEntrySimTime\":");
+                WriteDouble(w, entry.DesiredEntrySimTime);
+                w.Write(",\"EntrySimTime\":");
+                WriteDouble(w, entry.EntrySimTime);
+                w.Write(",\"ExitSimTime\":");
+                WriteDouble(w, entry.ExitSimTime);
+                w.Write(",\"OccupancyEndSimTime\":");
+                WriteDouble(w, entry.OccupancyEndSimTime);
+                w.Write(",\"StopArriveSimTimes\":");
+                WriteDoubleArray(w, entry.StopArriveSimTimes);
+                w.Write('}');
+            }
+
+            w.Write(']');
+        }
+
+        private static void WriteGrid(TextWriter w, GridIndex slot)
+        {
+            w.Write("{\"Level\":");
+            WriteInt(w, slot.Level);
+            w.Write(",\"Column\":");
+            WriteInt(w, slot.Column);
+            w.Write(",\"Row\":");
+            WriteInt(w, slot.Row);
+            w.Write(",\"Depth\":");
+            WriteInt(w, slot.Depth);
+            w.Write(",\"WarehouseId\":");
+            WriteInt(w, slot.WarehouseId);
+            w.Write('}');
+        }
+
+        private static void WriteJaggedInts(TextWriter w, int[][] rows)
+        {
+            w.Write('[');
+            if (rows != null)
+            {
+                for (var i = 0; i < rows.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        w.Write(',');
+                    }
+
+                    WriteIntArray(w, rows[i]);
+                }
+            }
+
+            w.Write(']');
+        }
+
+        private static void WriteIntArray(TextWriter w, int[] values)
+        {
+            if (values == null)
+            {
+                w.Write("null");
+                return;
+            }
+
+            w.Write('[');
+            for (var i = 0; i < values.Length; i++)
+            {
+                if (i > 0)
+                {
+                    w.Write(',');
+                }
+
+                WriteInt(w, values[i]);
+            }
+
+            w.Write(']');
+        }
+
+        private static void WriteDoubleArray(TextWriter w, double[] values)
+        {
+            if (values == null)
+            {
+                w.Write("null");
+                return;
+            }
+
+            w.Write('[');
+            for (var i = 0; i < values.Length; i++)
+            {
+                if (i > 0)
+                {
+                    w.Write(',');
+                }
+
+                WriteDouble(w, values[i]);
+            }
+
+            w.Write(']');
+        }
+
+        private static void WriteStringProp(TextWriter w, string name, string value, bool first = false)
+        {
+            if (!first)
+            {
+                w.Write(',');
+            }
+
+            w.Write('"');
+            w.Write(name);
+            w.Write("\":");
+            WriteString(w, value);
+        }
+
+        private static void WriteIntProp(TextWriter w, string name, int value)
+        {
+            w.Write(",\"");
+            w.Write(name);
+            w.Write("\":");
+            WriteInt(w, value);
+        }
+
+        private static void WriteDoubleProp(TextWriter w, string name, double value)
+        {
+            w.Write(",\"");
+            w.Write(name);
+            w.Write("\":");
+            WriteDouble(w, value);
+        }
+
+        private static void WriteString(TextWriter w, string value)
+        {
+            w.Write('"');
+            if (!string.IsNullOrEmpty(value))
+            {
+                for (var i = 0; i < value.Length; i++)
+                {
+                    var ch = value[i];
+                    switch (ch)
+                    {
+                        case '"': w.Write("\\\""); break;
+                        case '\\': w.Write("\\\\"); break;
+                        case '\n': w.Write("\\n"); break;
+                        case '\r': w.Write("\\r"); break;
+                        case '\t': w.Write("\\t"); break;
+                        default:
+                            if (ch < 0x20)
+                            {
+                                w.Write("\\u");
+                                w.Write(((int)ch).ToString("x4", Inv));
+                            }
+                            else
+                            {
+                                w.Write(ch);
+                            }
+
+                            break;
+                    }
+                }
+            }
+
+            w.Write('"');
+        }
+
+        private static void WriteInt(TextWriter w, int value)
+        {
+            if (value == 0)
+            {
+                w.Write('0');
+                return;
+            }
+
+            if (value == int.MinValue)
+            {
+                w.Write("-2147483648");
+                return;
+            }
+
+            var buf = t_digits ??= new char[16];
+            var neg = value < 0;
+            var n = neg ? -value : value;
+            var i = buf.Length;
+            while (n > 0)
+            {
+                buf[--i] = (char)('0' + n % 10);
+                n /= 10;
+            }
+
+            if (neg)
+            {
+                buf[--i] = '-';
+            }
+
+            w.Write(buf, i, buf.Length - i);
+        }
+
+        private static void WriteDouble(TextWriter w, double value)
+        {
+            if (double.IsNaN(value))
+            {
+                w.Write("\"NaN\"");
+                return;
+            }
+
+            if (double.IsPositiveInfinity(value))
+            {
+                w.Write("\"Infinity\"");
+                return;
+            }
+
+            if (double.IsNegativeInfinity(value))
+            {
+                w.Write("\"-Infinity\"");
+                return;
+            }
+
+            w.Write(value.ToString("G17", Inv));
         }
 
         private static byte[] Gzip(byte[] raw)

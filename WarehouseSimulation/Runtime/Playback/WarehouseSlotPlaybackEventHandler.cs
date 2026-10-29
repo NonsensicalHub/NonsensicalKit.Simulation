@@ -38,15 +38,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private readonly List<GridIndex> _occupancyClearBuffer = new();
         private SimPlaybackCargoVisualRegistry _cargoRegistry;
         private bool _cargoRegistryResolved;
-        private double _logSimTime = double.NaN;
-        private int _slotDiagFrame = -1;
-        private int _slotDiagCount;
-        private readonly HashSet<GridIndex> _loggedParkSkip = new();
-        private readonly HashSet<GridIndex> _loggedGpuFail = new();
         private readonly HashSet<int> _outboundJobIds = new();
         private readonly WarehouseSlotPlaybackSnapshotIndex _snapshotIndex = new();
         private GridIndex? _previousHighlight;
-        private bool _loggedSkip;
         private readonly Dictionary<int, SimSlotExclusionZone[]> _exclusionByWarehouse = new();
         private readonly Dictionary<int, WarehouseManagerSlotVisualAdapter> _extraAdapters = new();
         private WarehouseManagerSlotVisualAdapter _adapter;
@@ -84,9 +78,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             _outboundJobIds.Clear();
             _snapshotIndex.ResetPlaybackCursor();
             _previousHighlight = null;
-            _loggedSkip = false;
-            _loggedParkSkip.Clear();
-            _loggedGpuFail.Clear();
             ApplyInitialOccupancySlots();
         }
 
@@ -95,7 +86,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             ResolveEventSource();
             if (!HasPlaybackTarget() || subTasks == null || subTasks.Count == 0)
             {
-                LogSkipOnce();
                 return;
             }
 
@@ -108,7 +98,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
 
             var snapshot = _snapshotIndex.BuildAt(simTime);
-            _logSimTime = simTime;
             ApplySnapshotDiff(in snapshot);
         }
 
@@ -211,7 +200,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         {
             var occupied = snapshot.OccupiedSlots;
             // 堆垛机已经把场景料箱停在货位上的，这里收掉快照里不再占用的；还占着的不要再写 GPU。
-            ResolveCargoRegistry()?.ReleaseParkedExcept(occupied, _logSimTime);
+            ResolveCargoRegistry()?.ReleaseParkedExcept(occupied);
             _occupancyClearBuffer.Clear();
             foreach (var slot in _previousOccupied)
             {
@@ -227,8 +216,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 if (TrySetOccupied(slot, false))
                 {
                     _previousOccupied.Remove(slot);
-                    _loggedParkSkip.Remove(slot);
-                    LogSlotDiag($"隐藏 {DescribeSlot(slot)}");
                 }
             }
 
@@ -238,15 +225,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 {
                     if (IsSlotHeldBySceneCargo(slot))
                     {
-                        if (_loggedParkSkip.Add(slot))
-                        {
-                            LogSlotDiag($"跳过GPU {DescribeSlot(slot)} 原因=场景料箱已停在此货位");
-                        }
-
                         if (_previousOccupied.Contains(slot) && TrySetOccupied(slot, false))
                         {
                             _previousOccupied.Remove(slot);
-                            LogSlotDiag($"改由场景料箱显示，关掉GPU {DescribeSlot(slot)}");
                         }
 
                         continue;
@@ -260,68 +241,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     if (TrySetOccupied(slot, true))
                     {
                         _previousOccupied.Add(slot);
-                        LogSlotDiag($"GPU显示 {DescribeSlot(slot)}");
-                    }
-                    else if (_loggedGpuFail.Add(slot))
-                    {
-                        LogSlotDiag($"GPU显示失败 {DescribeSlot(slot)}");
                     }
                 }
             }
 
             ApplyHighlightDiff(in snapshot);
-        }
-
-        private const int SlotDiagCapPerFrame = 24;
-
-        private void LogSlotDiag(string message)
-        {
-            var frame = Time.frameCount;
-            if (frame != _slotDiagFrame)
-            {
-                _slotDiagFrame = frame;
-                _slotDiagCount = 0;
-            }
-
-            if (_slotDiagCount == SlotDiagCapPerFrame)
-            {
-                _slotDiagCount++;
-                SimPlaybackLog.CargoSync($"t={_logSimTime:F3} 本帧货位日志超过 {SlotDiagCapPerFrame} 条，其余省略");
-                return;
-            }
-
-            if (_slotDiagCount > SlotDiagCapPerFrame)
-            {
-                return;
-            }
-
-            _slotDiagCount++;
-            SimPlaybackLog.CargoSync($"t={_logSimTime:F3} {message}", this);
-        }
-
-        private string DescribeSlot(GridIndex slot)
-        {
-            var manager = FindManager(slot.WarehouseId);
-            var managerName = manager != null ? manager.name : "无管理器";
-            var world = "无坐标";
-            if (m_warehouses != null)
-            {
-                for (var i = 0; i < m_warehouses.Length; i++)
-                {
-                    var binding = m_warehouses[i];
-                    if (binding == null || binding.WarehouseId != slot.WarehouseId || binding.PositionIndex == null)
-                    {
-                        continue;
-                    }
-
-                    world = binding.PositionIndex.TryGetWorldPosition(slot, out var position)
-                        ? position.ToString("F2")
-                        : "查不到坐标";
-                    break;
-                }
-            }
-
-            return $"slot={slot} manager={managerName} world={world}";
         }
 
         /// <summary>管理器未就绪或未绑定时返回 false，调用方不得把这次变更记成已应用。</summary>
@@ -519,17 +443,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
 
             return null;
-        }
-
-        private void LogSkipOnce()
-        {
-            if (_loggedSkip)
-            {
-                return;
-            }
-
-            _loggedSkip = true;
-            SimPlaybackLog.Warn("SlotHandler 跳过：未绑定 WarehouseManager。", this);
         }
     }
 }

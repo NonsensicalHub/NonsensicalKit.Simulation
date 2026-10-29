@@ -195,6 +195,33 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         private bool TryPlaceOne(int maxReservations)
         {
+            while (true)
+            {
+                if (_ctx.InboundWaitingCount <= 0 || _ctx.InboundExhaustedAtInfeed)
+                {
+                    return false;
+                }
+
+                var allowedWarehouses = _ctx.PeekInboundWarehouseIds();
+                if (SimWarehouseRestriction.IsRestricted(allowedWarehouses)
+                    && !HasFreeStorageInWarehouses(allowedWarehouses))
+                {
+                    var before = _ctx.InboundWaitingCount;
+                    DrainInboundBlockedByWarehouse();
+                    if (_ctx.InboundWaitingCount <= 0 || _ctx.InboundWaitingCount == before)
+                    {
+                        return false;
+                    }
+
+                    continue;
+                }
+
+                return TryPlaceOneInAllowedWarehouses(maxReservations, allowedWarehouses);
+            }
+        }
+
+        private bool TryPlaceOneInAllowedWarehouses(int maxReservations, int[] allowedWarehouses)
+        {
             var portCount = _ctx.Topology.InfeedNodeIndices.Count;
             var processTags = _ctx.PeekInboundProcessTags();
             var access = ConveyorRouteAccess.FromTags(processTags);
@@ -211,6 +238,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 maxReservations,
                 _roundRobinCursor,
                 _portOrderScratch);
+            candidateCount = SimWarehousePortOrder.BringLocalPortsForward(
+                _ctx.Topology,
+                _ctx.Bindings,
+                _portOrderScratch,
+                candidateCount,
+                allowedWarehouses,
+                access);
 
             for (var i = 0; i < candidateCount; i++)
             {
@@ -245,7 +279,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         out var slot,
                         out var stackerId,
                         skipPickupCapacityPrecheck: true,
-                        access: access))
+                        access: access,
+                        allowedWarehouseIds: allowedWarehouses))
                 {
                     continue;
                 }
@@ -284,6 +319,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return false;
             }
 
+            if (SimWarehouseRestriction.IsRestricted(allowedWarehouses))
+            {
+                WarehouseSimLog.Detail(
+                    $"入库等候 {_ctx.InboundWaitingCount} 箱：限定仓库暂无可以放货的入库口，" +
+                    "待入库口或取货点释放后重试。");
+                return false;
+            }
+
             if (!HasOpenPickupRoute(access, restrictInfeedByProcessStation))
             {
                 WarehouseSimLog.Detail(
@@ -316,6 +359,49 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             WarehouseSimLog.Detail(
                 $"入库等候 {_ctx.InboundWaitingCount} 箱：各入库口暂无可路由空货位，" +
                 "待入库口物理释放或取货点释放后重试。");
+            return false;
+        }
+
+        private void DrainInboundBlockedByWarehouse()
+        {
+            var allowed = _ctx.PeekInboundWarehouseIds();
+            if (!SimWarehouseRestriction.IsRestricted(allowed)
+                || HasFreeStorageInWarehouses(allowed))
+            {
+                return;
+            }
+
+            var failed = 0;
+            var blockedLabel = SimWarehouseRestriction.Format(allowed);
+            while (_ctx.InboundWaitingCount > 0
+                   && SimWarehouseRestriction.Same(_ctx.PeekInboundWarehouseIds(), allowed))
+            {
+                _ctx.InboundWaitingCount--;
+                _ctx.DequeueInboundFlowEntry();
+                failed++;
+            }
+
+            _ctx.FailedNoSlot += failed;
+            _ctx.RecordFailure(SimJobFailureReason.InboundQueueNoAllocatableSlot, failed);
+            WarehouseSimLog.Info(
+                $"库号限定 {blockedLabel} 没有可分配货位：{failed} 箱入库失败 t={_ctx.Clock.Now:F2}s");
+        }
+
+        private bool HasFreeStorageInWarehouses(int[] allowed)
+        {
+            if (allowed == null || allowed.Length == 0 || _ctx.SlotAllocator is not IWarehouseStorageProbe probe)
+            {
+                return true;
+            }
+
+            for (var i = 0; i < allowed.Length; i++)
+            {
+                if (probe.HasFreeStorage(allowed[i]))
+                {
+                    return true;
+                }
+            }
+
             return false;
         }
 

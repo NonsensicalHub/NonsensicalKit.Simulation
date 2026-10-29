@@ -207,7 +207,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             int infeedPortIndex,
             GridIndex targetSlot,
             int[] pickupReservationCounts = null,
-            ConveyorRouteAccess access = default)
+            ConveyorRouteAccess access = default,
+            int onlyStackerId = -1)
         {
             if (topology == null || bindings == null || infeedPortIndex < 0
                 || infeedPortIndex >= topology.InfeedNodeIndices.Count)
@@ -219,6 +220,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             foreach (var pickupNode in topology.PickupNodeIndices)
             {
                 ref var pickupNodeData = ref topology.GetNode(pickupNode);
+                if (onlyStackerId >= 0 && pickupNodeData.StackerId != onlyStackerId)
+                {
+                    continue;
+                }
+
                 if (!StackerInteractionModeUtility.AllowsInbound(in pickupNodeData))
                 {
                     continue;
@@ -230,16 +236,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     continue;
                 }
 
-                var pt = topology.GetNode(pickupNode);
-                if (!StackerColumnReachUtility.TryGetDefinition(bindings, topology, pt.StackerId, out var stackerDef)
+                if (!StackerColumnReachUtility.TryGetDefinition(bindings, topology, pickupNodeData.StackerId, out var stackerDef)
                     || !StackerColumnReachUtility.ServesSlot(in stackerDef, targetSlot))
                 {
                     continue;
                 }
 
-                if (topology.TryFindAccessiblePathByTransit(infeedNode, pickupNode, access, out var path)
-                    && path != null
-                    && path.Count >= 2)
+                if (topology.HasAccessiblePathByTransit(infeedNode, pickupNode, access))
                 {
                     return true;
                 }
@@ -387,9 +390,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             var outfeedNode = topology.OutfeedNodeIndices[outfeedPortIndex];
-            return topology.TryFindAccessiblePathByTransit(pickupPointIndex, outfeedNode, access, out var path)
-                   && path != null
-                   && path.Count >= 2;
+            return topology.HasAccessiblePathByTransit(pickupPointIndex, outfeedNode, access);
         }
 
         private static bool TryFindFirstRoutableOutfeedPort(

@@ -14,6 +14,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         [Label("流向")]
         public SimFlowDirection Direction = SimFlowDirection.Inbound;
 
+        [Label("库号限定")]
+        [Tooltip("留空表示不限制仓库。填写后，这一段入库只能放到这些仓库，出库只能从这些仓库取货。")]
+        public int[] AllowedWarehouseIds;
+
         [Min(1)]
         [Label("数量")]
         public int Quantity = 100;

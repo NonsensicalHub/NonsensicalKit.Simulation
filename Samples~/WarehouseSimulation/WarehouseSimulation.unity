@@ -8394,7 +8394,6 @@ MonoBehaviour:
   - {fileID: 1367375689}
   - {fileID: 504604592}
   - {fileID: 17253221}
-  m_verboseLog: 0
 --- !u!114 &1803246530
 MonoBehaviour:
   m_ObjectHideFlags: 0

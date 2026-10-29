@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
+using System.IO;
 using System.Text;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Core;
@@ -22,10 +24,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         {
             var json = new StringBuilder(2048);
             AppendJobJsonObject(json, report, map, topology);
-            AppendJobsShell(sb, "[" + json + "]");
+            AppendJobsShell(sb, writer =>
+            {
+                writer.Write('[');
+                writer.Write(json.ToString());
+                writer.Write(']');
+            });
         }
 
         public static void AppendJobsShell(StringBuilder sb, string jobsJsonArray)
+        {
+            AppendJobsShell(sb, writer => writer.Write(jobsJsonArray ?? "[]"));
+        }
+
+        public static void AppendJobsShell(StringBuilder sb, Action<TextWriter> writeJobsJson)
         {
             sb.AppendLine("<details id=\"jobs\" class=\"section-fold card\" open>");
             sb.AppendLine("<summary><span class=\"fold-title\">任务与子任务明细</span></summary>");
@@ -33,7 +45,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             sb.AppendLine("<p class=\"hint\">点击任务行展开子任务时间轴；可用顶部搜索框按编号或货位筛选。明细以 gzip 压缩 JSON 按需渲染。</p>");
             sb.AppendLine("<div id=\"jobs-root\"><p class=\"meta\">正在解压任务数据…</p></div>");
             sb.AppendLine("<noscript><p><em>请启用 JavaScript 以查看任务明细。</em></p></noscript>");
-            SimReportGzipHtml.AppendGzipJsonScript(sb, "jobs-data", jobsJsonArray ?? "[]");
+            SimReportGzipHtml.AppendGzipJsonScript(sb, "jobs-data", writeJobsJson);
             sb.AppendLine("<script>");
             sb.AppendLine(SimReportGzipHtml.GunzipScript);
             sb.AppendLine(JobsRenderScript);

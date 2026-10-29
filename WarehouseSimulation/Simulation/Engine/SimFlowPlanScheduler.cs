@@ -50,6 +50,16 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             return _entries[entryIndex].RequiredProcessTags;
         }
 
+        public int[] GetAllowedWarehouseIds(int entryIndex)
+        {
+            if (entryIndex < 0 || entryIndex >= _entries.Length)
+            {
+                return null;
+            }
+
+            return _entries[entryIndex].AllowedWarehouseIds;
+        }
+
         public bool HasPendingReleases()
         {
             for (var i = 0; i < _remaining.Length; i++)
@@ -174,6 +184,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 RandomIntervalMinSeconds = source.RandomIntervalMinSeconds,
                 RandomIntervalMaxSeconds = source.RandomIntervalMaxSeconds,
                 RequiredProcessTags = tags,
+                AllowedWarehouseIds = SimWarehouseRestriction.Copy(source.AllowedWarehouseIds),
             };
         }
     }

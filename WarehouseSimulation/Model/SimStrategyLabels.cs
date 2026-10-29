@@ -71,7 +71,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
             var delay = entry.StartDelaySeconds > 1e-6f
                 ? $"，延迟 {entry.StartDelaySeconds:G} 秒"
                 : string.Empty;
-            return $"{direction} {entry.Quantity} 箱（{schedule}{delay}）";
+            var warehouses = SimWarehouseRestriction.Format(entry.AllowedWarehouseIds);
+            var limit = string.IsNullOrEmpty(warehouses)
+                ? string.Empty
+                : $"，限库 {warehouses}";
+            return $"{direction} {entry.Quantity} 箱（{schedule}{delay}{limit}）";
         }
 
         public static string FormatInfeedPortSelection(InfeedPortSelectionStrategy strategy) =>

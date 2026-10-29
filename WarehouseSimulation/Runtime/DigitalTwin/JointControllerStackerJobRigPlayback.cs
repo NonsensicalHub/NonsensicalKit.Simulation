@@ -64,17 +64,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private int _level;
         private int _row;
         private bool _rigInitialized;
-        private bool _loggedEvaluateSkip;
-        private bool _loggedMotionResolveSkip;
         /// <summary>已废弃：收叉在 Pick/Place 段内完成，不再靠 Move 冒充。字段仅清零兼容。</summary>
         private float _heldForkRaw;
         private bool _hasHeldFork;
         private double _logSimTime = double.NaN;
-        private int _placeDiagJobId = int.MinValue;
-        private bool _placeDiagStarted;
-        private bool _placeDiagCommitted;
-        private bool _loggedMountError;
-        private bool _loggedKinematicsMismatch;
         private IStackerKinematics _playbackKinematics;
         private bool _chainReady;
         private float _homeRow;
@@ -127,7 +120,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             _topology = topology;
             _cargoRegistry = cargoRegistry;
             _playbackKinematics = StackerKinematicsResolver.Resolve(bindings, topology, m_stackerId);
-            WarnIfKinematicsDiverge();
         }
 
         public bool TryInitialize()
@@ -171,11 +163,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             _level = 0;
             _row = 0;
             _rigInitialized = true;
-            _loggedEvaluateSkip = false;
-            _loggedMotionResolveSkip = false;
-            _loggedMountError = false;
             _chainReady = false;
-            WarnIfAlignReferenceDetached();
             ResetMotionTracking();
             SnapRetractedCarriage(0, 0);
             return true;
@@ -261,13 +249,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 if (_cargoRegistry == null || !_cargoRegistry.IsJobParked(lastCompletedTask.JobId))
                 {
                     PlaceCargoAtSlotByJob(lastCompletedTask.JobId, lastCompletedTask.TargetSlot);
-                    SimSubTask noPose = default;
-                    LogPlaceCargoCommitted(
-                        "空闲补放",
-                        in lastCompletedTask,
-                        lastCompletedTask.TargetSlot,
-                        in noPose,
-                        hasPose: false);
                 }
             }
             else if (lastCompletedTask.ReleaseCargoOnIdle)
@@ -313,98 +294,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         {
             if (_bindings == null || _positionIndex == null)
             {
-                LogEvaluateSkipOnce("依赖未注入（需由 StackerPlaybackEventHandler 调用 Configure）。");
                 return false;
             }
 
             if (!_rigInitialized && !TryInitialize())
             {
-                LogEvaluateSkipOnce("TryInitialize 失败（检查 StackerTransformDriver 三轴是否就绪）。");
                 return false;
             }
 
-            if (!EnsureDriver())
-            {
-                LogEvaluateSkipOnce("StackerTransformDriver 未就绪。");
-                return false;
-            }
-
-            return true;
+            return EnsureDriver();
         }
-
-        private void LogEvaluateSkipOnce(string reason)
-        {
-            if (_loggedEvaluateSkip)
-            {
-                return;
-            }
-
-            _loggedEvaluateSkip = true;
-            SimPlaybackLog.Warn($"JointStackerRig 堆垛机 {m_stackerId} {reason}", this);
-        }
-
-        private void WarnIfAlignReferenceDetached()
-        {
-            if (m_transformDriver == null || m_transformDriver.ForkAxis == null)
-            {
-                return;
-            }
-
-            var row = m_transformDriver.RowAxis;
-            var level = m_transformDriver.LevelAxis;
-            var fork = m_transformDriver.ForkAxis;
-            // 预想：走行 → 升降 → 货叉。货叉不是层向的子节点时，升降不会带动货叉，看起来就像自己飞。
-            if (level != null && fork != null && fork != level && !fork.IsChildOf(level))
-            {
-                SimPlaybackLog.Warn(
-                    $"JointStackerRig 堆垛机 {m_stackerId} 货叉轴不在层向轴下（当前父={fork.parent?.name ?? "null"}），" +
-                    "升降时货叉不会跟着走。",
-                    this);
-            }
-            else if (row != null && level != null && level != row && !level.IsChildOf(row))
-            {
-                SimPlaybackLog.Warn(
-                    $"JointStackerRig 堆垛机 {m_stackerId} 层向轴不在走行轴下（当前父={level.parent?.name ?? "null"}），" +
-                    "走行时升降/货叉不会跟着走。",
-                    this);
-            }
-
-            var align = m_transformDriver.AlignReference;
-            if (align == fork || align.IsChildOf(fork))
-            {
-                return;
-            }
-
-            SimPlaybackLog.Warn(
-                $"JointStackerRig 堆垛机 {m_stackerId} 的对齐参考不在货叉轴下，伸叉时本体可能和货叉脱节。",
-                this);
-        }
-
-        private void WarnIfKinematicsDiverge()
-        {
-            if (_loggedKinematicsMismatch || _playbackKinematics == null || m_kinematics == null)
-            {
-                return;
-            }
-
-            if (NearlyEqual(_playbackKinematics.VerticalSpeedMetersPerSecond, m_kinematics.VerticalSpeedMetersPerSecond)
-                && NearlyEqual(_playbackKinematics.VerticalSpeedLoadedMetersPerSecond, m_kinematics.VerticalSpeedLoadedMetersPerSecond)
-                && NearlyEqual(_playbackKinematics.DepthSpeedMetersPerSecond, m_kinematics.DepthSpeedMetersPerSecond)
-                && NearlyEqual(_playbackKinematics.DepthSpeedLoadedMetersPerSecond, m_kinematics.DepthSpeedLoadedMetersPerSecond)
-                && NearlyEqual(_playbackKinematics.VerticalAccelerationMetersPerSecondSquared, m_kinematics.VerticalAccelerationMetersPerSecondSquared)
-                && NearlyEqual(_playbackKinematics.DepthAccelerationMetersPerSecondSquared, m_kinematics.DepthAccelerationMetersPerSecondSquared)
-                && NearlyEqual(_playbackKinematics.PickSeconds, m_kinematics.PickSeconds)
-                && NearlyEqual(_playbackKinematics.PlaceSeconds, m_kinematics.PlaceSeconds))
-            {
-                return;
-            }
-
-            _loggedKinematicsMismatch = true;
-            SimPlaybackLog.Warn(
-                $"JointStackerRig 堆垛机 {m_stackerId} 上的运动学与硬件绑定不一致。回放插值改用硬件绑定，避免和仿真时长各算一套。",
-                this);
-        }
-
-        private static bool NearlyEqual(float a, float b) => Math.Abs(a - b) <= 0.001f;
     }
 }

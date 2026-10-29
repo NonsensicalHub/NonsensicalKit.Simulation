@@ -357,20 +357,56 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         private bool TryPlaceOne()
         {
-            var access = ConveyorRouteAccess.FromTags(_ctx.PeekOutboundProcessTags());
-            if (!OutfeedPortSelector.TrySelectOutboundPlacement(
-                    _ctx.Topology,
-                    _ctx.Bindings,
-                    _ctx.SlotAllocator,
-                    _ctx.PickupReservationCounts,
-                    _ctx.StackerActiveJobCounts,
-                    _reservedSlots,
-                    out var slot,
-                    out var stackerId,
-                    out var pickupIndex,
-                    out _,
-                    access))
+            while (true)
             {
+                if (_ctx.OutboundWaitingCount <= 0)
+                {
+                    return false;
+                }
+
+                var allowedWarehouses = _ctx.PeekOutboundWarehouseIds();
+                var access = ConveyorRouteAccess.FromTags(_ctx.PeekOutboundProcessTags());
+                if (OutfeedPortSelector.TrySelectOutboundPlacement(
+                        _ctx.Topology,
+                        _ctx.Bindings,
+                        _ctx.SlotAllocator,
+                        _ctx.PickupReservationCounts,
+                        _ctx.StackerActiveJobCounts,
+                        _reservedSlots,
+                        out var slot,
+                        out var stackerId,
+                        out var pickupIndex,
+                        out _,
+                        access,
+                        allowedWarehouses))
+                {
+                    _ctx.OutboundWaitingCount--;
+                    var processTags = _ctx.PeekOutboundProcessTags();
+                    _ctx.DequeueOutboundFlowEntry();
+                    var job = new WarehouseJob(_ctx.NextJobId++, _ctx.Clock.Now)
+                    {
+                        Direction = SimFlowDirection.Outbound,
+                        State = WarehouseJobState.WaitingStacker,
+                        RequiredProcessTags = SimRunContext.CopyProcessTags(processTags),
+                    };
+                    _ctx.Jobs[job.JobId] = job;
+                    Place(job, slot, stackerId, pickupIndex);
+                    return true;
+                }
+
+                if (SimWarehouseRestriction.IsRestricted(allowedWarehouses)
+                    && !HasStoredCargoInWarehouses(allowedWarehouses))
+                {
+                    var before = _ctx.OutboundWaitingCount;
+                    DrainOutboundBlockedByWarehouse();
+                    if (_ctx.OutboundWaitingCount <= 0 || _ctx.OutboundWaitingCount == before)
+                    {
+                        return false;
+                    }
+
+                    continue;
+                }
+
                 if (!_ctx.SlotAllocator.HasRetrievableOccupiedSlot(_ctx.Bindings, _ctx.Topology))
                 {
                     FailAllRemaining();
@@ -382,19 +418,49 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     "待交互点释放后重试。");
                 return false;
             }
+        }
 
-            _ctx.OutboundWaitingCount--;
-            var processTags = _ctx.PeekOutboundProcessTags();
-            _ctx.DequeueOutboundFlowEntry();
-            var job = new WarehouseJob(_ctx.NextJobId++, _ctx.Clock.Now)
+        private void DrainOutboundBlockedByWarehouse()
+        {
+            var allowed = _ctx.PeekOutboundWarehouseIds();
+            if (!SimWarehouseRestriction.IsRestricted(allowed)
+                || HasStoredCargoInWarehouses(allowed))
             {
-                Direction = SimFlowDirection.Outbound,
-                State = WarehouseJobState.WaitingStacker,
-                RequiredProcessTags = SimRunContext.CopyProcessTags(processTags),
-            };
-            _ctx.Jobs[job.JobId] = job;
-            Place(job, slot, stackerId, pickupIndex);
-            return true;
+                return;
+            }
+
+            var failed = 0;
+            var blockedLabel = SimWarehouseRestriction.Format(allowed);
+            while (_ctx.OutboundWaitingCount > 0
+                   && SimWarehouseRestriction.Same(_ctx.PeekOutboundWarehouseIds(), allowed))
+            {
+                _ctx.OutboundWaitingCount--;
+                _ctx.DequeueOutboundFlowEntry();
+                failed++;
+            }
+
+            _ctx.FailedNoCargo += failed;
+            _ctx.RecordFailure(SimJobFailureReason.OutboundQueueNoInventory, failed);
+            WarehouseSimLog.Info(
+                $"库号限定 {blockedLabel} 没有可取库存：{failed} 箱出库失败 t={_ctx.Clock.Now:F2}s");
+        }
+
+        private bool HasStoredCargoInWarehouses(int[] allowed)
+        {
+            if (allowed == null || allowed.Length == 0 || _ctx.SlotAllocator is not IWarehouseStorageProbe probe)
+            {
+                return true;
+            }
+
+            for (var i = 0; i < allowed.Length; i++)
+            {
+                if (probe.HasStoredCargo(allowed[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void Place(WarehouseJob job, GridIndex slot, int stackerId, int pickupIndex)

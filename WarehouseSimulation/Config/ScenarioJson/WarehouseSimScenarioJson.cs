@@ -384,6 +384,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
                     RandomIntervalMinSeconds = Math.Max(0.01f, e.RandomIntervalMinSeconds),
                     RandomIntervalMaxSeconds = Math.Max(0.01f, e.RandomIntervalMaxSeconds),
                     RequiredProcessTags = e.RequiredProcessTags,
+                    AllowedWarehouseIds = SimWarehouseRestriction.Copy(e.AllowedWarehouseIds),
                 };
             }
 
@@ -415,6 +416,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
                     RandomIntervalMinSeconds = Math.Max(0.01f, e.RandomIntervalMinSeconds),
                     RandomIntervalMaxSeconds = Math.Max(0.01f, e.RandomIntervalMaxSeconds),
                     RequiredProcessTags = e.RequiredProcessTags,
+                    AllowedWarehouseIds = SimWarehouseRestriction.Copy(e.AllowedWarehouseIds),
                 };
             }
 

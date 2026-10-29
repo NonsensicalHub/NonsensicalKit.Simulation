@@ -19,7 +19,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         public WarehouseSimStrategyProfile Strategy;
 
         [Label("流程计划")]
-        [Tooltip("出入库任务调度：每段指定流向、数量与释放节奏。至少配置一段；留空时运行时使用默认（100 箱瞬间入库）。")]
+        [Tooltip("出入库任务调度：每段指定流向、库号、数量与释放节奏。库号留空表示不限制仓库。至少配置一段；留空时运行时使用默认（100 箱瞬间入库）。")]
         public SimFlowPlanEntry[] FlowPlan = { new() { Quantity = 100 } };
 
         [Label("流程随机种子")]

@@ -48,6 +48,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _primaryTrack = new ConveyorTrackGeometry(Ctx.Bindings.ConveyorMap, Ctx.Topology);
             _primaryZonePoints.Clear();
             _primaryTooCloseCache.Clear();
+            _originNearByNode = null;
             _primaryKernel.ZonesTooClose = PrimaryZonesTooClose;
         }
 
@@ -55,6 +56,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private ConveyorTrackGeometry _primaryTrack;
         private readonly Dictionary<string, ConveyorTrackPoint> _primaryZonePoints = new Dictionary<string, ConveyorTrackPoint>(StringComparer.Ordinal);
         private readonly Dictionary<(string, string), bool> _primaryTooCloseCache = new Dictionary<(string, string), bool>();
+        private List<ZoneLockClaim>[] _originNearByNode;
 
         private void RegisterPrimaryZonePoint(string key, in ConveyorTrackPoint point)
         {
@@ -94,20 +96,40 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// </summary>
         private List<ZoneLockClaim> OriginNearClaims(int originNodeIndex)
         {
-            var claims = new List<ZoneLockClaim>();
-            if (_primaryTrack == null || Ctx.Bindings?.ConveyorMap?.Nodes == null || originNodeIndex < 0)
+            var nodes = Ctx.Bindings?.ConveyorMap?.Nodes;
+            if (_primaryTrack == null || nodes == null || originNodeIndex < 0)
             {
-                return claims;
+                return new List<ZoneLockClaim>();
             }
 
+            if (originNodeIndex < nodes.Length)
+            {
+                if (_originNearByNode == null || _originNearByNode.Length != nodes.Length)
+                {
+                    _originNearByNode = new List<ZoneLockClaim>[nodes.Length];
+                }
+
+                var cached = _originNearByNode[originNodeIndex];
+                if (cached != null)
+                {
+                    return cached;
+                }
+            }
+
+            var claims = new List<ZoneLockClaim>();
             var origin = ConveyorTrackGeometry.Node(originNodeIndex);
             var limit = _primaryTrack.CargoLength - 1e-3;
-            for (var m = 0; m < Ctx.Bindings.ConveyorMap.Nodes.Length; m++)
+            for (var m = 0; m < nodes.Length; m++)
             {
                 if (m == originNodeIndex || _primaryTrack.Distance(origin, ConveyorTrackGeometry.Node(m)) < limit)
                 {
                     claims.Add(new ZoneLockClaim { Key = NodeNearLockKey(m), Capacity = 1, Direction = 0 });
                 }
+            }
+
+            if (originNodeIndex < nodes.Length && _originNearByNode != null)
+            {
+                _originNearByNode[originNodeIndex] = claims;
             }
 
             return claims;

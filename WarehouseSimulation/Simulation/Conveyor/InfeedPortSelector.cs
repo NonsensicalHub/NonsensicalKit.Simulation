@@ -54,7 +54,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             out GridIndex slot,
             out int stackerId,
             bool skipPickupCapacityPrecheck = false,
-            ConveyorRouteAccess access = default)
+            ConveyorRouteAccess access = default,
+            int[] allowedWarehouseIds = null)
         {
             slot = default;
             stackerId = -1;
@@ -71,7 +72,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     out slot,
                     out stackerId,
                     skipPickupCapacityPrecheck,
-                    access))
+                    access,
+                    allowedWarehouseIds))
             {
                 return false;
             }
@@ -175,7 +177,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             out GridIndex slot,
             out int stackerId,
             bool skipPickupCapacityPrecheck = false,
-            ConveyorRouteAccess access = default)
+            ConveyorRouteAccess access = default,
+            int[] allowedWarehouseIds = null)
         {
             infeedPortIndex = fixedInfeedPortIndex;
             slot = default;
@@ -247,17 +250,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             {
                 var candidateStackerId = _stackerOrderBuf[orderIndex];
                 if (!StackerColumnReachUtility.TryGetDefinition(
-                        bindings, topology, candidateStackerId, out var stackerDef))
+                        bindings, topology, candidateStackerId, out var stackerDef)
+                    || !SimWarehouseRestriction.Allows(allowedWarehouseIds, stackerDef.WarehouseId)
+                    || !SimWarehousePortOrder.ReachesStacker(
+                        topology,
+                        bindings,
+                        fixedInfeedPortIndex,
+                        candidateStackerId,
+                        allowedWarehouseIds,
+                        access))
                 {
                     continue;
                 }
 
                 var anchorCol = StackerColumnReachUtility.GetAisleCenterColumn(in stackerDef);
-                if (!slotAllocator.HasAllocatableFreeSlotForStacker(bindings, topology, candidateStackerId))
-                {
-                    continue;
-                }
-
                 if (!StackerPickupAnchorResolver.TryGetPrimaryPickupAnchor(
                         topology, bindings, candidateStackerId, out var pickupCol, out var pickupRow))
                 {
@@ -282,7 +288,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         fixedInfeedPortIndex,
                         candidateSlot,
                         pickupReservationCounts,
-                        access))
+                        access,
+                        candidateStackerId))
                 {
                     continue;
                 }

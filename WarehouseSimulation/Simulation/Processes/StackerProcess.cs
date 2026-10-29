@@ -330,6 +330,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             job.State = WarehouseJobState.Completed;
+            _ctx.SlotAllocator.NotifyInboundPlaced(job.TargetSlot);
+            if (_ctx.InboundWaitingCount > 0 && !_ctx.InboundExhaustedAtInfeed)
+            {
+                _ctx.ScheduleInfeedQueueFill(_ctx.Clock.Now);
+            }
+
             _ctx.RecordPlayback(job, SimPlaybackPhase.StackerPlace, job.AssignedStackerId, job.TargetSlot);
             _ctx.Queue.Enqueue(new ScheduledSimEvent(_ctx.Clock.Now, SimEventType.JobCompleted, job.JobId));
         }

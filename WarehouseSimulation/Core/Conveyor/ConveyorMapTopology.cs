@@ -702,6 +702,44 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return true;
         }
 
+        /// <summary>与 <see cref="TryFindAccessiblePathByTransit"/> 相同的可达性，命中缓存时不复制路径。</summary>
+        public bool HasAccessiblePathByTransit(int fromNodeIndex, int toNodeIndex, ConveyorRouteAccess access)
+        {
+            if (fromNodeIndex == toNodeIndex)
+            {
+                return true;
+            }
+
+            var key = (fromNodeIndex, toNodeIndex, access.Signature);
+            if (_accessPathCache.ContainsKey(key))
+            {
+                return true;
+            }
+
+            if (_accessPathMiss.Contains(key))
+            {
+                return false;
+            }
+
+            if (!TryFindShortestPathByTransitCore(
+                    fromNodeIndex,
+                    toNodeIndex,
+                    restrictAccess: true,
+                    access: access,
+                    accessSearchTarget: -1,
+                    nodeArrivalExtraSeconds: null,
+                    out var path)
+                || path == null
+                || path.Count < 2)
+            {
+                _accessPathMiss.Add(key);
+                return false;
+            }
+
+            _accessPathCache[key] = path.ToArray();
+            return true;
+        }
+
         /// <summary>
         /// 按边输送时间 + 节点停留/服务时间的最短路径（不缓存；用于含提升机/加工站的路径择优）。
         /// </summary>

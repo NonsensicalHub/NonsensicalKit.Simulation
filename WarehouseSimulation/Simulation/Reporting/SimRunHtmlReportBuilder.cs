@@ -601,54 +601,71 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
-            var jobIds = CollectJobIds(subTasks);
-            jobIds.Sort();
-
-            // 预估：每任务约数百字节紧凑 JSON，远小于原 HTML 表格。
-            var json = new StringBuilder(Math.Max(4096, jobIds.Count * 512));
-            json.Append('[');
-            var written = 0;
-            for (var i = 0; i < jobIds.Count; i++)
+            var byJob = GroupSubTasks(subTasks);
+            var jobIds = new List<int>(byJob.Count);
+            foreach (var jobId in byJob.Keys)
             {
-                var jobId = jobIds[i];
-                if (written > 0)
-                {
-                    json.Append(',');
-                }
-
-                if (!SimCargoJobValidationReportBuilder.TryBuild(
-                        subTasks,
-                        jobId,
-                        endSimTime + 1e-6,
-                        s_scratchReport,
-                        map,
-                        topology))
-                {
-                    // 无法构建时仍保留占位条目，便于筛选看到该任务号
-                    json.Append("{\"i\":");
-                    json.Append(jobId);
-                    json.Append(",\"o\":0,\"s\":\"—\",\"p\":\"—\",\"k\":\"—\",\"r\":\"—\",\"a\":0,\"b\":0,\"d\":0,\"n\":0,\"q\":\"无法构建报告\",\"g\":[],\"u\":[]}");
-                    written++;
-                    continue;
-                }
-
-                SimCargoJobHtmlReportBuilder.AppendJobJsonObject(json, s_scratchReport, map, topology);
-                written++;
+                jobIds.Add(jobId);
             }
 
-            json.Append(']');
-            SimCargoJobHtmlReportBuilder.AppendJobsShell(sb, json.ToString());
+            jobIds.Sort();
+            var simTime = endSimTime + 1e-6;
+            var oneJob = new StringBuilder(2048);
+            SimCargoJobHtmlReportBuilder.AppendJobsShell(sb, writer =>
+            {
+                writer.Write('[');
+                var written = 0;
+                for (var i = 0; i < jobIds.Count; i++)
+                {
+                    var jobId = jobIds[i];
+                    if (written > 0)
+                    {
+                        writer.Write(',');
+                    }
+
+                    oneJob.Clear();
+                    if (!byJob.TryGetValue(jobId, out var jobTasks)
+                        || !SimCargoJobValidationReportBuilder.TryBuildJobTasks(
+                            jobTasks,
+                            jobId,
+                            simTime,
+                            s_scratchReport,
+                            map,
+                            topology))
+                    {
+                        oneJob.Append("{\"i\":");
+                        oneJob.Append(jobId);
+                        oneJob.Append(",\"o\":0,\"s\":\"—\",\"p\":\"—\",\"k\":\"—\",\"r\":\"—\",\"a\":0,\"b\":0,\"d\":0,\"n\":0,\"q\":\"无法构建报告\",\"g\":[],\"u\":[]}");
+                    }
+                    else
+                    {
+                        SimCargoJobHtmlReportBuilder.AppendJobJsonObject(oneJob, s_scratchReport, map, topology);
+                    }
+
+                    writer.Write(oneJob.ToString());
+                    written++;
+                }
+
+                writer.Write(']');
+            });
         }
 
-        private static List<int> CollectJobIds(IReadOnlyList<SimSubTask> subTasks)
+        private static Dictionary<int, List<SimSubTask>> GroupSubTasks(IReadOnlyList<SimSubTask> subTasks)
         {
-            var ids = new HashSet<int>();
+            var byJob = new Dictionary<int, List<SimSubTask>>();
             for (var i = 0; i < subTasks.Count; i++)
             {
-                ids.Add(subTasks[i].JobId);
+                var task = subTasks[i];
+                if (!byJob.TryGetValue(task.JobId, out var list))
+                {
+                    list = new List<SimSubTask>(24);
+                    byJob[task.JobId] = list;
+                }
+
+                list.Add(task);
             }
 
-            return new List<int>(ids);
+            return byJob;
         }
 
         private static void AppendTd(StringBuilder sb, string text, bool numeric = false)

@@ -76,12 +76,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         /// </summary>
         private void ReconcilePlaceCargo(in StackerJobPlaybackTask task, in SimSubTask placeSubTask)
         {
-            BeginPlaceCargoDiag(task.JobId);
             var committed = StackerCargoHandover.HasTransferred(in placeSubTask, _logSimTime);
             if (!committed)
             {
-                _placeDiagCommitted = false;
-                LogPlaceCargoStarted(in task, placeSubTask.NormalizedProgress(_logSimTime), in placeSubTask);
                 AttachCargoByJob(task.JobId);
                 return;
             }
@@ -94,131 +91,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             {
                 var visual = placeSubTask.HasStackerPose ? placeSubTask.StackerToSlot : task.TargetSlot;
                 PlaceCargoAtSlotByJob(task.JobId, task.TargetSlot, visual);
-                LogPlaceCargoCommitted("放货提交", in task, visual, in placeSubTask, placeSubTask.HasStackerPose);
             }
-
-            if (task.IsOutbound)
-            {
-                LogPlaceCargoCommitted("出库放货", in task, placeSubTask.StackerToSlot, in placeSubTask, placeSubTask.HasStackerPose);
-            }
-        }
-
-        private void BeginPlaceCargoDiag(int jobId)
-        {
-            if (_placeDiagJobId == jobId)
-            {
-                return;
-            }
-
-            _placeDiagJobId = jobId;
-            _placeDiagStarted = false;
-            _placeDiagCommitted = false;
-        }
-
-        private void LogPlaceCargoStarted(in StackerJobPlaybackTask task, float progress, in SimSubTask placeSubTask)
-        {
-            if (_placeDiagStarted)
-            {
-                return;
-            }
-
-            _placeDiagStarted = true;
-            SimPlaybackLog.CargoSync(
-                $"放货开始 t={_logSimTime:F3} stacker={m_stackerId} job={task.JobId} 出库={task.IsOutbound} " +
-                $"progress={progress:F3} 占用货位={task.TargetSlot} 放货姿态={placeSubTask.StackerToSlot} " +
-                $"起点={placeSubTask.StackerFromSlot} rail={placeSubTask.StackerRailColumn} " +
-                $"段={placeSubTask.StartSimTime:F3}-{placeSubTask.EndSimTime:F3} 货叉={FormatForkWorld()} " +
-                DescribePositionIndex(),
-                this);
-        }
-
-        private void LogPlaceCargoCommitted(
-            string phase,
-            in StackerJobPlaybackTask task,
-            GridIndex visualSlot,
-            in SimSubTask placeSubTask,
-            bool hasPose)
-        {
-            if (_placeDiagJobId != task.JobId)
-            {
-                _placeDiagJobId = task.JobId;
-                _placeDiagStarted = false;
-                _placeDiagCommitted = false;
-            }
-
-            if (_placeDiagCommitted)
-            {
-                return;
-            }
-
-            _placeDiagCommitted = true;
-            var cargoWorld = "无料箱";
-            var forkCargoDelta = "无";
-            var mount = ResolveCargoMount();
-            if (_cargoRegistry != null && _cargoRegistry.TryGet(task.JobId, out var cargo) && cargo != null)
-            {
-                cargoWorld = cargo.position.ToString("F2");
-                if (mount != null)
-                {
-                    forkCargoDelta = Vector3.Distance(mount.position, cargo.position).ToString("F2");
-                }
-            }
-
-            var visualWorld = DescribeWorld(visualSlot);
-            var occupancyWorld = DescribeWorld(task.TargetSlot);
-            var pose = hasPose
-                ? $"起点={placeSubTask.StackerFromSlot} 终点={placeSubTask.StackerToSlot} rail={placeSubTask.StackerRailColumn} 段={placeSubTask.StartSimTime:F3}-{placeSubTask.EndSimTime:F3}"
-                : "无放货姿态";
-            var side = "同列";
-            if (placeSubTask.HasStackerPose)
-            {
-                var rail = placeSubTask.StackerRailColumn;
-                var toCol = placeSubTask.StackerToSlot.Column;
-                if (toCol < rail)
-                {
-                    side = "左";
-                }
-                else if (toCol > rail)
-                {
-                    side = "右";
-                }
-            }
-
-            SimPlaybackLog.CargoSync(
-                $"{phase} t={_logSimTime:F3} stacker={m_stackerId} job={task.JobId} 出库={task.IsOutbound} " +
-                $"侧={side} 占用货位={task.TargetSlot}({occupancyWorld}) 显示货位={visualSlot}({visualWorld}) {pose} " +
-                $"货叉={FormatForkWorld()} 料箱={cargoWorld} 叉货距={forkCargoDelta} 存储货位={IsStorageSlot(task.TargetSlot)} " +
-                $"已停放={_cargoRegistry != null && _cargoRegistry.IsJobParked(task.JobId)} {DescribePositionIndex()}",
-                this);
-        }
-
-        private string FormatForkWorld()
-        {
-            var mount = ResolveCargoMount();
-            return mount != null ? mount.position.ToString("F2") : "无挂点";
-        }
-
-        private string DescribeWorld(GridIndex slot)
-        {
-            if (_positionIndex == null)
-            {
-                return "无索引";
-            }
-
-            return _positionIndex.TryGetWorldPosition(slot, out var world)
-                ? world.ToString("F2")
-                : "查不到坐标";
-        }
-
-        private string DescribePositionIndex()
-        {
-            if (_positionIndex == null)
-            {
-                return "索引=无";
-            }
-
-            var manager = _positionIndex.BoundManager != null ? _positionIndex.BoundManager.name : "无管理器";
-            return $"索引仓库={_positionIndex.WarehouseId} 管理器={manager}";
         }
 
         /// <summary>货物不该在货叉上，且当前确实挂在本机挂载点时才解开。已经交给输送线或货位的不动。</summary>
@@ -272,28 +145,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         /// 伸叉提交帧被跳过时，把已经到期的入库料箱补停到货位上。
         /// 已经停着的不动。调用方要先确认该货位在当前时刻仍然占用。
         /// </summary>
-        public void EnsureInboundCargoParked(
-            int jobId,
-            GridIndex occupancySlot,
-            GridIndex visualSlot,
-            in SimSubTask placeSubTask,
-            double simTime)
+        public void EnsureInboundCargoParked(int jobId, GridIndex occupancySlot, GridIndex visualSlot)
         {
             if (jobId < 0 || (_cargoRegistry != null && _cargoRegistry.IsJobParked(jobId)))
             {
                 return;
             }
 
-            _logSimTime = simTime;
             PlaceCargoAtSlotByJob(jobId, occupancySlot, visualSlot);
-            var task = new StackerJobPlaybackTask
-            {
-                JobId = jobId,
-                StackerId = m_stackerId,
-                TargetSlot = occupancySlot,
-                IsOutbound = false,
-            };
-            LogPlaceCargoCommitted("放货补交", in task, visualSlot, in placeSubTask, placeSubTask.HasStackerPose);
         }
 
         /// <summary>
@@ -391,39 +250,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         /// <summary>挂载点必须是货叉轴自身或其子节点。缺失或挂错时拒绝挂货，不再退到排向轴。</summary>
         private Transform ResolveCargoMount()
         {
-            if (!EnsureDriver() || m_transformDriver.ForkAxis == null)
+            if (!EnsureDriver() || m_transformDriver.ForkAxis == null || m_cargoMount == null)
             {
-                LogMountErrorOnce("货叉轴未配置");
                 return null;
             }
 
             var fork = m_transformDriver.ForkAxis;
-            if (m_cargoMount == null)
-            {
-                LogMountErrorOnce("未配置料箱挂载点");
-                return null;
-            }
-
             if (m_cargoMount != fork && !m_cargoMount.IsChildOf(fork))
             {
-                LogMountErrorOnce("料箱挂载点不在货叉轴下");
                 return null;
             }
 
             return m_cargoMount;
-        }
-
-        private void LogMountErrorOnce(string reason)
-        {
-            if (_loggedMountError)
-            {
-                return;
-            }
-
-            _loggedMountError = true;
-            SimPlaybackLog.Warn(
-                $"JointStackerRig 堆垛机 {m_stackerId} {reason}，本机不挂载料箱。",
-                this);
         }
 
         private bool IsStorageSlot(GridIndex slot) =>

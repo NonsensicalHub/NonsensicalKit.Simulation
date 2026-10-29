@@ -342,6 +342,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         public string[] PeekOutboundProcessTags() => _flow.PeekOutboundTags();
 
+        public int[] PeekInboundWarehouseIds() => _flow.PeekInboundWarehouseIds();
+
+        public int[] PeekOutboundWarehouseIds() => _flow.PeekOutboundWarehouseIds();
+
         public SimEventDiagnostics BuildEventDiagnostics(int queuePending)
         {
             var diag = new SimEventDiagnostics

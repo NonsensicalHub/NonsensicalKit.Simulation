@@ -139,7 +139,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         /// 当前快照里已经不再占用的货位，收回停在那里的场景料箱。
         /// 仍在快照里的留下，避免和货架 GPU 各画一次。
         /// </summary>
-        public void ReleaseParkedExcept(HashSet<GridIndex> stillOccupied, double simTime)
+        public void ReleaseParkedExcept(HashSet<GridIndex> stillOccupied)
         {
             _parkReleaseIds.Clear();
             foreach (var pair in _parkedJobBySlot)
@@ -150,23 +150,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 }
             }
 
-            var logged = 0;
             for (var i = 0; i < _parkReleaseIds.Count; i++)
             {
-                var jobId = _parkReleaseIds[i];
-                if (logged < 24)
-                {
-                    var slotText = _parkedSlotByJob.TryGetValue(jobId, out var slot) ? slot.ToString() : "?";
-                    SimPlaybackLog.CargoSync($"收回场景料箱 t={simTime:F3} job={jobId} slot={slotText} 原因=货位快照已无此货");
-                    logged++;
-                }
-
-                ReleaseCore(jobId);
-            }
-
-            if (_parkReleaseIds.Count > logged)
-            {
-                SimPlaybackLog.CargoSync($"t={simTime:F3} 收回场景料箱共 {_parkReleaseIds.Count} 只，其余省略");
+                ReleaseCore(_parkReleaseIds[i]);
             }
         }
 

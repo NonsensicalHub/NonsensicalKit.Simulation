@@ -34,7 +34,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private readonly SimSubTaskPlaybackIndex _subTaskIndex = new();
         private readonly HashSet<int> _outboundJobIds = new();
         private readonly List<int> _evaluateJobIds = new();
-        private bool _loggedNotReady;
 
         private IWarehouseSimulationBindings Bindings => m_bindings as IWarehouseSimulationBindings;
 
@@ -60,7 +59,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             _scheduleByJob.Clear();
             _outboundJobIds.Clear();
             _subTaskIndex.Build(System.Array.Empty<SimSubTask>());
-            _loggedNotReady = false;
         }
 
         public override void OnPlaybackEvaluate(double simTime, IReadOnlyList<SimSubTask> subTasks)
@@ -100,43 +98,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
         private bool EnsureReady()
         {
-            if (Bindings == null)
+            if (Bindings == null || Bindings.ConveyorMap == null || m_cargoRegistry == null)
             {
-                LogNotReadyOnce("未配置「硬件绑定」(WarehouseSimulationBindingsAsset)，输送线回放不会更新。");
-                return false;
-            }
-
-            if (Bindings.ConveyorMap == null)
-            {
-                LogNotReadyOnce("硬件绑定中缺少 ConveyorMap，输送线回放不会更新。");
-                return false;
-            }
-
-            if (m_cargoRegistry == null)
-            {
-                LogNotReadyOnce("未配置「料箱实例池」(SimPlaybackCargoVisualRegistry)，输送线回放不会更新。");
                 return false;
             }
 
             if (_topology == null && !RebuildTopology())
             {
-                LogNotReadyOnce("无法从 ConveyorMap 构建拓扑，输送线回放不会更新。");
                 return false;
             }
 
-            _loggedNotReady = false;
             return true;
-        }
-
-        private void LogNotReadyOnce(string reason)
-        {
-            if (_loggedNotReady)
-            {
-                return;
-            }
-
-            _loggedNotReady = true;
-            SimPlaybackLog.Warn($"ConveyorHandler {reason}", this);
         }
 
         private bool RebuildTopology() =>

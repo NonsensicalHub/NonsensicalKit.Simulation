@@ -48,11 +48,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private ConveyorMapTopology _topology;
         private IReadOnlyList<SimSubTask> _configuredTimeline;
         private double _lastEvaluateSimTime = double.NaN;
-        private bool _loggedEvaluateSkip;
         private bool _rigsInitialized;
-        private readonly HashSet<int> _missingPositionWarehouses = new();
-        private readonly HashSet<int> _missingExplicitStackers = new();
-        private readonly HashSet<int> _mismatchedPositionManagers = new();
         private readonly HashSet<int> _outboundJobIds = new();
         private readonly Dictionary<GridIndex, SimSubTask> _duePlaceBySlot = new();
         private readonly WarehouseSlotPlaybackSnapshotIndex _duePlaceOccupancy = new();
@@ -111,13 +107,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 return;
             }
 
-            if (!ValidateEvaluateReady(out var skipReason))
+            if (!ValidateEvaluateReady())
             {
-                LogEvaluateSkipOnce(skipReason);
                 return;
             }
-
-            _loggedEvaluateSkip = false;
 
             if (!_duePlaceBuilt || !_subTaskIndex.IsCurrentSource(subTasks))
             {
@@ -130,7 +123,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
             if (_executorList.Count == 0)
             {
-                LogEvaluateSkipOnce("未绑定任何堆垛机执行器，回放不会更新堆垛机姿态。");
                 return;
             }
 
@@ -157,8 +149,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
                 if (_subTaskIndex.TryGetActiveForStacker(stackerId, simTime, out _))
                 {
-                    LogEvaluateSkipOnce(
-                        $"堆垛机 {stackerId} 在 t={simTime:F2}s 有活动子任务但无法构建回放上下文，本帧跳过 RestoreIdle。");
                     continue;
                 }
 
@@ -245,12 +235,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                 }
 
                 var visual = place.HasStackerPose ? place.StackerToSlot : place.Slot;
-                executor.EnsureInboundCargoParked(
-                    place.JobId,
-                    place.Slot,
-                    visual,
-                    in place,
-                    simTime);
+                executor.EnsureInboundCargoParked(place.JobId, place.Slot, visual);
             }
         }
 
@@ -262,34 +247,24 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
         }
 
-        private bool ValidateEvaluateReady(out string skipReason)
+        private bool ValidateEvaluateReady()
         {
             if (m_bindings == null)
             {
-                skipReason = "未配置「硬件绑定」，堆垛机回放不会更新。";
                 return false;
             }
 
             if (HasWarehouseList)
             {
-                skipReason = null;
                 return true;
             }
 
             if (m_positionIndex == null)
             {
-                skipReason = "未配置「货位坐标索引」，堆垛机回放不会更新。";
                 return false;
             }
 
-            if (!m_positionIndex.IsReady && !m_positionIndex.TryLoad())
-            {
-                skipReason = "货位坐标索引尚未加载，堆垛机回放不会更新。";
-                return false;
-            }
-
-            skipReason = null;
-            return true;
+            return m_positionIndex.IsReady || m_positionIndex.TryLoad();
         }
 
         private void EnsureExecutorsConfigured(IReadOnlyList<SimSubTask> subTasks)
@@ -363,29 +338,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             }
 
             _rigsInitialized = _executorList.Count > 0;
-            if (_executorList.Count == 0)
-            {
-                SimPlaybackLog.Warn(
-                    "未成功绑定任何堆垛机 Rig（请检查 m_stackers、关节控制器引用及 m_stackerId）。",
-                    this);
-            }
         }
 
         private void ConfigureRig(JointControllerStackerJobRigPlayback rig)
         {
             var warehouseId = 0;
-            var hasExplicitDefinition = HasExplicitStackerDefinition(rig.StackerId);
             if (m_bindings != null
                 && StackerColumnReachUtility.TryGetDefinition(m_bindings, _topology, rig.StackerId, out var definition))
             {
                 warehouseId = definition.WarehouseId;
-            }
-
-            if (HasWarehouseList && !hasExplicitDefinition && _missingExplicitStackers.Add(rig.StackerId))
-            {
-                SimPlaybackLog.Warn(
-                    $"堆垛机 {rig.StackerId} 没有显式仓库定义，回放按仓库 {warehouseId} 绑定。多仓库请在 Fleet 填写 WarehouseId。",
-                    this);
             }
 
             rig.Configure(
@@ -401,25 +362,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
         private bool HasWarehouseList => m_warehouses != null && m_warehouses.Length > 0;
 
-        private bool HasExplicitStackerDefinition(int stackerId)
-        {
-            var definitions = m_bindings?.Fleet?.StackerDefinitions;
-            if (definitions == null)
-            {
-                return false;
-            }
-
-            for (var i = 0; i < definitions.Length; i++)
-            {
-                if (definitions[i].StackerId == stackerId)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private WarehouseManagerBinPositionIndex ResolvePositionIndex(int warehouseId)
         {
             if (HasWarehouseList)
@@ -433,14 +375,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
                     }
 
                     binding.PositionIndex.UseWarehouse(warehouseId);
-                    if (binding.PositionIndex.BoundManager != binding.Manager
-                        && _mismatchedPositionManagers.Add(warehouseId))
-                    {
-                        SimPlaybackLog.Warn(
-                            $"仓库 {warehouseId} 的货位索引与回放绑定不是同一个数字孪生仓库，世界坐标会按索引上的仓库变换。",
-                            this);
-                    }
-
                     return binding.PositionIndex;
                 }
             }
@@ -448,11 +382,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
             {
                 m_positionIndex?.UseWarehouse(0);
                 return m_positionIndex;
-            }
-
-            if (_missingPositionWarehouses.Add(warehouseId))
-            {
-                SimPlaybackLog.Warn($"堆垛机所属仓库 {warehouseId} 未配置货位坐标索引。", this);
             }
 
             return null;
@@ -472,17 +401,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         {
             _topology = null;
             return SimPlaybackTopologyUtility.TryBuild(m_bindings?.ConveyorMap, m_bindings, out _topology, this);
-        }
-
-        private void LogEvaluateSkipOnce(string reason)
-        {
-            if (_loggedEvaluateSkip)
-            {
-                return;
-            }
-
-            _loggedEvaluateSkip = true;
-            SimPlaybackLog.Warn($"StackerHandler {reason}", this);
         }
     }
 }

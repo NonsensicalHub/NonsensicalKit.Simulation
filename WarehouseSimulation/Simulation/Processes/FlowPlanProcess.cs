@@ -110,6 +110,26 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             return _scheduler.GetRequiredProcessTags(_outboundEntries.Peek());
         }
 
+        internal int[] PeekInboundWarehouseIds()
+        {
+            if (_inboundEntries.Count == 0 || _scheduler == null)
+            {
+                return null;
+            }
+
+            return _scheduler.GetAllowedWarehouseIds(_inboundEntries.Peek());
+        }
+
+        internal int[] PeekOutboundWarehouseIds()
+        {
+            if (_outboundEntries.Count == 0 || _scheduler == null)
+            {
+                return null;
+            }
+
+            return _scheduler.GetAllowedWarehouseIds(_outboundEntries.Peek());
+        }
+
         private void OnCargoRelease(int entryIndex)
         {
             if (_scheduler == null)

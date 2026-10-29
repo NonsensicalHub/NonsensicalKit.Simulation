@@ -11,7 +11,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
     /// 按堆垛机所属仓库把货位分配转到对应的 <see cref="DefaultSlotAllocator"/>。
     /// 每个子分配器只持有本库网格。
     /// </summary>
-    public sealed class MultiWarehouseSlotAllocator : ISlotAllocator, IWarehouseGridLookup
+    public sealed class MultiWarehouseSlotAllocator : ISlotAllocator, IWarehouseGridLookup, IWarehouseStorageProbe
     {
         private readonly SortedDictionary<int, DefaultSlotAllocator> _byWarehouse;
         private readonly Dictionary<int, string> _names;
@@ -132,6 +132,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
         }
 
         public StackerSlotPlacementStrategy PlacementStrategy { get; private set; }
+
+        public bool HasFreeStorage(int warehouseId) =>
+            _byWarehouse.TryGetValue(warehouseId, out var allocator) && allocator.HasFreeStorage(warehouseId);
+
+        public bool HasStoredCargo(int warehouseId) =>
+            _byWarehouse.TryGetValue(warehouseId, out var allocator) && allocator.HasStoredCargo(warehouseId);
 
         public bool TryGetGrid(int warehouseId, out WarehouseGridConfig grid)
         {
@@ -257,6 +263,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             {
                 allocator.Release(slot);
                 _packedDirty = true;
+            }
+        }
+
+        public void NotifyInboundPlaced(GridIndex slot)
+        {
+            if (_byWarehouse.TryGetValue(slot.WarehouseId, out var allocator))
+            {
+                allocator.NotifyInboundPlaced(slot);
             }
         }
 

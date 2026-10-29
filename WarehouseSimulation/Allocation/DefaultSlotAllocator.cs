@@ -7,16 +7,33 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 {
     /// <summary>
     /// 默认货位分配器：基于规则网格的 <c>bool[]</c> 占用位图。
+    /// 四列双深同一层、同一排先放远离巷道的深位，深位落稳后才放浅位，避免货叉伸到深位时撞上浅位货物。
     /// </summary>
-    public sealed class DefaultSlotAllocator : ISlotAllocator, IWarehouseGridLookup
+    public sealed class DefaultSlotAllocator : ISlotAllocator, IWarehouseGridLookup, IWarehouseStorageProbe
     {
         private WarehouseGridConfig _grid;
         private int _warehouseId;
         private IWarehouseSimulationBindings _bindings;
         private SimSlotExclusionZone[] _exclusionZones = Array.Empty<SimSlotExclusionZone>();
         private bool[] _occupied;
+        /// <summary>已预占、入库货叉尚未放完。深位在此期间不能打开同格浅位。</summary>
+        private bool[] _inboundPlacementPending;
         private int[] _freeCountByColumn;
         private int[] _columnOrderScratch;
+        private bool[] _isStorage;
+        private bool[] _slotHasPos;
+        private float[] _slotX;
+        private float[] _slotY;
+        private float[] _slotZ;
+        private bool _slotPosReady;
+        private bool[] _colBounded;
+        private float[] _colMinX;
+        private float[] _colMaxX;
+        private float[] _colMinY;
+        private float[] _colMaxY;
+        private float[] _colMinZ;
+        private float[] _colMaxZ;
+        private bool[][] _reachableByStacker;
 
         public bool[] Occupied => _occupied;
 
@@ -39,6 +56,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             _grid = grid;
             _warehouseId = warehouseId;
         }
+
+        public bool HasFreeStorage(int warehouseId) =>
+            warehouseId == _warehouseId && TotalFreeCount > 0;
+
+        public bool HasStoredCargo(int warehouseId) =>
+            warehouseId == _warehouseId && TotalFreeCount < StorageSlotCount;
 
         public bool TryGetGrid(int warehouseId, out WarehouseGridConfig grid)
         {
@@ -71,9 +94,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             _occupied = initialOccupied != null && initialOccupied.Length == PhysicalSlotCount
                 ? (bool[])initialOccupied.Clone()
                 : new bool[PhysicalSlotCount];
+            _inboundPlacementPending = new bool[PhysicalSlotCount];
+            BuildStorageMask();
             MarkExcludedSlotsOccupied();
             EnsureColumnOrderScratch(_grid.ColumnCount);
             RebuildFreeCounts();
+            _slotPosReady = false;
+            _reachableByStacker = null;
         }
 
         public int CountOccupiedStorageSlots(bool[] occupied) =>
@@ -109,43 +136,132 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                 return occupied;
             }
 
-            if (random)
-            {
-                FillRandomSlots(occupied, storageIndices, fillCount, MixOccupancySeed(randomSeed, warehouseId));
-            }
-            else
-            {
-                for (var i = 0; i < fillCount; i++)
-                {
-                    occupied[storageIndices[i]] = true;
-                }
-            }
-
+            FillRespectingDoubleDepth(
+                occupied,
+                grid,
+                storageIndices,
+                zones,
+                fillCount,
+                random,
+                MixOccupancySeed(randomSeed, warehouseId),
+                hardware,
+                warehouseId);
             return occupied;
         }
 
-        private static void FillRandomSlots(
+        /// <summary>
+        /// 先占深位和没有深位配对的货位，再占浅位。
+        /// 浅位的深位还空着时不预占，避免开局库存把货叉通道堵住。
+        /// </summary>
+        private static void FillRespectingDoubleDepth(
             bool[] occupied,
+            WarehouseGridConfig grid,
             System.Collections.Generic.List<int> storageIndices,
+            SimSlotExclusionZone[] zones,
             int fillCount,
-            int randomSeed)
+            bool random,
+            int randomSeed,
+            IWarehouseSimulationBindings bindings,
+            int warehouseId)
         {
-            var order = new int[storageIndices.Count];
-            for (var i = 0; i < order.Length; i++)
+            var primary = new System.Collections.Generic.List<int>(storageIndices.Count);
+            var nearSlots = new System.Collections.Generic.List<int>();
+            for (var i = 0; i < storageIndices.Count; i++)
             {
-                order[i] = i;
+                var index = storageIndices[i];
+                if (IsNearSlotWaitingForFar(grid, zones, bindings, warehouseId, index))
+                {
+                    nearSlots.Add(index);
+                }
+                else
+                {
+                    primary.Add(index);
+                }
             }
 
+            if (random)
+            {
+                ShuffleIndices(primary, randomSeed);
+                ShuffleIndices(nearSlots, randomSeed ^ 0x5bd1e995);
+            }
+
+            var filled = 0;
+            for (var i = 0; i < primary.Count && filled < fillCount; i++)
+            {
+                occupied[primary[i]] = true;
+                filled++;
+            }
+
+            for (var i = 0; i < nearSlots.Count && filled < fillCount; i++)
+            {
+                occupied[nearSlots[i]] = true;
+                filled++;
+            }
+        }
+
+        private static bool IsNearSlotWaitingForFar(
+            WarehouseGridConfig grid,
+            SimSlotExclusionZone[] zones,
+            IWarehouseSimulationBindings bindings,
+            int warehouseId,
+            int flatIndex)
+        {
+            var level = flatIndex % grid.LevelCount;
+            var columnAndRow = flatIndex / grid.LevelCount;
+            var column = columnAndRow % grid.ColumnCount;
+            var row = columnAndRow / grid.ColumnCount;
+            if (!TryFindDoubleDepthPartner(bindings, warehouseId, column, out var partnerColumn, out var columnIsFar)
+                || columnIsFar
+                || partnerColumn < 0
+                || partnerColumn >= grid.ColumnCount)
+            {
+                return false;
+            }
+
+            return SlotGridUtility.IsStorageSlot(grid, level, partnerColumn, row, zones);
+        }
+
+        private static bool TryFindDoubleDepthPartner(
+            IWarehouseSimulationBindings bindings,
+            int warehouseId,
+            int column,
+            out int partnerColumn,
+            out bool columnIsFar)
+        {
+            partnerColumn = -1;
+            columnIsFar = false;
+            var definitions = bindings?.StackerDefinitions;
+            if (definitions == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < definitions.Length; i++)
+            {
+                var definition = definitions[i];
+                if (definition.WarehouseId != warehouseId
+                    || !StackerColumnReachUtility.CanReachColumn(in definition, column))
+                {
+                    continue;
+                }
+
+                if (StackerColumnReachUtility.TryGetDoubleDepthPartner(
+                        in definition, column, out partnerColumn, out columnIsFar))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void ShuffleIndices(System.Collections.Generic.List<int> indices, int randomSeed)
+        {
             var rng = new Random(randomSeed);
-            for (var i = order.Length - 1; i > 0; i--)
+            for (var i = indices.Count - 1; i > 0; i--)
             {
                 var swapIndex = rng.Next(i + 1);
-                (order[i], order[swapIndex]) = (order[swapIndex], order[i]);
-            }
-
-            for (var i = 0; i < fillCount; i++)
-            {
-                occupied[storageIndices[order[i]]] = true;
+                (indices[i], indices[swapIndex]) = (indices[swapIndex], indices[i]);
             }
         }
 
@@ -186,8 +302,29 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                     bindings, topology, servingStackerId, pickupColumn, pickupRow, out slot),
             };
 
-        public bool HasAllocatableFreeSlot(IWarehouseSimulationBindings bindings, ConveyorMapTopology topology) =>
-            CountFreeAllocatableStorageSlots(bindings, topology) > 0;
+        public bool HasAllocatableFreeSlot(IWarehouseSimulationBindings bindings, ConveyorMapTopology topology)
+        {
+            if (_grid == null || TotalFreeCount <= 0 || _occupied == null)
+            {
+                return false;
+            }
+
+            var stackerCount = Math.Max(1, bindings?.StackerCount ?? 1);
+            for (var stackerId = 0; stackerId < stackerCount; stackerId++)
+            {
+                if (!ServesThisWarehouse(bindings, topology, stackerId))
+                {
+                    continue;
+                }
+
+                if (HasAllocatableFreeSlotForStacker(bindings, topology, stackerId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         public int CountAllocatableStorageSlots(
             IWarehouseSimulationBindings bindings,
@@ -209,6 +346,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                 return false;
             }
 
+            var hasDefinition = StackerColumnReachUtility.TryGetDefinition(
+                bindings, topology, servingStackerId, out var definition);
             for (var col = 0; col < _grid.ColumnCount; col++)
             {
                 if (_freeCountByColumn[col] <= 0)
@@ -216,12 +355,26 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                     continue;
                 }
 
-                if (!IsAllocatableColumnForStacker(bindings, topology, servingStackerId, col))
+                if (!ColumnReachable(bindings, topology, servingStackerId, col))
                 {
                     continue;
                 }
 
-                return true;
+                for (var row = 0; row < _grid.RowCount; row++)
+                {
+                    for (var level = 0; level < _grid.LevelCount; level++)
+                    {
+                        var idx = ToFlatIndex(_grid, level, col, row);
+                        if (_occupied[idx]
+                            || !_isStorage[idx]
+                            || !IsInboundDepthClear(in definition, hasDefinition, level, col, row))
+                        {
+                            continue;
+                        }
+
+                        return true;
+                    }
+                }
             }
 
             return false;
@@ -243,6 +396,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             }
 
             _occupied[idx] = true;
+            if (_inboundPlacementPending != null && idx < _inboundPlacementPending.Length)
+            {
+                _inboundPlacementPending[idx] = true;
+            }
+
             _freeCountByColumn[slot.Column]--;
             TotalFreeCount--;
             return true;
@@ -277,8 +435,27 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             }
 
             _occupied[idx] = false;
+            if (_inboundPlacementPending != null && idx < _inboundPlacementPending.Length)
+            {
+                _inboundPlacementPending[idx] = false;
+            }
+
             _freeCountByColumn[slot.Column]++;
             TotalFreeCount++;
+        }
+
+        public void NotifyInboundPlaced(GridIndex slot)
+        {
+            if (_grid == null || _inboundPlacementPending == null)
+            {
+                return;
+            }
+
+            var idx = ToFlatIndex(_grid, slot.Level, slot.Column, slot.Row);
+            if (idx >= 0 && idx < _inboundPlacementPending.Length)
+            {
+                _inboundPlacementPending[idx] = false;
+            }
         }
 
         public bool HasRetrievableOccupiedSlot(
@@ -325,10 +502,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             var bestDistance = double.MaxValue;
             var found = false;
             var bestSlot = default(GridIndex);
+            var hasDefinition = StackerColumnReachUtility.TryGetDefinition(
+                bindings, topology, servingStackerId, out var definition);
+            var fromReady = TryReadOrigin(bindings, pickupColumn, pickupRow, out var fromX, out var fromY, out var fromZ);
 
             for (var col = 0; col < _grid.ColumnCount; col++)
             {
-                if (!IsAllocatableColumnForStacker(bindings, topology, servingStackerId, col))
+                if (!ColumnReachable(bindings, topology, servingStackerId, col))
+                {
+                    continue;
+                }
+
+                if (found && fromReady && ColumnLowerBound(col, fromX, fromY, fromZ) > bestDistance + 1e-4)
                 {
                     continue;
                 }
@@ -345,13 +530,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
                         var idx = ToFlatIndex(_grid, level, col, row);
                         if (!_occupied[idx]
-                            || !SlotGridUtility.IsStorageSlot(_grid, level, col, row, _exclusionZones))
+                            || IsInboundPlacementPending(idx)
+                            || !_isStorage[idx]
+                            || !IsOutboundDepthClear(in definition, hasDefinition, level, col, row))
                         {
                             continue;
                         }
 
-                        var distance = ComputePickupDistance(
-                            bindings, pickupColumn, pickupRow, col, row, level);
+                        var distance = PickupDistance(
+                            bindings, pickupColumn, pickupRow, col, row, level, idx, fromReady, fromX, fromY, fromZ);
                         if (distance >= bestDistance)
                         {
                             continue;
@@ -384,9 +571,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                 return false;
             }
 
+            var hasDefinition = StackerColumnReachUtility.TryGetDefinition(
+                bindings, topology, servingStackerId, out var definition);
             for (var col = 0; col < _grid.ColumnCount; col++)
             {
-                if (!IsAllocatableColumnForStacker(bindings, topology, servingStackerId, col))
+                if (!ColumnReachable(bindings, topology, servingStackerId, col))
                 {
                     continue;
                 }
@@ -403,7 +592,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
                         var idx = ToFlatIndex(_grid, level, col, row);
                         if (_occupied[idx]
-                            && SlotGridUtility.IsStorageSlot(_grid, level, col, row, _exclusionZones))
+                            && !IsInboundPlacementPending(idx)
+                            && _isStorage[idx]
+                            && IsOutboundDepthClear(in definition, hasDefinition, level, col, row))
                         {
                             return true;
                         }
@@ -439,6 +630,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             var bestDistance = double.MaxValue;
             var found = false;
             var bestSlot = default(GridIndex);
+            var hasDefinition = StackerColumnReachUtility.TryGetDefinition(
+                bindings, topology, servingStackerId, out var definition);
+            var fromReady = TryReadOrigin(bindings, pickupColumn, pickupRow, out var fromX, out var fromY, out var fromZ);
 
             for (var col = 0; col < _grid.ColumnCount; col++)
             {
@@ -447,7 +641,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                     continue;
                 }
 
-                if (!IsAllocatableColumnForStacker(bindings, topology, servingStackerId, col))
+                if (!ColumnReachable(bindings, topology, servingStackerId, col))
+                {
+                    continue;
+                }
+
+                if (found && fromReady && ColumnLowerBound(col, fromX, fromY, fromZ) > bestDistance + 1e-4)
                 {
                     continue;
                 }
@@ -458,13 +657,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                     {
                         var idx = ToFlatIndex(_grid, level, col, row);
                         if (_occupied[idx]
-                            || !SlotGridUtility.IsStorageSlot(_grid, level, col, row, _exclusionZones))
+                            || !_isStorage[idx]
+                            || !IsInboundDepthClear(in definition, hasDefinition, level, col, row))
                         {
                             continue;
                         }
 
-                        var distance = ComputePickupDistance(
-                            bindings, pickupColumn, pickupRow, col, row, level);
+                        var distance = PickupDistance(
+                            bindings, pickupColumn, pickupRow, col, row, level, idx, fromReady, fromX, fromY, fromZ);
                         if (distance >= bestDistance)
                         {
                             continue;
@@ -500,6 +700,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             }
 
             EnsureColumnOrderScratch(_grid.ColumnCount);
+            var hasDefinition = StackerColumnReachUtility.TryGetDefinition(
+                bindings, topology, servingStackerId, out var definition);
             var columnOrder = _columnOrderScratch;
             for (var i = 0; i < _grid.ColumnCount; i++)
             {
@@ -535,7 +737,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                     continue;
                 }
 
-                if (!IsAllocatableColumnForStacker(bindings, topology, servingStackerId, col))
+                if (!ColumnReachable(bindings, topology, servingStackerId, col))
                 {
                     continue;
                 }
@@ -546,7 +748,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
                     {
                         var idx = ToFlatIndex(_grid, level, col, row);
                         if (!_occupied[idx]
-                            && SlotGridUtility.IsStorageSlot(_grid, level, col, row, _exclusionZones))
+                            && _isStorage[idx]
+                            && IsInboundDepthClear(in definition, hasDefinition, level, col, row))
                         {
                             slot = MakeSlot(level, col, row);
                             return true;
@@ -557,6 +760,62 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
 
             return false;
         }
+
+        /// <summary>
+        /// 深位：同格浅位必须空着。浅位：同格深位必须已经放进货架，不能只是预占。
+        /// </summary>
+        private bool IsInboundDepthClear(
+            in SimStackerDefinition def,
+            bool hasDefinition,
+            int level,
+            int column,
+            int row)
+        {
+            if (!hasDefinition
+                || !StackerColumnReachUtility.TryGetDoubleDepthPartner(
+                    in def, column, out var partnerColumn, out var columnIsFar)
+                || partnerColumn < 0
+                || partnerColumn >= _grid.ColumnCount
+                || !SlotGridUtility.IsStorageSlot(_grid, level, partnerColumn, row, _exclusionZones))
+            {
+                return true;
+            }
+
+            var partnerIndex = ToFlatIndex(_grid, level, partnerColumn, row);
+            if (columnIsFar)
+            {
+                return !_occupied[partnerIndex];
+            }
+
+            return _occupied[partnerIndex] && !IsInboundPlacementPending(partnerIndex);
+        }
+
+        /// <summary>出库取深位时，同格浅位上还有货就会挡住货叉。</summary>
+        private bool IsOutboundDepthClear(
+            in SimStackerDefinition def,
+            bool hasDefinition,
+            int level,
+            int column,
+            int row)
+        {
+            if (!hasDefinition
+                || !StackerColumnReachUtility.TryGetDoubleDepthPartner(
+                    in def, column, out var partnerColumn, out var columnIsFar)
+                || !columnIsFar
+                || partnerColumn < 0
+                || partnerColumn >= _grid.ColumnCount
+                || !SlotGridUtility.IsStorageSlot(_grid, level, partnerColumn, row, _exclusionZones))
+            {
+                return true;
+            }
+
+            return !_occupied[ToFlatIndex(_grid, level, partnerColumn, row)];
+        }
+
+        private bool IsInboundPlacementPending(int flatIndex) =>
+            _inboundPlacementPending != null
+            && (uint)flatIndex < (uint)_inboundPlacementPending.Length
+            && _inboundPlacementPending[flatIndex];
 
         private double ComputePickupDistance(
             IWarehouseSimulationBindings bindings,
@@ -569,6 +828,252 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Allocation
             var from = new GridIndex(0, pickupColumn, pickupRow, 0, _warehouseId);
             var to = new GridIndex(level, column, row, 0, _warehouseId);
             return SlotPositionMath.ComputeManhattanDistance(bindings.SlotPositions, from, to);
+        }
+
+        private void BuildStorageMask()
+        {
+            var count = _occupied != null ? _occupied.Length : 0;
+            _isStorage = new bool[count];
+            if (_grid == null)
+            {
+                return;
+            }
+
+            for (var row = 0; row < _grid.RowCount; row++)
+            {
+                for (var col = 0; col < _grid.ColumnCount; col++)
+                {
+                    for (var level = 0; level < _grid.LevelCount; level++)
+                    {
+                        var idx = ToFlatIndex(_grid, level, col, row);
+                        _isStorage[idx] = SlotGridUtility.IsStorageSlot(
+                            _grid, level, col, row, _exclusionZones);
+                    }
+                }
+            }
+        }
+
+        private bool ColumnReachable(
+            IWarehouseSimulationBindings bindings,
+            ConveyorMapTopology topology,
+            int stackerId,
+            int column)
+        {
+            if (topology == null)
+            {
+                return true;
+            }
+
+            if (stackerId < 0 || _grid == null || (uint)column >= (uint)_grid.ColumnCount)
+            {
+                return false;
+            }
+
+            if (_reachableByStacker == null || stackerId >= _reachableByStacker.Length)
+            {
+                var grown = new bool[Math.Max(stackerId + 1, 4)][];
+                if (_reachableByStacker != null)
+                {
+                    Array.Copy(_reachableByStacker, grown, _reachableByStacker.Length);
+                }
+
+                _reachableByStacker = grown;
+            }
+
+            var flags = _reachableByStacker[stackerId];
+            if (flags == null || flags.Length != _grid.ColumnCount)
+            {
+                flags = new bool[_grid.ColumnCount];
+                for (var col = 0; col < flags.Length; col++)
+                {
+                    flags[col] = IsAllocatableColumnForStacker(bindings, topology, stackerId, col);
+                }
+
+                _reachableByStacker[stackerId] = flags;
+            }
+
+            return flags[column];
+        }
+
+        private bool TryReadOrigin(
+            IWarehouseSimulationBindings bindings,
+            int pickupColumn,
+            int pickupRow,
+            out float x,
+            out float y,
+            out float z)
+        {
+            x = y = z = 0f;
+            EnsureSlotPositions(bindings);
+            var index = bindings?.SlotPositions;
+            if (index == null || !index.IsReady)
+            {
+                return false;
+            }
+
+            if (!index.TryGetLocalPosition(new GridIndex(0, pickupColumn, pickupRow, 0, _warehouseId), out var local))
+            {
+                return false;
+            }
+
+            x = local.x;
+            y = local.y;
+            z = local.z;
+            return true;
+        }
+
+        private void EnsureSlotPositions(IWarehouseSimulationBindings bindings)
+        {
+            if (_slotPosReady)
+            {
+                return;
+            }
+
+            _slotPosReady = true;
+            var count = _occupied != null ? _occupied.Length : 0;
+            _slotHasPos = new bool[count];
+            _slotX = new float[count];
+            _slotY = new float[count];
+            _slotZ = new float[count];
+            var index = bindings?.SlotPositions;
+            if (index == null || !index.IsReady || _grid == null)
+            {
+                return;
+            }
+
+            for (var row = 0; row < _grid.RowCount; row++)
+            {
+                for (var col = 0; col < _grid.ColumnCount; col++)
+                {
+                    for (var level = 0; level < _grid.LevelCount; level++)
+                    {
+                        var idx = ToFlatIndex(_grid, level, col, row);
+                        if (!index.TryGetLocalPosition(
+                                new GridIndex(level, col, row, 0, _warehouseId),
+                                out var local))
+                        {
+                            continue;
+                        }
+
+                        _slotHasPos[idx] = true;
+                        _slotX[idx] = local.x;
+                        _slotY[idx] = local.y;
+                        _slotZ[idx] = local.z;
+                    }
+                }
+            }
+
+            BuildColumnBounds();
+        }
+
+        private void BuildColumnBounds()
+        {
+            var columns = _grid.ColumnCount;
+            _colBounded = new bool[columns];
+            _colMinX = new float[columns];
+            _colMaxX = new float[columns];
+            _colMinY = new float[columns];
+            _colMaxY = new float[columns];
+            _colMinZ = new float[columns];
+            _colMaxZ = new float[columns];
+            for (var col = 0; col < columns; col++)
+            {
+                var minX = float.PositiveInfinity;
+                var maxX = float.NegativeInfinity;
+                var minY = float.PositiveInfinity;
+                var maxY = float.NegativeInfinity;
+                var minZ = float.PositiveInfinity;
+                var maxZ = float.NegativeInfinity;
+                var any = false;
+                for (var row = 0; row < _grid.RowCount; row++)
+                {
+                    for (var level = 0; level < _grid.LevelCount; level++)
+                    {
+                        var idx = ToFlatIndex(_grid, level, col, row);
+                        if (!_isStorage[idx] || !_slotHasPos[idx])
+                        {
+                            continue;
+                        }
+
+                        any = true;
+                        var x = _slotX[idx];
+                        var y = _slotY[idx];
+                        var z = _slotZ[idx];
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        if (z < minZ) minZ = z;
+                        if (z > maxZ) maxZ = z;
+                    }
+                }
+
+                if (!any)
+                {
+                    continue;
+                }
+
+                _colBounded[col] = true;
+                _colMinX[col] = minX;
+                _colMaxX[col] = maxX;
+                _colMinY[col] = minY;
+                _colMaxY[col] = maxY;
+                _colMinZ[col] = minZ;
+                _colMaxZ[col] = maxZ;
+            }
+        }
+
+        private double ColumnLowerBound(int column, float x, float y, float z)
+        {
+            if (_colBounded == null || (uint)column >= (uint)_colBounded.Length || !_colBounded[column])
+            {
+                return 0d;
+            }
+
+            return AxisGap(x, _colMinX[column], _colMaxX[column])
+                   + AxisGap(y, _colMinY[column], _colMaxY[column])
+                   + AxisGap(z, _colMinZ[column], _colMaxZ[column]);
+        }
+
+        private static double AxisGap(float value, float min, float max)
+        {
+            var v = (double)value;
+            var lo = (double)min;
+            var hi = (double)max;
+            if (v < lo)
+            {
+                return lo - v;
+            }
+
+            if (v > hi)
+            {
+                return v - hi;
+            }
+
+            return 0d;
+        }
+
+        private double PickupDistance(
+            IWarehouseSimulationBindings bindings,
+            int pickupColumn,
+            int pickupRow,
+            int column,
+            int row,
+            int level,
+            int idx,
+            bool fromReady,
+            float fromX,
+            float fromY,
+            float fromZ)
+        {
+            if (fromReady && _slotHasPos != null && (uint)idx < (uint)_slotHasPos.Length && _slotHasPos[idx])
+            {
+                return Math.Abs(_slotX[idx] - fromX)
+                       + Math.Abs(_slotY[idx] - fromY)
+                       + Math.Abs(_slotZ[idx] - fromZ);
+            }
+
+            return ComputePickupDistance(bindings, pickupColumn, pickupRow, column, row, level);
         }
 
         private void RebuildFreeCounts()
