@@ -25,7 +25,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         public static IEnumerator Run(
             MonoBehaviour host,
             WarehouseSimScenario scenario,
-            StackerWarehouseSimulator simulator,
+            WarehouseSimEngine simulator,
             SimRunResult result,
             string directory,
             Action<Outcome> onComplete,

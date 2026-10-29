@@ -66,7 +66,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             var clampedSlotColumn = StackerColumnReachUtility.ClampColumn(definition, slot.Column);
-            var clampedPickupColumn = StackerColumnReachUtility.ClampColumn(definition, pickupColumn);
+            // 交互参考列允许落在货位列域对侧浅位；取货伸叉姿态保留参考列，勿钳回唯一货位列。
+            var pickupForkColumn = StackerColumnReachUtility.CanUsePickupReferenceColumn(in definition, pickupColumn)
+                ? pickupColumn
+                : StackerColumnReachUtility.ClampColumn(definition, pickupColumn);
 
             if (job.Direction == SimFlowDirection.Outbound)
             {
@@ -79,7 +82,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     CarriagePose(slot.Level, railColumn, slot.Row, warehouseId),
                     CarriagePose(pickupLevel, railColumn, pickupRow, warehouseId),
                     CarriagePose(pickupLevel, railColumn, pickupRow, warehouseId),
-                    ForkPose(pickupLevel, clampedPickupColumn, pickupRow, warehouseId));
+                    ForkPose(pickupLevel, pickupForkColumn, pickupRow, warehouseId));
             }
 
             // 入库放货：从巷道中心收回位 Absolute 伸到货位列（含左浅位列号=轨道列；Rig 显式区分收回/伸叉）。
@@ -88,7 +91,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 railColumn,
                 CarriagePose(pickupLevel, railColumn, pickupRow, warehouseId),
                 CarriagePose(pickupLevel, railColumn, pickupRow, warehouseId),
-                ForkPose(pickupLevel, clampedPickupColumn, pickupRow, warehouseId),
+                ForkPose(pickupLevel, pickupForkColumn, pickupRow, warehouseId),
                 CarriagePose(pickupLevel, railColumn, pickupRow, warehouseId),
                 CarriagePose(slot.Level, railColumn, slot.Row, warehouseId),
                 CarriagePose(slot.Level, railColumn, slot.Row, warehouseId),

@@ -16,19 +16,27 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
     /// 取货点一直占用到堆垛机取货完成（ReleaseGoal）。
     /// 入库、出库输送的唯一调度路径（出入库共用一个内核与同一套位置/锁）。
     /// </content>
-    public sealed partial class StackerWarehouseSimulator
+    internal sealed class ConveyorKernelSession
     {
+        private readonly SimRunContext Ctx;
+
+        public ConveyorKernelSession(SimRunContext ctx) => Ctx = ctx;
+
+        internal bool IsActive => _primaryKernel != null;
+
+        internal bool IsSubmitted(int jobId) => _primaryKernel != null && _primaryKernel.IsSubmitted(jobId);
+
         private ConveyorZoneKernel _primaryKernel;
         private double _primaryNextTick = double.PositiveInfinity;
         private int _primaryGoalCount;
 
         /// <summary>每次 Run 新建内核；入库一律由内核调度。</summary>
-        private void InitPrimaryKernel(SimRunOptions options, bool planHasOutbound)
+        internal void Init()
         {
             _primaryKernel = null;
             _primaryNextTick = double.PositiveInfinity;
             _primaryGoalCount = 0;
-            if (_conveyorTopology == null || _bindings?.ConveyorMap == null)
+            if (Ctx.Topology == null || Ctx.Bindings?.ConveyorMap == null)
             {
                 WarehouseSimLog.Error("[ConveyorKernel] 未配置 ConveyorMap，入库输送无法调度。");
                 return;
@@ -37,7 +45,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _primaryKernel = new ConveyorZoneKernel();
             _primaryPickupWaiters.Clear();
             _primaryInfeedOriginBlocked = false;
-            _primaryTrack = new ConveyorTrackGeometry(_bindings.ConveyorMap, _conveyorTopology);
+            _primaryTrack = new ConveyorTrackGeometry(Ctx.Bindings.ConveyorMap, Ctx.Topology);
             _primaryZonePoints.Clear();
             _primaryTooCloseCache.Clear();
             _primaryKernel.ZonesTooClose = PrimaryZonesTooClose;
@@ -87,14 +95,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private List<ZoneLockClaim> OriginNearClaims(int originNodeIndex)
         {
             var claims = new List<ZoneLockClaim>();
-            if (_primaryTrack == null || _bindings?.ConveyorMap?.Nodes == null || originNodeIndex < 0)
+            if (_primaryTrack == null || Ctx.Bindings?.ConveyorMap?.Nodes == null || originNodeIndex < 0)
             {
                 return claims;
             }
 
             var origin = ConveyorTrackGeometry.Node(originNodeIndex);
             var limit = _primaryTrack.CargoLength - 1e-3;
-            for (var m = 0; m < _bindings.ConveyorMap.Nodes.Length; m++)
+            for (var m = 0; m < Ctx.Bindings.ConveyorMap.Nodes.Length; m++)
             {
                 if (m == originNodeIndex || _primaryTrack.Distance(origin, ConveyorTrackGeometry.Node(m)) < limit)
                 {
@@ -118,14 +126,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// 入库放货前在内核里占住入库口位置（并拿起点附近节点的邻域锁）。附近节点上 / 近点上有货时放不上去，
         /// 等内核里有货移动后再唤醒入库放货重试。
         /// </summary>
-        private bool TryClaimInfeedOrigin(int portIndex, int ownerId)
+        internal bool TryClaimInfeedOrigin(int portIndex, int ownerId)
         {
             if (_primaryKernel == null)
             {
                 return true;
             }
 
-            var node = _conveyorTopology.InfeedNodeIndices[portIndex];
+            var node = Ctx.Topology.InfeedNodeIndices[portIndex];
             if (_primaryKernel.TryClaimZone(InfeedZoneKey(node), ownerId, OriginNearClaims(node)))
             {
                 return true;
@@ -135,19 +143,19 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             return false;
         }
 
-        private void ReleaseInfeedOriginClaim(WarehouseJob job)
+        internal void ReleaseInfeedOriginClaim(WarehouseJob job)
         {
             if (_primaryKernel == null || job == null || job.InfeedPortIndex < 0 || _primaryKernel.IsSubmitted(job.JobId))
             {
                 return;
             }
 
-            _primaryKernel.ReleaseClaim(InfeedZoneKey(_conveyorTopology.InfeedNodeIndices[job.InfeedPortIndex]), job.JobId);
+            _primaryKernel.ReleaseClaim(InfeedZoneKey(Ctx.Topology.InfeedNodeIndices[job.InfeedPortIndex]), job.JobId);
         }
 
         private string PickupZoneKey(int pickupNodeIndex)
         {
-            ref var node = ref _conveyorTopology.GetNode(pickupNodeIndex);
+            ref var node = ref Ctx.Topology.GetNode(pickupNodeIndex);
             var key = SimEntityNaming.PickupResourceId(node, pickupNodeIndex);
             RegisterPrimaryZonePoint(key, ConveyorTrackGeometry.Node(pickupNodeIndex));
             return key;
@@ -157,7 +165,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// 出库堆垛机作业开始前先在内核里占住交互点（与入库到达交互点同一把位置锁）；
         /// 占不到（入库箱在上面或正有箱在等它）就挂起，交互点空出后由 <see cref="RetryPrimaryPickupWaiters"/> 重试。
         /// </summary>
-        private bool TryClaimOutboundPickup(WarehouseJob job)
+        internal bool TryClaimOutboundPickup(WarehouseJob job)
         {
             if (_primaryKernel == null || job.PickupPointIndex < 0)
             {
@@ -192,9 +200,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             {
                 foreach (var id in _primaryPickupWaiters.ToArray())
                 {
-                    if (_jobs.TryGetValue(id, out var job) && job.State == WarehouseJobState.WaitingStacker)
+                    if (Ctx.Jobs.TryGetValue(id, out var job) && job.State == WarehouseJobState.WaitingStacker)
                     {
-                        TryBeginStackerPhase(job);
+                        Ctx.TryBeginStackerPhase(job);
                     }
                     else
                     {
@@ -208,30 +216,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
         }
 
-        /// <summary>TryScheduleConveyorOnMap 入口：选路沿用旧规划器，然后整条 zone 链提交给内核。</summary>
-        private bool TrySubmitToPrimaryKernel(WarehouseJob job)
+        /// <summary>路径已选定后，把整条 zone 链提交给内核。状态推进和 Pump 由调用方负责。</summary>
+        internal bool TrySubmitPlaced(WarehouseJob job)
         {
-            if (_primaryKernel.IsSubmitted(job.JobId))
-            {
-                return true;
-            }
-
-            if (!TryCommitConveyorPath(job))
-            {
-                return false;
-            }
-
             List<ZoneKernelStep> steps;
             List<ZoneLockRelease> releases;
             var outbound = job.Direction == SimFlowDirection.Outbound;
             try
             {
                 BuildPrimarySteps(job, out steps, out releases);
-                _primaryKernel.AdvanceTo(_clock.Now);
+                _primaryKernel.AdvanceTo(Ctx.Clock.Now);
                 // 起点作为内核第 0 步：出库 = 堆垛机交互点（堆垛机作业前已占住），入库 = 入库口（放货前已占住）。
                 var originKey = outbound
                     ? PickupZoneKey(job.PickupPointIndex)
-                    : InfeedZoneKey(_conveyorTopology.InfeedNodeIndices[job.InfeedPortIndex]);
+                    : InfeedZoneKey(Ctx.Topology.InfeedNodeIndices[job.InfeedPortIndex]);
                 if (!outbound && _primaryKernel.IsZoneFree(originKey))
                 {
                     // 兜底：放货时未占住（不应发生），现在补占；补占失败就按普通提交，从第一个停留点开始。
@@ -246,7 +244,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     releases[i] = r;
                 }
 
-                _primaryKernel.SubmitPlaced(job.JobId, steps, releases, _clock.Now);
+                _primaryKernel.SubmitPlaced(job.JobId, steps, releases, Ctx.Clock.Now);
             }
             catch (Exception ex)
             {
@@ -254,17 +252,23 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return false;
             }
 
-            job.State = WarehouseJobState.OnConveyor;
-            job.NextConveyorZoneIndex = job.ConveyorPathZones.Count;
-            PumpPrimaryKernel();
             return true;
+        }
+
+        internal void ReleaseFailedOutboundPickup(WarehouseJob job)
+        {
+            if (_primaryKernel != null && job != null && job.PickupPointIndex >= 0)
+            {
+                _primaryKernel.ReleaseClaim(PickupZoneKey(job.PickupPointIndex), job.JobId);
+                _primaryPickupWaiters.Remove(job.JobId);
+            }
         }
 
         private void BuildPrimarySteps(WarehouseJob job, out List<ZoneKernelStep> steps, out List<ZoneLockRelease> releases)
         {
             var chain = job.ConveyorPathZones;
             var path = job.ConveyorPathNodeIndices;
-            var map = _bindings.ConveyorMap;
+            var map = Ctx.Bindings.ConveyorMap;
             steps = new List<ZoneKernelStep>(chain.Count);
             releases = new List<ZoneLockRelease>();
             var last = chain.Count - 1;
@@ -274,7 +278,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 var z = chain[k];
                 double dwell = 0;
                 if (z.Kind == ConveyorPathZoneKind.EdgeSlot
-                    && _conveyorTopology.TryGetEdge(z.FromNodeIndex, z.ToNodeIndex, out var edge)
+                    && Ctx.Topology.TryGetEdge(z.FromNodeIndex, z.ToNodeIndex, out var edge)
                     && ConveyorMapMath.TryGetGateHoldSlot(map, in edge, out var gateSlot, out var gateSeconds)
                     && gateSlot == z.SlotIndex)
                 {
@@ -282,10 +286,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
                 else if (z.Kind == ConveyorPathZoneKind.ProcessStation)
                 {
-                    ref var node = ref _conveyorTopology.GetNode(z.ToNodeIndex);
+                    ref var node = ref Ctx.Topology.GetNode(z.ToNodeIndex);
                     if (ConveyorProcessStationUtility.JobRequiresStationTag(job, in node))
                     {
-                        dwell = node.ProcessServiceSeconds > 0f ? node.ProcessServiceSeconds : _bindings.ProcessStationServiceSeconds;
+                        dwell = node.ProcessServiceSeconds > 0f ? node.ProcessServiceSeconds : Ctx.Bindings.ProcessStationServiceSeconds;
                     }
                 }
 
@@ -338,10 +342,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 if (spurEdges.Contains(e)) continue;
                 var from = chain[firstZ[e]].FromNodeIndex;
                 var to = chain[firstZ[e]].ToNodeIndex;
-                if (!_conveyorTopology.TryGetEdge(from, to, out var edge)) continue;
+                if (!Ctx.Topology.TryGetEdge(from, to, out var edge)) continue;
                 var cap = lastZ[e] - firstZ[e] + 1;
-                var twoWay = _conveyorTopology.TryGetEdge(to, from, out _);
-                var destIsJunction = _conveyorTopology.GetNode(to).Kind == SimConveyorNodeKind.Junction;
+                var twoWay = Ctx.Topology.TryGetEdge(to, from, out _);
+                var destIsJunction = Ctx.Topology.GetNode(to).Kind == SimConveyorNodeKind.Junction;
                 var approachHop = ConveyorMapMath.GetNodeApproachHopSeconds(map, edge);
                 var key = $"lane:{Math.Min(from, to)}-{Math.Max(from, to)}";
                 var acquireAt = twoWay && firstZ[e] > 0 && chain[firstZ[e] - 1].Kind == ConveyorPathZoneKind.Junction
@@ -506,14 +510,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             Dictionary<int, int> spurAcquireStep)
         {
             var chain = job.ConveyorPathZones;
-            var map = _bindings.ConveyorMap;
+            var map = Ctx.Bindings.ConveyorMap;
             var last = chain.Count - 1;
             var cargo = ConveyorMapMath.GetCargoOccupancyLengthMeters(map);
             foreach (var e in firstZ.Keys)
             {
                 var from = chain[firstZ[e]].FromNodeIndex;
                 var to = chain[firstZ[e]].ToNodeIndex;
-                if (!_conveyorTopology.TryGetEdge(from, to, out var edge)
+                if (!Ctx.Topology.TryGetEdge(from, to, out var edge)
                     || !ConveyorJunctionAxis.TryBuildResourceId(map, from, to, out var axisId))
                 {
                     continue;
@@ -546,7 +550,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
 
                 // 双向段：直线锁与通道锁同一步拿（进入本段前），否则会出现“我占直线等你的通道、你占通道等我的直线”的对顶死锁。
-                if (_conveyorTopology.TryGetEdge(to, from, out _))
+                if (Ctx.Topology.TryGetEdge(to, from, out _))
                 {
                     var entryAcquire = firstZ[e] > 0 && chain[firstZ[e] - 1].Kind == ConveyorPathZoneKind.Junction
                         ? firstZ[e] - 1
@@ -577,7 +581,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// </summary>
         private int ResolveTailClearStep(List<ConveyorPathZone> chain, int fromStep, out double delaySeconds)
         {
-            var map = _bindings.ConveyorMap;
+            var map = Ctx.Bindings.ConveyorMap;
             var cargo = (double)ConveyorMapMath.GetCargoOccupancyLengthMeters(map);
             var travelled = 0d;
             var last = chain.Count - 1;
@@ -586,7 +590,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             {
                 var z = chain[k];
                 var speed = 1f;
-                if (_conveyorTopology.TryGetEdge(z.FromNodeIndex, z.ToNodeIndex, out var edge))
+                if (Ctx.Topology.TryGetEdge(z.FromNodeIndex, z.ToNodeIndex, out var edge))
                 {
                     speed = Math.Max(0.01f, ConveyorMapMath.ResolveSpeedMetersPerSecond(map, edge));
                 }
@@ -599,7 +603,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             var lastSpeed = 1f;
-            if (_conveyorTopology.TryGetEdge(chain[last].FromNodeIndex, chain[last].ToNodeIndex, out var lastEdge))
+            if (Ctx.Topology.TryGetEdge(chain[last].FromNodeIndex, chain[last].ToNodeIndex, out var lastEdge))
             {
                 lastSpeed = Math.Max(0.01f, ConveyorMapMath.ResolveSpeedMetersPerSecond(map, lastEdge));
             }
@@ -616,42 +620,42 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         }
 
         /// <summary>出库口服务结束、货箱离开出库口：出库口位置交还内核。</summary>
-        private void ReleasePrimaryOutfeed(WarehouseJob job)
+        internal void ReleaseOutfeed(WarehouseJob job)
         {
             if (!IsPrimaryKernelJob(job) || !_primaryKernel.IsSubmitted(job.JobId))
             {
                 return;
             }
 
-            job.ConveyorGoalReleaseSimTime = _clock.Now;
-            _primaryKernel.ReleaseGoal(job.JobId, _clock.Now);
-            PumpPrimaryKernel();
+            job.ConveyorGoalReleaseSimTime = Ctx.Clock.Now;
+            _primaryKernel.ReleaseGoal(job.JobId, Ctx.Clock.Now);
+            Pump();
         }
 
         /// <summary>主循环 tick：推进内核到当前时刻并处理输出。</summary>
-        private void OnConveyorKernelTick()
+        internal void OnTick()
         {
             if (_primaryKernel == null)
             {
                 return;
             }
 
-            if (_clock.Now >= _primaryNextTick - 1e-9)
+            if (Ctx.Clock.Now >= _primaryNextTick - 1e-9)
             {
                 _primaryNextTick = double.PositiveInfinity;
             }
 
-            PumpPrimaryKernel();
+            Pump();
         }
 
-        private void PumpPrimaryKernel()
+        internal void Pump()
         {
             try
             {
-                _primaryKernel.AdvanceTo(_clock.Now);
+                _primaryKernel.AdvanceTo(Ctx.Clock.Now);
                 foreach (var output in _primaryKernel.DrainOutputs())
                 {
-                    if (!_jobs.TryGetValue(output.CargoId, out var job))
+                    if (!Ctx.Jobs.TryGetValue(output.CargoId, out var job))
                     {
                         WarehouseSimLog.Error($"[ConveyorKernel/Primary] 输出指向不存在的 job={output.CargoId}");
                         continue;
@@ -662,7 +666,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         case ZoneKernelOutputKind.OriginDeparted:
                             if (job.Direction == SimFlowDirection.Inbound)
                             {
-                                ScheduleInfeedPortPhysicalRelease(job, output.Time);
+                                Ctx.ScheduleInfeedPortPhysicalRelease(job, output.Time);
                             }
 
                             break;
@@ -670,7 +674,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                             if (job.Direction == SimFlowDirection.Outbound)
                             {
                                 // 货箱离开交互点：堆垛机可接下一出库单。
-                                ReleaseOutboundStackerAfterPickupDeparture(job);
+                                Ctx.ReleaseOutboundStackerAfterPickupDeparture(job);
                             }
 
                             break;
@@ -682,7 +686,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
             catch (Exception ex)
             {
-                WarehouseSimLog.Error($"[ConveyorKernel/Primary] 内核推进异常 t={_clock.Now:F2}：{ex}");
+                WarehouseSimLog.Error($"[ConveyorKernel/Primary] 内核推进异常 t={Ctx.Clock.Now:F2}：{ex}");
             }
 
             EnsurePrimaryTick();
@@ -690,7 +694,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (_primaryInfeedOriginBlocked)
             {
                 _primaryInfeedOriginBlocked = false;
-                ScheduleInfeedQueueFill(_clock.Now);
+                Ctx.ScheduleInfeedQueueFill(Ctx.Clock.Now);
             }
         }
 
@@ -701,29 +705,29 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
-            next = Math.Max(next, _clock.Now);
+            next = Math.Max(next, Ctx.Clock.Now);
             if (next < _primaryNextTick - 1e-9)
             {
                 _primaryNextTick = next;
-                _queue.Enqueue(new ScheduledSimEvent(next, SimEventType.ConveyorKernelTick, -1));
+                Ctx.Queue.Enqueue(new ScheduledSimEvent(next, SimEventType.ConveyorKernelTick, -1));
             }
         }
 
         /// <summary>堆垛机取货完成：取货点交还内核。</summary>
-        private void ReleasePrimaryGoal(WarehouseJob job)
+        internal void ReleaseGoal(WarehouseJob job)
         {
             if (!IsPrimaryKernelJob(job) || !_primaryKernel.IsSubmitted(job.JobId))
             {
                 return;
             }
 
-            job.ConveyorGoalReleaseSimTime = _clock.Now;
-            _primaryKernel.ReleaseGoal(job.JobId, _clock.Now);
-            PumpPrimaryKernel();
+            job.ConveyorGoalReleaseSimTime = Ctx.Clock.Now;
+            _primaryKernel.ReleaseGoal(job.JobId, Ctx.Clock.Now);
+            Pump();
         }
 
         /// <summary>仿真结束时报告内核残留 / 违例。</summary>
-        private void ReportPrimaryKernelDiagnostics()
+        internal void ReportDiagnostics()
         {
             if (_primaryKernel == null)
             {
@@ -758,7 +762,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             var chain = job.ConveyorPathZones;
             var n = chain.Count;
-            var map = _bindings.ConveyorMap;
+            var map = Ctx.Bindings.ConveyorMap;
             if (ms.Length == n + 1)
             {
                 // 出库：内核第 0 步是交互点，去掉后与 zone 链对齐。
@@ -805,9 +809,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
 
                 var nextK = Math.Min(k1 + 1, n - 1);
-                var destIsJunction = _conveyorTopology.GetNode(to).Kind == SimConveyorNodeKind.Junction;
+                var destIsJunction = Ctx.Topology.GetNode(to).Kind == SimConveyorNodeKind.Junction;
                 double approachHop = 0;
-                if (_conveyorTopology.TryGetEdge(from, to, out var edge))
+                if (Ctx.Topology.TryGetEdge(from, to, out var edge))
                 {
                     approachHop = ConveyorMapMath.GetNodeApproachHopSeconds(map, edge);
                 }
@@ -828,11 +832,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 k0 = k1 + 1;
             }
 
-            EnsurePlaybackSnapshot(job);
-            if (_recordPlayback)
+            Ctx.EnsurePlaybackSnapshot(job);
+            if (Ctx.ShouldRecordPlayback)
             {
                 RecordPrimarySubTasks(job, ms, arrive);
-                RecordPlaybackAt(
+                Ctx.RecordPlaybackAt(
                     arrive[n - 1],
                     job,
                     SimPlaybackPhase.ConveyorRouted,
@@ -842,7 +846,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             job.ScheduledCompleteTime = now;
-            _queue.Enqueue(new ScheduledSimEvent(now, SimEventType.ConveyorTransitComplete, job.JobId));
+            Ctx.Queue.Enqueue(new ScheduledSimEvent(now, SimEventType.ConveyorTransitComplete, job.JobId));
         }
 
         /// <summary>按内核时间线生成与旧引擎同类的子任务，时间轴首尾相接、无空档。</summary>
@@ -850,14 +854,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         {
             var chain = job.ConveyorPathZones;
             var n = chain.Count;
-            var map = _bindings.ConveyorMap;
+            var map = Ctx.Bindings.ConveyorMap;
             const double eps = 1e-9;
 
             void Rec(SimSubTaskKind kind, double a, double b, int from, int to, int slot, bool attach = false)
             {
                 if (b > a + eps)
                 {
-                    RecordSubTask(job, kind, a, b, job.AssignedStackerId, job.TargetSlot, from, to, slot, attach);
+                    Ctx.RecordSubTask(job, kind, a, b, job.AssignedStackerId, job.TargetSlot, from, to, slot, attach);
                 }
             }
 
@@ -918,7 +922,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     case ConveyorPathZoneKind.EdgeSlot:
                     {
                         var holdStart = arrive[k];
-                        if (_conveyorTopology.TryGetEdge(z.FromNodeIndex, z.ToNodeIndex, out var edge)
+                        if (Ctx.Topology.TryGetEdge(z.FromNodeIndex, z.ToNodeIndex, out var edge)
                             && ConveyorMapMath.TryGetGateHoldSlot(map, in edge, out var gateSlot, out var gateSeconds)
                             && gateSlot == z.SlotIndex)
                         {
@@ -932,7 +936,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     }
                     case ConveyorPathZoneKind.ProcessStation:
                     {
-                        ref var node = ref _conveyorTopology.GetNode(z.ToNodeIndex);
+                        ref var node = ref Ctx.Topology.GetNode(z.ToNodeIndex);
                         var kind = ConveyorProcessStationUtility.JobRequiresStationTag(job, in node)
                             ? SimSubTaskKind.ProcessStationService
                             : SimSubTaskKind.SegmentStopDwell;

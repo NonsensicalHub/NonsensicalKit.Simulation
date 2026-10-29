@@ -59,7 +59,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
         private bool _isExporting;
 
         public SimRunResult LastResult => _lastResult;
-        public StackerWarehouseSimulator LastSimulator { get; private set; }
+        public WarehouseSimEngine LastSimulator { get; private set; }
         public bool IsRunning => _isRunning;
         public bool IsExporting => _isExporting;
 

@@ -2,7 +2,6 @@ using UnityEngine;
 using NonsensicalKit.Simulation.WarehouseSimulation.Allocation;
 using NonsensicalKit.Simulation.WarehouseSimulation.Config;
 using NonsensicalKit.Simulation.WarehouseSimulation.Model;
-using NonsensicalKit.Simulation.WarehouseSimulation.Runtime;
 
 namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 {
@@ -10,38 +9,38 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
     /// 仿真运行门面（Facade），供 <c>WarehouseSimRunner</c>、编辑器菜单等 Unity 侧代码调用。
     /// </summary>
     /// <remarks>
-    /// 业务逻辑全部在 <see cref="StackerWarehouseSimulator"/> 及其 partial 中实现；
-    /// 本类不持有仿真状态，仅负责：构造仿真器 → 调用 <see cref="StackerWarehouseSimulator.Run"/> →
+    /// 业务逻辑在 <see cref="WarehouseSimEngine"/>。
+    /// 本类不持有仿真状态，仅负责：构造仿真器 → 调用 <see cref="WarehouseSimEngine.Run"/> →
     /// 可选的后台线程日志隔离 → 将 <see cref="SimRunResult"/> 摘要输出到 Unity Console。
     /// </remarks>
     public static class WarehouseSimulationService
     {
         /// <summary>主线程同步运行仓库仿真。</summary>
-        public static (StackerWarehouseSimulator Simulator, SimRunResult Result) Run(
+        public static (WarehouseSimEngine Simulator, SimRunResult Result) Run(
             WarehouseSimScenario scenario,
             ISlotAllocator slotAllocator,
             SimRunOptions? runOptions = null) =>
             Run(scenario, slotAllocator, runOptions, liveProgress: null);
 
-        internal static (StackerWarehouseSimulator Simulator, SimRunResult Result) Run(
+        internal static (WarehouseSimEngine Simulator, SimRunResult Result) Run(
             WarehouseSimScenario scenario,
             ISlotAllocator slotAllocator,
             SimRunOptions? runOptions,
             SimRunLiveProgress liveProgress)
         {
-            var simulator = new StackerWarehouseSimulator(slotAllocator);
+            var simulator = new WarehouseSimEngine(slotAllocator);
             simulator.UseLiveProgress(liveProgress);
             return (simulator, simulator.Run(scenario, runOptions));
         }
 
         /// <summary>供 <see cref="System.Threading.Tasks.Task.Run"/> 调用；禁止在工作线程使用 Unity API 打日志。</summary>
-        public static (StackerWarehouseSimulator Simulator, SimRunResult Result) RunOnBackgroundThread(
+        public static (WarehouseSimEngine Simulator, SimRunResult Result) RunOnBackgroundThread(
             WarehouseSimScenario scenario,
             ISlotAllocator slotAllocator,
             SimRunOptions? runOptions = null) =>
             RunOnBackgroundThread(scenario, slotAllocator, runOptions, liveProgress: null);
 
-        internal static (StackerWarehouseSimulator Simulator, SimRunResult Result) RunOnBackgroundThread(
+        internal static (WarehouseSimEngine Simulator, SimRunResult Result) RunOnBackgroundThread(
             WarehouseSimScenario scenario,
             ISlotAllocator slotAllocator,
             SimRunOptions? runOptions,

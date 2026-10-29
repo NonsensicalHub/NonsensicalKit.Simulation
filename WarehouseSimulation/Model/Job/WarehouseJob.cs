@@ -6,7 +6,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
 {
     /// <summary>
     /// 单箱仓库任务在仿真中的可变状态（入库 / 出库统一模型）。
-    /// <para>由 <c>StackerWarehouseSimulator</c> 创建并写入；各 partial 按阶段更新对应字段。</para>
+    /// <para>由 <c>WarehouseSimEngine</c> 创建；各流程进程按阶段更新对应字段。</para>
     /// </summary>
     public sealed class WarehouseJob
     {

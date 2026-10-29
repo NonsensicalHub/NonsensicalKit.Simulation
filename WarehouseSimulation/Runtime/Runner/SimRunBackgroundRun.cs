@@ -16,7 +16,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
     {
         public sealed class Outcome
         {
-            public StackerWarehouseSimulator Simulator { get; set; }
+            public WarehouseSimEngine Simulator { get; set; }
             public SimRunResult Result { get; set; }
             public Exception Error { get; set; }
             public double ElapsedSeconds { get; set; }
@@ -24,7 +24,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
 
         public static bool TryApplyOutcome(
             Outcome outcome,
-            out StackerWarehouseSimulator simulator,
+            out WarehouseSimEngine simulator,
             out SimRunResult result)
         {
             if (outcome?.Error != null)

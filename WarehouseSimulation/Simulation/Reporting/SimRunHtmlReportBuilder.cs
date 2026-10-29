@@ -15,7 +15,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         public static string Build(
             WarehouseSimScenario scenario,
-            StackerWarehouseSimulator simulator,
+            WarehouseSimEngine simulator,
             SimRunResult result,
             string debugMarkdownFileName = null,
             SimRunExportDisplayInfo displayInfo = default,
@@ -208,7 +208,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             StringBuilder sb,
             WarehouseSimScenario scenario,
             SimRunResult result,
-            StackerWarehouseSimulator simulator,
+            WarehouseSimEngine simulator,
             string debugMarkdownFileName,
             IReadOnlyList<SimResourceUtilizationStat> resourceUtilizations)
         {
@@ -273,7 +273,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private static void AppendOccupancyRows(
             StringBuilder sb,
             WarehouseSimScenario scenario,
-            StackerWarehouseSimulator simulator)
+            WarehouseSimEngine simulator)
         {
             var snapshot = simulator.ExportOccupancySnapshot();
             if (snapshot == null || snapshot.Length == 0)

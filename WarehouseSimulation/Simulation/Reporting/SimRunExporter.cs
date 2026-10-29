@@ -16,7 +16,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// <summary>生成面向使用者的仿真 HTML 报告文本。</summary>
         public static string BuildHtmlReport(
             WarehouseSimScenario scenario,
-            StackerWarehouseSimulator simulator,
+            WarehouseSimEngine simulator,
             SimRunResult result,
             string debugMarkdownFileName = null,
             SimRunExportDisplayInfo displayInfo = default,
@@ -26,7 +26,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// <summary>生成面向开发者的调试信息 Markdown 报告文本。</summary>
         public static string BuildDebugMarkdownReport(
             WarehouseSimScenario scenario,
-            StackerWarehouseSimulator simulator,
+            WarehouseSimEngine simulator,
             SimRunResult result,
             string linkedUserReportFileName = null,
             SimRunExportDisplayInfo displayInfo = default) =>
@@ -88,7 +88,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// <summary>一步导出最近一次仿真运行（使用者 HTML 报告 + 开发者 Markdown 调试报告）。</summary>
         public static string ExportLastRun(
             WarehouseSimScenario scenario,
-            StackerWarehouseSimulator simulator,
+            WarehouseSimEngine simulator,
             SimRunResult result,
             string directory = null,
             string fileName = null)
@@ -110,7 +110,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         /// </summary>
         public static (string HtmlPath, string DebugReportPath) ExportLastRunAtDirectory(
             WarehouseSimScenario scenario,
-            StackerWarehouseSimulator simulator,
+            WarehouseSimEngine simulator,
             SimRunResult result,
             string resolvedDirectory,
             string fileName = null,

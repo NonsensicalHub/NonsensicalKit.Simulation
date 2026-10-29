@@ -10,7 +10,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Runtime
     public static partial class ConveyorPlaybackPosition
     {
         /// <summary>
-        /// 入库口驶离时刻：与 <see cref="StackerWarehouseSimulator.RecordInfeedDepartMoveSubTask"/> 一致。
+        /// 入库口驶离时刻：与仿真时间轴上的入库口驶离子任务一致。
         /// </summary>
         private static bool TryEvaluateInfeedDepart(
             WarehouseConveyorMap map,

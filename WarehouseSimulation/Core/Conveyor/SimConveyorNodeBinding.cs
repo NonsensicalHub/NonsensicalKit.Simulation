@@ -69,8 +69,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 && StackerColumnReachUtility.TryGetDefinition(fleet, topology, node.StackerId, out var def))
             {
                 var pickupColumn = ResolvePickupColumn(node, fleet, topology);
-                // pickupColumn 可为 0（堆垛机 8）；只要在列域内就用定义的巷道左列。
-                if (StackerColumnReachUtility.CanReachColumn(in def, pickupColumn))
+                // 交互参考列可落在巷道左右浅位，含单向机货位对侧（如堆垛机 8：货位列 0、交互列 1）。
+                // 只要参考列合法，轨道仍用定义巷道左列，不能按取货列反推（否则 OneColumn 会把 rail 推成 1）。
+                if (StackerColumnReachUtility.CanUsePickupReferenceColumn(in def, pickupColumn))
                 {
                     return def.AisleLeftColumn;
                 }

@@ -130,7 +130,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
             return id != "—" ? id : $"OUT{outfeedNodeIndex + 1}";
         }
 
-        /// <summary>出库口发运服务串行资源（与 <see cref="StackerWarehouseSimulator"/> 出库服务排队共用）。</summary>
+        /// <summary>出库口发运服务串行资源（与出库口服务排队共用）。</summary>
         public static string OutfeedServiceResourceId(in SimConveyorMapNode outfeedNode, int outfeedPortIndex)
         {
             var portLabel = FormatLogicalId(in outfeedNode, outfeedPortIndex);

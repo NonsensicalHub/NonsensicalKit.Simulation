@@ -11,7 +11,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
     {
         public static string Build(
             WarehouseSimScenario scenario,
-            StackerWarehouseSimulator simulator,
+            WarehouseSimEngine simulator,
             SimRunResult result,
             string linkedUserReportFileName = null,
             SimRunExportDisplayInfo displayInfo = default)
