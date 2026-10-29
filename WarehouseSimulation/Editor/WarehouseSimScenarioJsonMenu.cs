@@ -182,9 +182,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
                 scenario.Strategy.StackerPlacementStrategy = runtime.Strategy.StackerPlacementStrategy;
                 scenario.Strategy.InfeedPortSelectionStrategy = runtime.Strategy.InfeedPortSelectionStrategy;
                 scenario.Strategy.ConveyorRoutingStrategy = runtime.Strategy.ConveyorRoutingStrategy;
-                scenario.Strategy.RouteDistanceWeight = runtime.Strategy.RouteDistanceWeight;
-                scenario.Strategy.RouteCongestedCargoWeight = runtime.Strategy.RouteCongestedCargoWeight;
-                scenario.Strategy.RouteTotalCargoWeight = runtime.Strategy.RouteTotalCargoWeight;
                 EditorUtility.SetDirty(scenario.Strategy);
             }
 

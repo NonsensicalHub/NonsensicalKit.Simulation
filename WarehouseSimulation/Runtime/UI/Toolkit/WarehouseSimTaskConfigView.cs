@@ -39,14 +39,12 @@ public sealed class WarehouseSimTaskConfigView
     private static readonly ConveyorRoutingStrategy[] RoutingValues =
     {
         ConveyorRoutingStrategy.ShortestDistance,
-        ConveyorRoutingStrategy.LeastCongestion,
         ConveyorRoutingStrategy.PreferAssignedStacker,
     };
 
     private static readonly string[] RoutingLabels =
     {
         "最短时间",
-        "最少拥堵（同最短时间）",
         "优先已分配堆垛机",
     };
 
@@ -60,7 +58,6 @@ public sealed class WarehouseSimTaskConfigView
     private WarehouseSimStrategyProfile _strategy;
     private VisualElement _form;
     private VisualElement _flowList;
-    private VisualElement _weights;
     private Label _note;
     private Label _missing;
     private Label _preview;
@@ -72,9 +69,6 @@ public sealed class WarehouseSimTaskConfigView
     private DropdownField _placement;
     private DropdownField _port;
     private DropdownField _routing;
-    private FloatField _distance;
-    private FloatField _congested;
-    private FloatField _total;
     private VisualElement _presetBox;
     private DropdownField _presetDropdown;
     private TextField _presetName;
@@ -104,16 +98,12 @@ public sealed class WarehouseSimTaskConfigView
         _strategyNote = root.Q<Label>("strategy-note");
         _form = root.Q("task-form");
         _flowList = root.Q("flow-list");
-        _weights = root.Q("route-weights");
         _occupancy = root.Q<Slider>("occupancy");
         _occupancyRandom = root.Q<Toggle>("occupancy-random");
         _seed = root.Q<IntegerField>("flow-seed");
         _placement = root.Q<DropdownField>("placement");
         _port = root.Q<DropdownField>("port");
         _routing = root.Q<DropdownField>("routing");
-        _distance = root.Q<FloatField>("route-distance");
-        _congested = root.Q<FloatField>("route-congested");
-        _total = root.Q<FloatField>("route-total");
         _presetBox = root.Q("preset-box");
         _presetDropdown = root.Q<DropdownField>("preset");
         _presetName = root.Q<TextField>("preset-name");
@@ -174,7 +164,6 @@ public sealed class WarehouseSimTaskConfigView
         _strategy = null;
         _form = null;
         _flowList = null;
-        _weights = null;
         _note = null;
         _missing = null;
         _preview = null;
@@ -186,9 +175,6 @@ public sealed class WarehouseSimTaskConfigView
         _placement = null;
         _port = null;
         _routing = null;
-        _distance = null;
-        _congested = null;
-        _total = null;
         _presetBox = null;
         _presetDropdown = null;
         _presetName = null;
@@ -247,10 +233,6 @@ public sealed class WarehouseSimTaskConfigView
         BindEnumDropdown(_routing, RoutingValues, RoutingLabels, OnRoutingChanged,
             "从端口到堆垛机交互点的输送路径。");
 
-        BindWeight(_distance, value => _strategy.RouteDistanceWeight = value, "路径评分中的距离系数。");
-        BindWeight(_congested, value => _strategy.RouteCongestedCargoWeight = value, "路径评分中的拥堵箱数系数。");
-        BindWeight(_total, value => _strategy.RouteTotalCargoWeight = value, "路径评分中的在途箱数系数。");
-
         if (addButton != null)
         {
             addButton.tooltip = "在流程计划末尾追加一段入库。";
@@ -273,10 +255,6 @@ public sealed class WarehouseSimTaskConfigView
             SetEnumValue(_placement, PlacementValues, PlacementLabels, _strategy.StackerPlacementStrategy);
             SetEnumValue(_port, PortValues, PortLabels, _strategy.InfeedPortSelectionStrategy);
             SetEnumValue(_routing, RoutingValues, RoutingLabels, _strategy.ConveyorRoutingStrategy);
-            _distance?.SetValueWithoutNotify(_strategy.RouteDistanceWeight);
-            _congested?.SetValueWithoutNotify(_strategy.RouteCongestedCargoWeight);
-            _total?.SetValueWithoutNotify(_strategy.RouteTotalCargoWeight);
-            ApplyRoutingExtras();
         }
 
         if (_strategyNote != null)
@@ -350,18 +328,7 @@ public sealed class WarehouseSimTaskConfigView
         }
 
         _strategy.ConveyorRoutingStrategy = value;
-        ApplyRoutingExtras();
         NotifyChanged();
-    }
-
-    private void ApplyRoutingExtras()
-    {
-        if (_weights == null)
-        {
-            return;
-        }
-
-        _weights.style.display = DisplayStyle.None;
     }
 
     private void EnsurePlan()
@@ -1021,35 +988,6 @@ public sealed class WarehouseSimTaskConfigView
             {
                 onChanged(values[index]);
             }
-        };
-        field.RegisterValueChangedCallback(callback);
-        _unbindActions.Add(() => field.UnregisterValueChangedCallback(callback));
-    }
-
-    private void BindWeight(FloatField field, Action<float> apply, string tooltip)
-    {
-        if (field == null)
-        {
-            return;
-        }
-
-        field.isDelayed = true;
-        field.tooltip = tooltip;
-        EventCallback<ChangeEvent<float>> callback = evt =>
-        {
-            if (_syncing || _strategy == null)
-            {
-                return;
-            }
-
-            var clamped = Mathf.Max(0f, evt.newValue);
-            apply(clamped);
-            if (!Mathf.Approximately(clamped, evt.newValue))
-            {
-                field.SetValueWithoutNotify(clamped);
-            }
-
-            NotifyChanged();
         };
         field.RegisterValueChangedCallback(callback);
         _unbindActions.Add(() => field.UnregisterValueChangedCallback(callback));

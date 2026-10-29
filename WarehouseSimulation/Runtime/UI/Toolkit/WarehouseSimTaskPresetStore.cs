@@ -90,9 +90,6 @@ public sealed class WarehouseSimTaskPresetStore
         strategy.ConveyorRoutingStrategy = EnumOr(
             preset.Routing,
             ConveyorRoutingStrategy.ShortestDistance);
-        strategy.RouteDistanceWeight = Mathf.Max(0f, preset.RouteDistanceWeight);
-        strategy.RouteCongestedCargoWeight = Mathf.Max(0f, preset.RouteCongestedCargoWeight);
-        strategy.RouteTotalCargoWeight = Mathf.Max(0f, preset.RouteTotalCargoWeight);
     }
 
     public void Capture(WarehouseSimScenario scenario)
@@ -451,9 +448,6 @@ public sealed class WarehouseSimTaskPresetStore
             Placement = (int)StackerSlotPlacementStrategy.NearestToPickup,
             Port = (int)InfeedPortSelectionStrategy.RoundRobin,
             Routing = (int)ConveyorRoutingStrategy.ShortestDistance,
-            RouteDistanceWeight = 1f,
-            RouteCongestedCargoWeight = 5f,
-            RouteTotalCargoWeight = 1f,
         };
 
         if (scenario == null)
@@ -475,9 +469,6 @@ public sealed class WarehouseSimTaskPresetStore
         preset.Placement = (int)strategy.StackerPlacementStrategy;
         preset.Port = (int)strategy.InfeedPortSelectionStrategy;
         preset.Routing = (int)strategy.ConveyorRoutingStrategy;
-        preset.RouteDistanceWeight = strategy.RouteDistanceWeight;
-        preset.RouteCongestedCargoWeight = strategy.RouteCongestedCargoWeight;
-        preset.RouteTotalCargoWeight = strategy.RouteTotalCargoWeight;
         return preset;
     }
 
@@ -492,9 +483,6 @@ public sealed class WarehouseSimTaskPresetStore
             Placement = source.Placement,
             Port = source.Port,
             Routing = source.Routing,
-            RouteDistanceWeight = source.RouteDistanceWeight,
-            RouteCongestedCargoWeight = source.RouteCongestedCargoWeight,
-            RouteTotalCargoWeight = source.RouteTotalCargoWeight,
             FlowPlan = ClonePlan(source.FlowPlan),
         };
     }
@@ -511,10 +499,7 @@ public sealed class WarehouseSimTaskPresetStore
             || left.Placement != right.Placement
             || left.Port != right.Port
             || left.Routing != right.Routing
-            || !Nearly(left.InitialOccupancyRatio, right.InitialOccupancyRatio)
-            || !Nearly(left.RouteDistanceWeight, right.RouteDistanceWeight)
-            || !Nearly(left.RouteCongestedCargoWeight, right.RouteCongestedCargoWeight)
-            || !Nearly(left.RouteTotalCargoWeight, right.RouteTotalCargoWeight))
+            || !Nearly(left.InitialOccupancyRatio, right.InitialOccupancyRatio))
         {
             return false;
         }
@@ -718,9 +703,6 @@ public sealed class WarehouseSimTaskPresetStore
             StackerPlacementStrategy = EnumOr(preset.Placement, StackerSlotPlacementStrategy.NearestToPickup).ToString(),
             InfeedPortSelectionStrategy = EnumOr(preset.Port, InfeedPortSelectionStrategy.RoundRobin).ToString(),
             ConveyorRoutingStrategy = EnumOr(preset.Routing, ConveyorRoutingStrategy.ShortestDistance).ToString(),
-            RouteDistanceWeight = preset.RouteDistanceWeight,
-            RouteCongestedCargoWeight = preset.RouteCongestedCargoWeight,
-            RouteTotalCargoWeight = preset.RouteTotalCargoWeight,
         };
         dto.FlowPlan = ToFlowDtos(preset.FlowPlan);
         WarehouseSimScenarioJson.Normalize(dto);
@@ -739,10 +721,7 @@ public sealed class WarehouseSimTaskPresetStore
         {
             preset.Placement = (int)ParseEnum(dto.Strategy.StackerPlacementStrategy, StackerSlotPlacementStrategy.NearestToPickup);
             preset.Port = (int)ParseEnum(dto.Strategy.InfeedPortSelectionStrategy, InfeedPortSelectionStrategy.RoundRobin);
-            preset.Routing = (int)ParseEnum(dto.Strategy.ConveyorRoutingStrategy, ConveyorRoutingStrategy.ShortestDistance);
-            preset.RouteDistanceWeight = dto.Strategy.RouteDistanceWeight;
-            preset.RouteCongestedCargoWeight = dto.Strategy.RouteCongestedCargoWeight;
-            preset.RouteTotalCargoWeight = dto.Strategy.RouteTotalCargoWeight;
+            preset.Routing = (int)ParseConveyorRouting(dto.Strategy.ConveyorRoutingStrategy);
         }
 
         preset.FlowPlan = FromFlowDtos(dto.FlowPlan);
@@ -782,6 +761,23 @@ public sealed class WarehouseSimTaskPresetStore
         }
 
         return WarehouseSimScenarioJson.ConvertFlowPlan(plan);
+    }
+
+    private static ConveyorRoutingStrategy ParseConveyorRouting(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return ConveyorRoutingStrategy.ShortestDistance;
+        }
+
+        var trimmed = raw.Trim();
+        if (string.Equals(trimmed, "LeastCongestion", StringComparison.OrdinalIgnoreCase)
+            || trimmed == "1")
+        {
+            return ConveyorRoutingStrategy.ShortestDistance;
+        }
+
+        return ParseEnum(trimmed, ConveyorRoutingStrategy.ShortestDistance);
     }
 
     private static T ParseEnum<T>(string raw, T fallback) where T : struct
@@ -836,9 +832,6 @@ public sealed class WarehouseSimTaskPreset
     public int Placement;
     public int Port;
     public int Routing;
-    public float RouteDistanceWeight = 1f;
-    public float RouteCongestedCargoWeight = 5f;
-    public float RouteTotalCargoWeight = 1f;
     public SimFlowPlanEntry[] FlowPlan;
 }
 }

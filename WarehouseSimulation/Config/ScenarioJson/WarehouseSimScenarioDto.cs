@@ -41,9 +41,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         public string StackerPlacementStrategy = "NearestToPickup";
         public string InfeedPortSelectionStrategy = "RoundRobin";
         public string ConveyorRoutingStrategy = "ShortestDistance";
-        public float RouteDistanceWeight = 1f;
-        public float RouteCongestedCargoWeight = 5f;
-        public float RouteTotalCargoWeight = 1f;
     }
 
     [Serializable]

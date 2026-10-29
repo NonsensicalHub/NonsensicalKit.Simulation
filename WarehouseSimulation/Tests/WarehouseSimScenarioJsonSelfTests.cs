@@ -59,8 +59,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Tests
             dto.FlowRandomSeed = 7;
             dto.InitialOccupancyRatio = 0.35f;
             dto.InitialOccupancyRandom = true;
-            dto.Strategy.ConveyorRoutingStrategy = "LeastCongestion";
-            dto.Strategy.RouteCongestedCargoWeight = 9f;
+            dto.Strategy.ConveyorRoutingStrategy = "PreferAssignedStacker";
             dto.FlowPlan = new[]
             {
                 new SimFlowPlanEntryDto
@@ -111,9 +110,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Tests
                 return "flow content";
             }
 
-            if (back.Strategy.RouteCongestedCargoWeight != 9f)
+            if (!string.Equals(back.Strategy.ConveyorRoutingStrategy, "PreferAssignedStacker", StringComparison.Ordinal))
             {
-                return "strategy weight";
+                return "strategy routing";
             }
 
             if (back.FlowPlan[0].RequiredProcessTags == null

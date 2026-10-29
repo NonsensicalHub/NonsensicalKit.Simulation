@@ -72,11 +72,6 @@
                                 <ui:DropdownField name="placement" label="放置策略" class="field task-input" />
                                 <ui:DropdownField name="port" label="端口选择" class="field task-input" />
                                 <ui:DropdownField name="routing" label="输送路径" class="field task-input" />
-                                <ui:VisualElement name="route-weights">
-                                    <ui:FloatField name="route-distance" label="距离权重" value="1" class="field task-input" />
-                                    <ui:FloatField name="route-congested" label="拥堵权重" value="5" class="field task-input" />
-                                    <ui:FloatField name="route-total" label="在途权重" value="1" class="field task-input" />
-                                </ui:VisualElement>
                             </ui:VisualElement>
                         </ui:ScrollView>
                     </ui:VisualElement>

@@ -319,9 +319,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
                 StackerPlacementStrategy = profile.StackerPlacementStrategy.ToString(),
                 InfeedPortSelectionStrategy = profile.InfeedPortSelectionStrategy.ToString(),
                 ConveyorRoutingStrategy = profile.ConveyorRoutingStrategy.ToString(),
-                RouteDistanceWeight = profile.RouteDistanceWeight,
-                RouteCongestedCargoWeight = profile.RouteCongestedCargoWeight,
-                RouteTotalCargoWeight = profile.RouteTotalCargoWeight,
             };
         }
 
@@ -347,10 +344,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
             var s = dto.Strategy ?? new WarehouseSimStrategyDto();
             profile.StackerPlacementStrategy = ParseEnum(s.StackerPlacementStrategy, StackerSlotPlacementStrategy.NearestToPickup);
             profile.InfeedPortSelectionStrategy = ParseEnum(s.InfeedPortSelectionStrategy, InfeedPortSelectionStrategy.RoundRobin);
-            profile.ConveyorRoutingStrategy = ParseEnum(s.ConveyorRoutingStrategy, ConveyorRoutingStrategy.ShortestDistance);
-            profile.RouteDistanceWeight = s.RouteDistanceWeight;
-            profile.RouteCongestedCargoWeight = s.RouteCongestedCargoWeight;
-            profile.RouteTotalCargoWeight = s.RouteTotalCargoWeight;
+            profile.ConveyorRoutingStrategy = ParseConveyorRouting(s.ConveyorRoutingStrategy);
             return profile;
         }
 
@@ -421,6 +415,24 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
             }
 
             return result;
+        }
+
+        /// <summary>旧档里的 LeastCongestion 与最短输送时间等价，统一映射为 ShortestDistance。</summary>
+        private static ConveyorRoutingStrategy ParseConveyorRouting(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return ConveyorRoutingStrategy.ShortestDistance;
+            }
+
+            var trimmed = raw.Trim();
+            if (string.Equals(trimmed, "LeastCongestion", StringComparison.OrdinalIgnoreCase)
+                || trimmed == "1")
+            {
+                return ConveyorRoutingStrategy.ShortestDistance;
+            }
+
+            return ParseEnum(trimmed, ConveyorRoutingStrategy.ShortestDistance);
         }
 
         private static TEnum ParseEnum<TEnum>(string raw, TEnum fallback) where TEnum : struct
