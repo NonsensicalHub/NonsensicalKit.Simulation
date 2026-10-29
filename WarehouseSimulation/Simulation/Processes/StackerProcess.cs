@@ -109,7 +109,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
-            if (!_ctx.TryClaimOutboundPickup(job))
+            if (!_ctx.Conveyor.TryClaimOutboundPickup(job))
             {
                 return;
             }
@@ -306,7 +306,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
             else if (job.Direction == SimFlowDirection.Inbound)
             {
-                _ctx.ReleasePrimaryGoal(job);
+                _ctx.Conveyor.ReleasePrimaryGoal(job);
             }
 
             job.State = WarehouseJobState.StackerMove;
@@ -317,7 +317,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         {
             if (job.Direction == SimFlowDirection.Outbound)
             {
-                _ctx.OnOutboundStackerPlaceComplete(job);
+                _ctx.Outfeed.OnStackerPlaceComplete(job);
                 return;
             }
 
@@ -331,9 +331,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             job.State = WarehouseJobState.Completed;
             _ctx.SlotAllocator.NotifyInboundPlaced(job.TargetSlot);
-            if (_ctx.InboundWaitingCount > 0 && !_ctx.InboundExhaustedAtInfeed)
+            if (_ctx.Flow.InboundWaitingCount > 0 && !_ctx.InboundExhaustedAtInfeed)
             {
-                _ctx.ScheduleInfeedQueueFill(_ctx.Clock.Now);
+                _ctx.Infeed.ScheduleQueueFill(_ctx.Clock.Now);
             }
 
             _ctx.RecordPlayback(job, SimPlaybackPhase.StackerPlace, job.AssignedStackerId, job.TargetSlot);

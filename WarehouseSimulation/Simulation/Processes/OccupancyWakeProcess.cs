@@ -169,11 +169,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     continue;
                 }
 
-                _ctx.TryBeginConveyor(job);
+                _ctx.Conveyor.TryBegin(job);
                 if (!ConveyorPathPlanner.HasOpenPickupRouteFromAnyInfeed(
                         _ctx.Topology,
                         _ctx.Bindings,
-                        _ctx.PickupReservationCounts,
+                        _ctx.Conveyor.PickupReservationCounts,
                         ConveyorRouteAccess.FromJob(job)))
                 {
                     return;
@@ -208,7 +208,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     continue;
                 }
 
-                _ctx.TryBeginConveyor(job);
+                _ctx.Conveyor.TryBegin(job);
             }
         }
 

@@ -161,9 +161,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         $"超过最大事件数 {_ctx.Bindings.MaxSimEvents}，仿真中止。\n失败统计：{failureSummary}\n{diagnostics}";
                 }
                 else if (_ctx.CompletedCount + _ctx.FailedNoSlot + _ctx.FailedNoCargo < _ctx.TargetCount
-                         || _ctx.InboundWaitingCount > 0
-                         || _ctx.OutboundWaitingCount > 0
-                         || _ctx.FlowHasPendingReleases())
+                         || _ctx.Flow.InboundWaitingCount > 0
+                         || _ctx.Flow.OutboundWaitingCount > 0
+                         || _ctx.Flow.HasPendingReleases())
                 {
                     var diagnostics = SimEventDiagnosticsCollector.FormatPlainText(LastEventDiagnostics);
                     WarehouseSimLog.Warn($"事件队列已空但未完成全部任务。\n{diagnostics}");

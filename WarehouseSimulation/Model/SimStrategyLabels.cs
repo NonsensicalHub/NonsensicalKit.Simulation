@@ -88,7 +88,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Model
         public static string FormatConveyorRouting(ConveyorRoutingStrategy strategy) =>
             strategy switch
             {
-                ConveyorRoutingStrategy.LeastCongestion => "最少拥堵（距离+路段占用加权）",
+                ConveyorRoutingStrategy.LeastCongestion => "最少拥堵（与最短输送时间相同，路段占用由输送内核调度）",
                 ConveyorRoutingStrategy.PreferAssignedStacker => "优先已分配堆垛机交互点",
                 _ => "最短输送时间",
             };

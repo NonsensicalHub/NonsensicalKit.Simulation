@@ -45,7 +45,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                             SimPlaybackPhase.InfeedDone,
                             completeJob.AssignedStackerId,
                             completeJob.TargetSlot);
-                        _ctx.TryBeginConveyor(completeJob);
+                        _ctx.Conveyor.TryBegin(completeJob);
                     }
 
                     break;
@@ -83,7 +83,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         internal void ScheduleQueueFill(double when)
         {
-            if (_ctx.InboundWaitingCount <= 0 || _ctx.InboundExhaustedAtInfeed || _queueFillScheduled)
+            if (_ctx.Flow.InboundWaitingCount <= 0 || _ctx.InboundExhaustedAtInfeed || _queueFillScheduled)
             {
                 return;
             }
@@ -121,7 +121,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
-            _ctx.ReleaseInfeedOriginClaim(job);
+            _ctx.Conveyor.ReleaseInfeedOriginClaim(job);
             if (releaseResources)
             {
                 if (job.HasSlot)
@@ -184,7 +184,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             var maxReservations = _ctx.Bindings.MaxInfeedReservationsPerPort > 0
                 ? _ctx.Bindings.MaxInfeedReservationsPerPort
                 : 1;
-            while (_ctx.InboundWaitingCount > 0 && !_ctx.InboundExhaustedAtInfeed)
+            while (_ctx.Flow.InboundWaitingCount > 0 && !_ctx.InboundExhaustedAtInfeed)
             {
                 if (!TryPlaceOne(maxReservations))
                 {
@@ -197,18 +197,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         {
             while (true)
             {
-                if (_ctx.InboundWaitingCount <= 0 || _ctx.InboundExhaustedAtInfeed)
+                if (_ctx.Flow.InboundWaitingCount <= 0 || _ctx.InboundExhaustedAtInfeed)
                 {
                     return false;
                 }
 
-                var allowedWarehouses = _ctx.PeekInboundWarehouseIds();
+                var allowedWarehouses = _ctx.Flow.PeekInboundWarehouseIds();
                 if (SimWarehouseRestriction.IsRestricted(allowedWarehouses)
                     && !HasFreeStorageInWarehouses(allowedWarehouses))
                 {
-                    var before = _ctx.InboundWaitingCount;
+                    var before = _ctx.Flow.InboundWaitingCount;
                     DrainInboundBlockedByWarehouse();
-                    if (_ctx.InboundWaitingCount <= 0 || _ctx.InboundWaitingCount == before)
+                    if (_ctx.Flow.InboundWaitingCount <= 0 || _ctx.Flow.InboundWaitingCount == before)
                     {
                         return false;
                     }
@@ -223,7 +223,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         private bool TryPlaceOneInAllowedWarehouses(int maxReservations, int[] allowedWarehouses)
         {
             var portCount = _ctx.Topology.InfeedNodeIndices.Count;
-            var processTags = _ctx.PeekInboundProcessTags();
+            var processTags = _ctx.Flow.PeekInboundTags();
             var access = ConveyorRouteAccess.FromTags(processTags);
             ConveyorProcessStationUtility.TryResolveSupportedInfeedPortUnion(
                 _ctx.Topology,
@@ -263,7 +263,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         _ctx.Topology,
                         _ctx.Bindings,
                         portIndex,
-                        _ctx.PickupReservationCounts,
+                        _ctx.Conveyor.PickupReservationCounts,
                         access))
                 {
                     continue;
@@ -273,8 +273,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         _ctx.Topology,
                         _ctx.Bindings,
                         _ctx.SlotAllocator,
-                        _ctx.PickupReservationCounts,
-                        _ctx.StackerActiveJobCounts,
+                        _ctx.Conveyor.PickupReservationCounts,
+                        _ctx.Stacker.ActiveJobCounts,
                         portIndex,
                         out var slot,
                         out var stackerId,
@@ -285,7 +285,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     continue;
                 }
 
-                if (!_ctx.TryClaimInfeedOrigin(portIndex, _ctx.NextJobId))
+                if (!_ctx.Conveyor.TryClaimInfeedOrigin(portIndex, _ctx.NextJobId))
                 {
                     continue;
                 }
@@ -301,12 +301,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 if (!PlaceOnPort(job, portIndex, slot, stackerId))
                 {
                     _ctx.Jobs.Remove(job.JobId);
-                    _ctx.ReleaseInfeedOriginClaim(job);
+                    _ctx.Conveyor.ReleaseInfeedOriginClaim(job);
                     continue;
                 }
 
-                _ctx.InboundWaitingCount--;
-                _ctx.DequeueInboundFlowEntry();
+                _ctx.Flow.InboundWaitingCount--;
+                _ctx.Flow.DequeueInbound();
                 _roundRobinCursor = (portIndex + 1) % portCount;
                 return true;
             }
@@ -314,7 +314,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (restrictInfeedByProcessStation && _allowedPorts.Count == 0)
             {
                 WarehouseSimLog.Detail(
-                    $"入库等候 {_ctx.InboundWaitingCount} 箱：加工站「支持的入库口」并集为空或无法解析，" +
+                    $"入库等候 {_ctx.Flow.InboundWaitingCount} 箱：加工站「支持的入库口」并集为空或无法解析，" +
                     "无法放货。请检查加工站配置的入库口逻辑 ID。");
                 return false;
             }
@@ -322,7 +322,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (SimWarehouseRestriction.IsRestricted(allowedWarehouses))
             {
                 WarehouseSimLog.Detail(
-                    $"入库等候 {_ctx.InboundWaitingCount} 箱：限定仓库暂无可以放货的入库口，" +
+                    $"入库等候 {_ctx.Flow.InboundWaitingCount} 箱：限定仓库暂无可以放货的入库口，" +
                     "待入库口或取货点释放后重试。");
                 return false;
             }
@@ -330,7 +330,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (!HasOpenPickupRoute(access, restrictInfeedByProcessStation))
             {
                 WarehouseSimLog.Detail(
-                    $"入库等候 {_ctx.InboundWaitingCount} 箱：取货点预定已满（库内仍有空货位），" +
+                    $"入库等候 {_ctx.Flow.InboundWaitingCount} 箱：取货点预定已满（库内仍有空货位），" +
                     "待取货点释放后重试。");
                 return false;
             }
@@ -351,20 +351,20 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (!_ctx.SlotAllocator.HasAllocatableFreeSlot(_ctx.Bindings, _ctx.Topology))
             {
                 WarehouseSimLog.Detail(
-                    $"入库等候 {_ctx.InboundWaitingCount} 箱：空闲货位暂不在堆垛机可达列，" +
+                    $"入库等候 {_ctx.Flow.InboundWaitingCount} 箱：空闲货位暂不在堆垛机可达列，" +
                     "待出库腾位后重试。");
                 return false;
             }
 
             WarehouseSimLog.Detail(
-                $"入库等候 {_ctx.InboundWaitingCount} 箱：各入库口暂无可路由空货位，" +
+                $"入库等候 {_ctx.Flow.InboundWaitingCount} 箱：各入库口暂无可路由空货位，" +
                 "待入库口物理释放或取货点释放后重试。");
             return false;
         }
 
         private void DrainInboundBlockedByWarehouse()
         {
-            var allowed = _ctx.PeekInboundWarehouseIds();
+            var allowed = _ctx.Flow.PeekInboundWarehouseIds();
             if (!SimWarehouseRestriction.IsRestricted(allowed)
                 || HasFreeStorageInWarehouses(allowed))
             {
@@ -373,11 +373,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             var failed = 0;
             var blockedLabel = SimWarehouseRestriction.Format(allowed);
-            while (_ctx.InboundWaitingCount > 0
-                   && SimWarehouseRestriction.Same(_ctx.PeekInboundWarehouseIds(), allowed))
+            while (_ctx.Flow.InboundWaitingCount > 0
+                   && SimWarehouseRestriction.Same(_ctx.Flow.PeekInboundWarehouseIds(), allowed))
             {
-                _ctx.InboundWaitingCount--;
-                _ctx.DequeueInboundFlowEntry();
+                _ctx.Flow.InboundWaitingCount--;
+                _ctx.Flow.DequeueInbound();
                 failed++;
             }
 
@@ -407,14 +407,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         private void FailAllRemaining(int portIndex, SimJobFailureReason reason)
         {
-            if (_ctx.InboundWaitingCount <= 0 || _ctx.InboundExhaustedAtInfeed)
+            if (_ctx.Flow.InboundWaitingCount <= 0 || _ctx.InboundExhaustedAtInfeed)
             {
                 return;
             }
 
-            var remaining = _ctx.InboundWaitingCount;
-            _ctx.InboundWaitingCount = 0;
-            _ctx.ClearInboundFlowEntries();
+            var remaining = _ctx.Flow.InboundWaitingCount;
+            _ctx.Flow.InboundWaitingCount = 0;
+            _ctx.Flow.ClearInbound();
             _ctx.InboundExhaustedAtInfeed = true;
             _ctx.FailedNoSlot += remaining;
             _ctx.RecordFailure(reason, remaining);
@@ -445,7 +445,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             job.AssignedStackerId = stackerId;
             _cargoOccupied[portIndex] = true;
             _reservationCounts[portIndex]++;
-            _ctx.IncrementStackerActiveJobCount(stackerId);
+            _ctx.Stacker.IncrementActive(stackerId);
 
             ref var infeedNode = ref _ctx.Topology.GetNode(_ctx.Topology.InfeedNodeIndices[portIndex]);
             var portLabel = SimEntityNaming.FormatLogicalId(in infeedNode, _ctx.Topology.InfeedNodeIndices[portIndex]);
@@ -527,7 +527,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return ConveyorPathPlanner.HasOpenPickupRouteFromAnyInfeed(
                     _ctx.Topology,
                     _ctx.Bindings,
-                    _ctx.PickupReservationCounts,
+                    _ctx.Conveyor.PickupReservationCounts,
                     access);
             }
 
@@ -537,7 +537,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         _ctx.Topology,
                         _ctx.Bindings,
                         portIndex,
-                        _ctx.PickupReservationCounts,
+                        _ctx.Conveyor.PickupReservationCounts,
                         access))
                 {
                     return true;

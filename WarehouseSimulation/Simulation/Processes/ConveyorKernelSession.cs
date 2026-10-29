@@ -224,7 +224,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 {
                     if (Ctx.Jobs.TryGetValue(id, out var job) && job.State == WarehouseJobState.WaitingStacker)
                     {
-                        Ctx.TryBeginStackerPhase(job);
+                        Ctx.Stacker.TryBegin(job);
                     }
                     else
                     {
@@ -688,7 +688,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         case ZoneKernelOutputKind.OriginDeparted:
                             if (job.Direction == SimFlowDirection.Inbound)
                             {
-                                Ctx.ScheduleInfeedPortPhysicalRelease(job, output.Time);
+                                Ctx.Infeed.SchedulePhysicalRelease(job, output.Time);
                             }
 
                             break;
@@ -696,7 +696,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                             if (job.Direction == SimFlowDirection.Outbound)
                             {
                                 // 货箱离开交互点：堆垛机可接下一出库单。
-                                Ctx.ReleaseOutboundStackerAfterPickupDeparture(job);
+                                Ctx.Outfeed.ReleaseStackerAfterPickupDeparture(job);
                             }
 
                             break;
@@ -716,7 +716,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (_primaryInfeedOriginBlocked)
             {
                 _primaryInfeedOriginBlocked = false;
-                Ctx.ScheduleInfeedQueueFill(Ctx.Clock.Now);
+                Ctx.Infeed.ScheduleQueueFill(Ctx.Clock.Now);
             }
         }
 

@@ -10,8 +10,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 {
     /// <summary>
     /// 一次运行的共享事实：时钟、队列、任务、预约表和时间轴。
-    /// 阶段之间不互相引用，要继续下一步就调用这里的交接方法，由它转给对应进程。
-    /// 必须在当前事件里做完的交接保持同步，避免打乱同一时刻的原有顺序。
+    /// 跨阶段交接直接调用对应进程，必须在当前事件里做完的交接保持同步。
     /// </summary>
     internal sealed class SimRunContext
     {
@@ -89,21 +88,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         public int[] EventTypeCounts { get; set; }
 
-        public int InboundWaitingCount
-        {
-            get => _flow.InboundWaitingCount;
-            set => _flow.InboundWaitingCount = value;
-        }
+        internal FlowPlanProcess Flow => _flow;
 
-        public int OutboundWaitingCount
-        {
-            get => _flow.OutboundWaitingCount;
-            set => _flow.OutboundWaitingCount = value;
-        }
+        internal InfeedProcess Infeed => _infeed;
 
-        public int[] StackerActiveJobCounts => _stacker.ActiveJobCounts;
+        internal OutfeedProcess Outfeed => _outfeed;
 
-        public int[] PickupReservationCounts => _conveyor.PickupReservationCounts;
+        internal StackerProcess Stacker => _stacker;
+
+        internal ConveyorProcess Conveyor => _conveyor;
+
+        internal OccupancyWakeProcess Occupancy => _occupancy;
 
         public void ResetShared()
         {
@@ -143,8 +138,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         public void InitConveyorKernel() => _conveyor.InitKernel();
 
         public void ScheduleFlowPlan() => _flow.Schedule();
-
-        public bool FlowHasPendingReleases() => _flow.HasPendingReleases();
 
         public void ReportKernelDiagnostics() => _conveyor.ReportKernelDiagnostics();
 
@@ -255,69 +248,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         public void EnsurePlaybackSnapshot(WarehouseJob job) => Timeline.EnsurePlaybackSnapshot(job);
 
-        public void ScheduleInitialInfeedFeeds() => _infeed.ScheduleInitialFeeds();
-
-        public void ScheduleInfeedQueueFill(double when) => _infeed.ScheduleQueueFill(when);
-
-        public void ScheduleInfeedPortPhysicalRelease(WarehouseJob job, double releaseTime) =>
-            _infeed.SchedulePhysicalRelease(job, releaseTime);
-
-        public void ScheduleInitialOutfeedDispatches() => _outfeed.ScheduleInitialDispatches();
-
-        public void ScheduleOutfeedQueueFill(double when) => _outfeed.ScheduleQueueFill(when);
-
-        public bool TryBeginConveyor(WarehouseJob job) => _conveyor.TryBegin(job);
-
-        public void TryBeginStackerPhase(WarehouseJob job) => _stacker.TryBegin(job);
-
-        public void BeginOutfeed(WarehouseJob job) => _outfeed.Begin(job);
-
-        public void OnOutboundStackerPlaceComplete(WarehouseJob job) => _outfeed.OnStackerPlaceComplete(job);
-
-        public void ReleaseOutboundStackerAfterPickupDeparture(WarehouseJob job) =>
-            _outfeed.ReleaseStackerAfterPickupDeparture(job);
-
-        public bool TryClaimInfeedOrigin(int portIndex, int ownerId) =>
-            _conveyor.TryClaimInfeedOrigin(portIndex, ownerId);
-
-        public void ReleaseInfeedOriginClaim(WarehouseJob job) => _conveyor.ReleaseInfeedOriginClaim(job);
-
-        public bool TryClaimOutboundPickup(WarehouseJob job) => _conveyor.TryClaimOutboundPickup(job);
-
-        public void ReleasePrimaryGoal(WarehouseJob job) => _conveyor.ReleasePrimaryGoal(job);
-
-        public void ReleasePrimaryOutfeed(WarehouseJob job) => _conveyor.ReleasePrimaryOutfeed(job);
-
-        public void ReleaseFailedOutboundPickup(WarehouseJob job) => _conveyor.ReleaseFailedOutboundPickup(job);
-
-        public void ClearConveyorRoutePending(WarehouseJob job) => _occupancy.ClearPending(job);
-
-        public void MarkConveyorRoutePending(WarehouseJob job, params string[] blockingResources) =>
-            _occupancy.MarkPending(job, blockingResources);
-
-        public bool TryAcceptConveyorRouteRetry(int jobId, int token) => _occupancy.TryAcceptRetry(jobId, token);
-
-        public void OnConveyorRouteRetryDispatched(int jobId) => _occupancy.OnRetryDispatched(jobId);
-
-        public void RetryInboundConveyorRouteWaiters() => _occupancy.RetryInboundWaiters();
-
-        public void RetryOutboundConveyorRouteWaiters() => _occupancy.RetryOutboundWaiters();
-
-        public bool TryCommitOutboundConveyorPath(WarehouseJob job) => _outfeed.TryCommitPath(job);
-
-        public void FailJobNoSlot(WarehouseJob job, SimJobFailureReason reason, bool releaseResources = false) =>
-            _infeed.FailNoSlot(job, reason, releaseResources);
-
-        public void FailJobNoCargo(WarehouseJob job, SimJobFailureReason reason, bool releaseResources = false) =>
-            _outfeed.FailNoCargo(job, reason, releaseResources);
-
-        public void IncrementStackerActiveJobCount(int stackerId) => _stacker.IncrementActive(stackerId);
-
-        public void DecrementStackerActiveJobCount(int stackerId) => _stacker.DecrementActive(stackerId);
-
-        public void SetStackerCarriagePosition(int stackerId, int row, int level) =>
-            _stacker.SetCarriagePosition(stackerId, row, level);
-
         public void ReleaseAllocatedSlot(WarehouseJob job)
         {
             if (!job.HasSlot)
@@ -327,24 +257,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             SlotAllocator.Release(job.TargetSlot);
             job.HasSlot = false;
-            DecrementStackerActiveJobCount(job.AssignedStackerId);
+            _stacker.DecrementActive(job.AssignedStackerId);
         }
-
-        public void DequeueInboundFlowEntry() => _flow.DequeueInbound();
-
-        public void ClearInboundFlowEntries() => _flow.ClearInbound();
-
-        public void DequeueOutboundFlowEntry() => _flow.DequeueOutbound();
-
-        public void ClearOutboundFlowEntries() => _flow.ClearOutbound();
-
-        public string[] PeekInboundProcessTags() => _flow.PeekInboundTags();
-
-        public string[] PeekOutboundProcessTags() => _flow.PeekOutboundTags();
-
-        public int[] PeekInboundWarehouseIds() => _flow.PeekInboundWarehouseIds();
-
-        public int[] PeekOutboundWarehouseIds() => _flow.PeekOutboundWarehouseIds();
 
         public SimEventDiagnostics BuildEventDiagnostics(int queuePending)
         {

@@ -97,7 +97,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         internal void ScheduleQueueFill(double when)
         {
-            if (_ctx.OutboundWaitingCount <= 0 || _queueFillScheduled)
+            if (_ctx.Flow.OutboundWaitingCount <= 0 || _queueFillScheduled)
             {
                 return;
             }
@@ -170,7 +170,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (job.AssignedStackerId >= 0 && job.PickupPointIndex >= 0)
             {
                 var pickupNode = _ctx.Topology.GetNode(job.PickupPointIndex);
-                _ctx.SetStackerCarriagePosition(
+                _ctx.Stacker.SetCarriagePosition(
                     job.AssignedStackerId,
                     pickupNode.PickupRow,
                     Math.Max(0, pickupNode.PickupLevel));
@@ -179,12 +179,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _ctx.RecordPlayback(job, SimPlaybackPhase.StackerPlace, job.AssignedStackerId, job.TargetSlot);
             ReleaseSlotReservation(job);
             _ctx.SlotAllocator.Release(job.TargetSlot);
-            if (_ctx.InboundWaitingCount > 0 && !_ctx.InboundExhaustedAtInfeed)
+            if (_ctx.Flow.InboundWaitingCount > 0 && !_ctx.InboundExhaustedAtInfeed)
             {
-                _ctx.ScheduleInfeedQueueFill(_ctx.Clock.Now);
+                _ctx.Infeed.ScheduleQueueFill(_ctx.Clock.Now);
             }
 
-            if (!_ctx.TryBeginConveyor(job))
+            if (!_ctx.Conveyor.TryBegin(job))
             {
                 WarehouseSimLog.Detail(
                     $"出库交互点待发运 job={job.JobId} pickup={job.PickupPointIndex} t={_ctx.Clock.Now:F2}s，" +
@@ -204,7 +204,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 return;
             }
 
-            _ctx.DecrementStackerActiveJobCount(job.AssignedStackerId);
+            _ctx.Stacker.DecrementActive(job.AssignedStackerId);
             ScheduleQueueFill(_ctx.Clock.Now);
         }
 
@@ -231,7 +231,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             ReleaseStackerAfterPickupDeparture(job);
-            _ctx.ReleaseFailedOutboundPickup(job);
+            _ctx.Conveyor.ReleaseFailedOutboundPickup(job);
             job.State = WarehouseJobState.FailedNoCargo;
             _ctx.FailedNoCargo++;
             _ctx.RecordFailure(reason);
@@ -251,11 +251,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     _ctx.Topology,
                     _ctx.Bindings,
                     _ctx.Strategy,
-                    _ctx.Reservations,
                     _reservationCounts,
                     job.PickupPointIndex,
                     job.OutfeedPortIndex,
-                    _ctx.Clock.Now,
                     out var outfeedPort,
                     out var path,
                     job))
@@ -339,14 +337,14 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         private void TryFillFromQueue()
         {
-            if (_ctx.OutboundWaitingCount <= 0
+            if (_ctx.Flow.OutboundWaitingCount <= 0
                 || _ctx.Topology.OutfeedNodeIndices == null
                 || _ctx.Topology.OutfeedNodeIndices.Count == 0)
             {
                 return;
             }
 
-            while (_ctx.OutboundWaitingCount > 0)
+            while (_ctx.Flow.OutboundWaitingCount > 0)
             {
                 if (!TryPlaceOne())
                 {
@@ -359,19 +357,19 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         {
             while (true)
             {
-                if (_ctx.OutboundWaitingCount <= 0)
+                if (_ctx.Flow.OutboundWaitingCount <= 0)
                 {
                     return false;
                 }
 
-                var allowedWarehouses = _ctx.PeekOutboundWarehouseIds();
-                var access = ConveyorRouteAccess.FromTags(_ctx.PeekOutboundProcessTags());
+                var allowedWarehouses = _ctx.Flow.PeekOutboundWarehouseIds();
+                var access = ConveyorRouteAccess.FromTags(_ctx.Flow.PeekOutboundTags());
                 if (OutfeedPortSelector.TrySelectOutboundPlacement(
                         _ctx.Topology,
                         _ctx.Bindings,
                         _ctx.SlotAllocator,
-                        _ctx.PickupReservationCounts,
-                        _ctx.StackerActiveJobCounts,
+                        _ctx.Conveyor.PickupReservationCounts,
+                        _ctx.Stacker.ActiveJobCounts,
                         _reservedSlots,
                         out var slot,
                         out var stackerId,
@@ -380,9 +378,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         access,
                         allowedWarehouses))
                 {
-                    _ctx.OutboundWaitingCount--;
-                    var processTags = _ctx.PeekOutboundProcessTags();
-                    _ctx.DequeueOutboundFlowEntry();
+                    _ctx.Flow.OutboundWaitingCount--;
+                    var processTags = _ctx.Flow.PeekOutboundTags();
+                    _ctx.Flow.DequeueOutbound();
                     var job = new WarehouseJob(_ctx.NextJobId++, _ctx.Clock.Now)
                     {
                         Direction = SimFlowDirection.Outbound,
@@ -397,9 +395,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 if (SimWarehouseRestriction.IsRestricted(allowedWarehouses)
                     && !HasStoredCargoInWarehouses(allowedWarehouses))
                 {
-                    var before = _ctx.OutboundWaitingCount;
+                    var before = _ctx.Flow.OutboundWaitingCount;
                     DrainOutboundBlockedByWarehouse();
-                    if (_ctx.OutboundWaitingCount <= 0 || _ctx.OutboundWaitingCount == before)
+                    if (_ctx.Flow.OutboundWaitingCount <= 0 || _ctx.Flow.OutboundWaitingCount == before)
                     {
                         return false;
                     }
@@ -414,7 +412,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 }
 
                 WarehouseSimLog.Detail(
-                    $"出库等候 {_ctx.OutboundWaitingCount} 箱：暂无空闲堆垛机或交互点，" +
+                    $"出库等候 {_ctx.Flow.OutboundWaitingCount} 箱：暂无空闲堆垛机或交互点，" +
                     "待交互点释放后重试。");
                 return false;
             }
@@ -422,7 +420,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         private void DrainOutboundBlockedByWarehouse()
         {
-            var allowed = _ctx.PeekOutboundWarehouseIds();
+            var allowed = _ctx.Flow.PeekOutboundWarehouseIds();
             if (!SimWarehouseRestriction.IsRestricted(allowed)
                 || HasStoredCargoInWarehouses(allowed))
             {
@@ -431,11 +429,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             var failed = 0;
             var blockedLabel = SimWarehouseRestriction.Format(allowed);
-            while (_ctx.OutboundWaitingCount > 0
-                   && SimWarehouseRestriction.Same(_ctx.PeekOutboundWarehouseIds(), allowed))
+            while (_ctx.Flow.OutboundWaitingCount > 0
+                   && SimWarehouseRestriction.Same(_ctx.Flow.PeekOutboundWarehouseIds(), allowed))
             {
-                _ctx.OutboundWaitingCount--;
-                _ctx.DequeueOutboundFlowEntry();
+                _ctx.Flow.OutboundWaitingCount--;
+                _ctx.Flow.DequeueOutbound();
                 failed++;
             }
 
@@ -471,25 +469,25 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             job.PickupPointIndex = pickupIndex;
             job.OutfeedPortIndex = -1;
             _reservedSlots.Add(slot);
-            _ctx.IncrementStackerActiveJobCount(stackerId);
+            _ctx.Stacker.IncrementActive(stackerId);
             WarehouseSimLog.Info(() =>
                 $"出库建单 job={job.JobId} stacker={stackerId} slot={slot} pickup={pickupIndex} " +
                 $"outfeed=待选 t={_ctx.Clock.Now:F2}s");
             job.ArrivalTime = _ctx.Clock.Now;
             _ctx.RecordPlayback(job, SimPlaybackPhase.Arrived, stackerId, slot);
-            _ctx.TryBeginStackerPhase(job);
+            _ctx.Stacker.TryBegin(job);
         }
 
         private void FailAllRemaining()
         {
-            if (_ctx.OutboundWaitingCount <= 0)
+            if (_ctx.Flow.OutboundWaitingCount <= 0)
             {
                 return;
             }
 
-            var remaining = _ctx.OutboundWaitingCount;
-            _ctx.OutboundWaitingCount = 0;
-            _ctx.ClearOutboundFlowEntries();
+            var remaining = _ctx.Flow.OutboundWaitingCount;
+            _ctx.Flow.OutboundWaitingCount = 0;
+            _ctx.Flow.ClearOutbound();
             _ctx.FailedNoCargo += remaining;
             _ctx.RecordFailure(SimJobFailureReason.OutboundQueueNoInventory, remaining);
             WarehouseSimLog.Info($"无可用库存：{remaining} 箱出库请求失败 t={_ctx.Clock.Now:F2}s");
@@ -526,8 +524,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             _ctx.RecordPlayback(job, SimPlaybackPhase.OutfeedDone, job.AssignedStackerId, job.TargetSlot);
-            _ctx.ReleasePrimaryOutfeed(job);
-            _ctx.RetryOutboundConveyorRouteWaiters();
+            _ctx.Conveyor.ReleasePrimaryOutfeed(job);
+            _ctx.Occupancy.RetryOutboundWaiters();
             _ctx.Queue.Enqueue(new ScheduledSimEvent(_ctx.Clock.Now, SimEventType.JobCompleted, job.JobId));
             SchedulePhysicalRelease(job, _ctx.Clock.Now + 0.5);
         }
@@ -564,8 +562,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _ctx.ReportLiveProgress();
             if (job.Direction != SimFlowDirection.Outbound)
             {
-                _ctx.DecrementStackerActiveJobCount(job.AssignedStackerId);
-                if (_ctx.OutboundWaitingCount > 0)
+                _ctx.Stacker.DecrementActive(job.AssignedStackerId);
+                if (_ctx.Flow.OutboundWaitingCount > 0)
                 {
                     ScheduleQueueFill(_ctx.Clock.Now);
                 }

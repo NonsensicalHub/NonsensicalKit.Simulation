@@ -144,7 +144,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 _outboundEntries.Enqueue(entryIndex);
                 WarehouseSimLog.Info(
                     $"出库请求 +1 t={_ctx.Clock.Now:F2}s；出库等候 {OutboundWaitingCount} 箱");
-                _ctx.ScheduleInitialOutfeedDispatches();
+                _ctx.Outfeed.ScheduleInitialDispatches();
             }
             else
             {
@@ -152,7 +152,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 _inboundEntries.Enqueue(entryIndex);
                 WarehouseSimLog.Info(
                     $"入库请求 +1 t={_ctx.Clock.Now:F2}s；入库等候 {InboundWaitingCount} 箱");
-                _ctx.ScheduleInitialInfeedFeeds();
+                _ctx.Infeed.ScheduleInitialFeeds();
             }
         }
 
@@ -180,7 +180,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 OutboundWaitingCount += quantity;
                 WarehouseSimLog.Info(
                     $"出库请求 +{quantity} t={_ctx.Clock.Now:F2}s；出库等候 {OutboundWaitingCount} 箱");
-                _ctx.ScheduleInitialOutfeedDispatches();
+                _ctx.Outfeed.ScheduleInitialDispatches();
                 return;
             }
 
@@ -192,7 +192,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             InboundWaitingCount += quantity;
             WarehouseSimLog.Info(
                 $"入库请求 +{quantity} t={_ctx.Clock.Now:F2}s；入库等候 {InboundWaitingCount} 箱");
-            _ctx.ScheduleInitialInfeedFeeds();
+            _ctx.Infeed.ScheduleInitialFeeds();
         }
     }
 }

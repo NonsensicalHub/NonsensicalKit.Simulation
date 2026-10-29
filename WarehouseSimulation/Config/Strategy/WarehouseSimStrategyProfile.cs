@@ -20,13 +20,15 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         [Label("输送路径策略")]
         public ConveyorRoutingStrategy ConveyorRoutingStrategy = ConveyorRoutingStrategy.ShortestDistance;
 
-        [Tooltip("仅「最少拥堵」策略：路径评分 = 距离×系数 + 拥堵箱数×系数 + 在途箱数×系数")]
+        [Tooltip("保留字段，选路已不再读取预约表。行驶占用由输送内核决定。")]
         [Label("距离权重")]
         public float RouteDistanceWeight = 1f;
 
+        [Tooltip("保留字段，选路已不再读取预约表。")]
         [Label("拥堵箱数权重")]
         public float RouteCongestedCargoWeight = 5f;
 
+        [Tooltip("保留字段，选路已不再读取预约表。")]
         [Label("在途箱数权重")]
         public float RouteTotalCargoWeight = 1f;
     }

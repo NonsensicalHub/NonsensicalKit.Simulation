@@ -4,10 +4,7 @@
     "references": [
         "NonsensicalKit.Core.Runtime",
         "NonsensicalKit.NaughtyAttributes",
-        "NonsensicalKit.DigitalTwin.Motion",
-        "NonsensicalKit.DigitalTwin.Warehouse",
-        "NonsensicalKit.UGUI.Items",
-        "Unity.TextMeshPro"
+        "NonsensicalKit.DigitalTwin.Warehouse"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -30,12 +30,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             switch (evt.Type)
             {
                 case SimEventType.ConveyorRouteRetry:
-                    if (!_ctx.TryAcceptConveyorRouteRetry(evt.JobId, evt.Payload))
+                    if (!_ctx.Occupancy.TryAcceptRetry(evt.JobId, evt.Payload))
                     {
                         return;
                     }
 
-                    _ctx.OnConveyorRouteRetryDispatched(evt.JobId);
+                    _ctx.Occupancy.OnRetryDispatched(evt.JobId);
                     if (_ctx.TryGetJob(evt.JobId, evt.Type, out var retryJob))
                     {
                         TryBegin(retryJob);
@@ -119,13 +119,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
             if (TrySchedule(job))
             {
-                _ctx.ClearConveyorRoutePending(job);
+                _ctx.Occupancy.ClearPending(job);
                 return true;
             }
 
             if (IsTransitCommitted(job))
             {
-                _ctx.MarkConveyorRoutePending(job);
+                _ctx.Occupancy.MarkPending(job);
                 return false;
             }
 
@@ -135,11 +135,11 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     || _ctx.Topology?.OutfeedNodeIndices == null
                     || _ctx.Topology.OutfeedNodeIndices.Count == 0)
                 {
-                    _ctx.FailJobNoCargo(job, SimJobFailureReason.OutboundJobNoInventory, releaseResources: false);
+                    _ctx.Outfeed.FailNoCargo(job, SimJobFailureReason.OutboundJobNoInventory, releaseResources: false);
                     return false;
                 }
 
-                _ctx.MarkConveyorRoutePending(job);
+                _ctx.Occupancy.MarkPending(job);
                 return false;
             }
 
@@ -150,23 +150,21 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         _ctx.Topology,
                         _ctx.Bindings,
                         _ctx.Strategy,
-                        _ctx.Reservations,
                         pickupReservationCounts: null,
                         job.InfeedPortIndex,
                         job.TargetSlot,
                         job.AssignedStackerId,
-                        _ctx.Clock.Now,
                         out _,
                         out _,
                         out _,
                         job))
                 {
-                    _ctx.FailJobNoSlot(job, SimJobFailureReason.InboundConveyorRouteUnreachable, releaseResources: true);
+                    _ctx.Infeed.FailNoSlot(job, SimJobFailureReason.InboundConveyorRouteUnreachable, releaseResources: true);
                     return false;
                 }
             }
 
-            _ctx.MarkConveyorRoutePending(job);
+            _ctx.Occupancy.MarkPending(job);
             return false;
         }
 
@@ -185,9 +183,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         internal void NotifyRouteWaiters()
         {
-            _ctx.RetryInboundConveyorRouteWaiters();
-            _ctx.RetryOutboundConveyorRouteWaiters();
-            _ctx.ScheduleInfeedQueueFill(_ctx.Clock.Now);
+            _ctx.Occupancy.RetryInboundWaiters();
+            _ctx.Occupancy.RetryOutboundWaiters();
+            _ctx.Infeed.ScheduleQueueFill(_ctx.Clock.Now);
         }
 
         internal void IncrementPickup(int pickupNodeIndex)
@@ -254,7 +252,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         {
             if (job.Direction == SimFlowDirection.Outbound)
             {
-                return _ctx.TryCommitOutboundConveyorPath(job);
+                return _ctx.Outfeed.TryCommitPath(job);
             }
 
             if (job.ConveyorPathZones != null && job.ConveyorPathZones.Count > 0)
@@ -269,12 +267,10 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     _ctx.Topology,
                     _ctx.Bindings,
                     _ctx.Strategy,
-                    _ctx.Reservations,
                     _pickupReservationCounts,
                     job.InfeedPortIndex,
                     job.TargetSlot,
                     job.AssignedStackerId,
-                    _ctx.Clock.Now,
                     out var pickup,
                     out var stackerId,
                     out var path,
@@ -320,13 +316,13 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _ctx.RecordPlayback(job, SimPlaybackPhase.ConveyorDone, job.AssignedStackerId, job.TargetSlot);
             if (job.Direction == SimFlowDirection.Outbound)
             {
-                _ctx.BeginOutfeed(job);
+                _ctx.Outfeed.Begin(job);
                 return;
             }
 
             job.State = WarehouseJobState.WaitingStacker;
             DecrementPickup(job.PickupPointIndex);
-            _ctx.TryBeginStackerPhase(job);
+            _ctx.Stacker.TryBegin(job);
         }
     }
 }
