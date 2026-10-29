@@ -41,7 +41,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Config
         [Tooltip("占用路口逻辑 ID（如 LR1104）。货物前往本加工站时，首次经过该路口独占占用，再次经过时释放，避免死胡同进站对向争用。留空则不启用。")]
         [Label("占用路口（逻辑 ID）")]
         public string ProcessOccupiedJunctionLogicalId;
-        [Tooltip("本加工站允许作为起点的入库口逻辑 ID 列表。带加工标签的入库任务会收集匹配站的并集，只从并集内选口；留空表示该站不限制入库口。旧地图默认空列表，行为与改前一致。")]
+        [Tooltip("本加工站允许作为起点的入库口逻辑 ID 列表。同一加工标签多站取并集；任务需要多个加工标签时再对各标签结果取交集。留空表示该站不限制入库口。")]
         [Label("支持的入库口")]
         public string[] SupportedInfeedLogicalIds;
 

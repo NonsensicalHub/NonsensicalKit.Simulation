@@ -50,6 +50,182 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             _primaryTooCloseCache.Clear();
             _originNearByNode = null;
             _primaryKernel.ZonesTooClose = PrimaryZonesTooClose;
+            BuildStraightCorridors();
+        }
+
+        /// <summary>无向边 → 直线走廊编号。只收录至少两段相连、同一朝向的双向边。</summary>
+        private Dictionary<long, int> _straightCorridorId;
+
+        private void BuildStraightCorridors()
+        {
+            _straightCorridorId = null;
+            var map = Ctx.Bindings.ConveyorMap;
+            var nodes = map?.Nodes;
+            var mapEdges = map?.Edges;
+            if (nodes == null || mapEdges == null)
+            {
+                return;
+            }
+
+            var index = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var i = 0; i < nodes.Length; i++)
+            {
+                var id = nodes[i].NodeId?.Trim();
+                if (!string.IsNullOrEmpty(id) && !index.ContainsKey(id))
+                {
+                    index[id] = i;
+                }
+            }
+
+            var directed = new HashSet<long>();
+            foreach (var edge in mapEdges)
+            {
+                if (edge.FromNodeId == null || edge.ToNodeId == null
+                    || !index.TryGetValue(edge.FromNodeId.Trim(), out var from)
+                    || !index.TryGetValue(edge.ToNodeId.Trim(), out var to)
+                    || from == to)
+                {
+                    continue;
+                }
+
+                directed.Add(((long)from << 32) | (uint)to);
+            }
+
+            var undirected = new List<(int A, int B, int Bucket)>();
+            var seen = new HashSet<long>();
+            foreach (var key in directed)
+            {
+                var a = (int)(key >> 32);
+                var b = (int)(key & 0xffffffff);
+                if (a > b)
+                {
+                    continue;
+                }
+
+                if (!directed.Contains(((long)b << 32) | (uint)a))
+                {
+                    continue;
+                }
+
+                var uk = EdgeKey(a, b);
+                if (!seen.Add(uk))
+                {
+                    continue;
+                }
+
+                if (!ConveyorJunctionAxis.TryGetBucket(map, a, b, out var bucket))
+                {
+                    continue;
+                }
+
+                undirected.Add((a, b, bucket));
+            }
+
+            var count = undirected.Count;
+            if (count == 0)
+            {
+                return;
+            }
+
+            var parent = new int[count];
+            for (var i = 0; i < count; i++)
+            {
+                parent[i] = i;
+            }
+
+            int Find(int x)
+            {
+                while (parent[x] != x)
+                {
+                    parent[x] = parent[parent[x]];
+                    x = parent[x];
+                }
+
+                return x;
+            }
+
+            var incident = new Dictionary<int, List<(int Edge, int Bucket)>>();
+            for (var i = 0; i < count; i++)
+            {
+                void Touch(int node)
+                {
+                    if (!incident.TryGetValue(node, out var list))
+                    {
+                        list = new List<(int, int)>();
+                        incident[node] = list;
+                    }
+
+                    list.Add((i, undirected[i].Bucket));
+                }
+
+                Touch(undirected[i].A);
+                Touch(undirected[i].B);
+            }
+
+            foreach (var list in incident.Values)
+            {
+                for (var i = 0; i < list.Count; i++)
+                {
+                    for (var j = i + 1; j < list.Count; j++)
+                    {
+                        if (list[i].Bucket != list[j].Bucket)
+                        {
+                            continue;
+                        }
+
+                        var ra = Find(list[i].Edge);
+                        var rb = Find(list[j].Edge);
+                        if (ra != rb)
+                        {
+                            parent[rb] = ra;
+                        }
+                    }
+                }
+            }
+
+            var size = new int[count];
+            for (var i = 0; i < count; i++)
+            {
+                size[Find(i)]++;
+            }
+
+            _straightCorridorId = new Dictionary<long, int>();
+            var ids = new Dictionary<int, int>();
+            var nextId = 1;
+            for (var i = 0; i < count; i++)
+            {
+                var root = Find(i);
+                if (size[root] < 2)
+                {
+                    continue;
+                }
+
+                if (!ids.TryGetValue(root, out var id))
+                {
+                    id = nextId++;
+                    ids[root] = id;
+                }
+
+                _straightCorridorId[EdgeKey(undirected[i].A, undirected[i].B)] = id;
+            }
+        }
+
+        private static long EdgeKey(int a, int b) =>
+            a < b ? ((long)a << 32) | (uint)b : ((long)b << 32) | (uint)a;
+
+        /// <summary>沿直线走廊的行驶方向：对向符号相反。桶只表示这条线的朝向，不区分去回。</summary>
+        private static int TravelSense(WarehouseConveyorMap map, int from, int to)
+        {
+            if (!ConveyorJunctionAxis.TryGetBucket(map, from, to, out var bucket))
+            {
+                return 0;
+            }
+
+            var a = map.Nodes[from].EditorPosition;
+            var b = map.Nodes[to].EditorPosition;
+            var center = bucket * (Math.PI / 4d);
+            var proj = (b.x - a.x) * Math.Cos(center) + (b.y - a.y) * Math.Sin(center);
+            return proj >= 0d ? 1 : 2;
         }
 
         // 车身间距：zone 中心位置（与回放 / 间距自检同一套几何），两两距离缓存。
@@ -391,7 +567,103 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 releases.Add(new ZoneLockRelease { Key = key, StepIndex = rel, DelaySeconds = delay });
             }
 
+            // 通道锁仍按段拿。整段提前占容量锁会把同向也卡死，对向直段只加一把方向锁。
+            AddStraightCorridorTokens(chain, firstZ, lastZ, spurEdges, steps, releases);
             HoistClaimsIntoNodeApproach(steps, nearSpans);
+        }
+
+        /// <summary>
+        /// 同一条物理直道上，同一时刻只允许一个行驶方向。同向不限数量，仍由各段通道锁限流；
+        /// 对向在入口外等待，直到这条直道上的车尾都离开。
+        /// </summary>
+        private void AddStraightCorridorTokens(
+            List<ConveyorPathZone> chain,
+            Dictionary<int, int> firstZ,
+            Dictionary<int, int> lastZ,
+            HashSet<int> spurEdges,
+            List<ZoneKernelStep> steps,
+            List<ZoneLockRelease> releases)
+        {
+            if (_straightCorridorId == null || _straightCorridorId.Count == 0)
+            {
+                return;
+            }
+
+            var map = Ctx.Bindings.ConveyorMap;
+            var edges = new List<int>();
+            foreach (var e in firstZ.Keys)
+            {
+                if (spurEdges != null && spurEdges.Contains(e))
+                {
+                    continue;
+                }
+
+                edges.Add(e);
+            }
+
+            if (edges.Count == 0)
+            {
+                return;
+            }
+
+            edges.Sort();
+            var acquireAt = new Dictionary<(int Id, int Sense), int>();
+            var releaseAt = new Dictionary<(int Id, int Sense), (int Step, double Delay)>();
+            foreach (var e in edges)
+            {
+                var from = chain[firstZ[e]].FromNodeIndex;
+                var to = chain[firstZ[e]].ToNodeIndex;
+                if (!_straightCorridorId.TryGetValue(EdgeKey(from, to), out var id))
+                {
+                    continue;
+                }
+
+                var sense = TravelSense(map, from, to);
+                if (sense == 0)
+                {
+                    continue;
+                }
+
+                var pair = (id, sense);
+                var entry = firstZ[e] > 0 && chain[firstZ[e] - 1].Kind == ConveyorPathZoneKind.Junction
+                    ? firstZ[e] - 1
+                    : firstZ[e];
+                if (!acquireAt.TryGetValue(pair, out var existing) || entry < existing)
+                {
+                    acquireAt[pair] = entry;
+                }
+
+                var destIsJunction = Ctx.Topology.GetNode(to).Kind == SimConveyorNodeKind.Junction;
+                var rel = ResolveTailClearStep(chain, lastZ[e] + 1 + (destIsJunction ? 1 : 0), out var delay);
+                if (!releaseAt.TryGetValue(pair, out var prev)
+                    || rel > prev.Step
+                    || (rel == prev.Step && delay > prev.Delay))
+                {
+                    releaseAt[pair] = (rel, delay);
+                }
+            }
+
+            foreach (var pair in acquireAt.Keys)
+            {
+                if (!releaseAt.TryGetValue(pair, out var rel))
+                {
+                    continue;
+                }
+
+                var key = $"corr:{pair.Id}";
+                steps[acquireAt[pair]].AcquireOnMoveIn.Add(new ZoneLockClaim
+                {
+                    Key = key,
+                    Capacity = int.MaxValue,
+                    Direction = pair.Sense,
+                });
+                releases.Add(new ZoneLockRelease
+                {
+                    Key = key,
+                    StepIndex = rel.Step,
+                    DelaySeconds = rel.Delay,
+                });
+            }
         }
 
         /// <summary>
@@ -748,12 +1020,12 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             Pump();
         }
 
-        /// <summary>仿真结束时报告内核残留 / 违例。</summary>
-        internal void ReportDiagnostics()
+        /// <summary>仿真结束时报告内核残留 / 违例。返回滞留说明（无滞留则为 null）。</summary>
+        internal string ReportDiagnostics()
         {
             if (_primaryKernel == null)
             {
-                return;
+                return null;
             }
 
             foreach (var v in _primaryKernel.Violations)
@@ -761,15 +1033,21 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                 WarehouseSimLog.Error($"[ConveyorKernel/Primary] 不变量违例：{v}");
             }
 
-            if (_primaryKernel.ActiveCount > 0)
-            {
-                WarehouseSimLog.Error(
-                    $"[ConveyorKernel/Primary] 结束时仍有 {_primaryKernel.ActiveCount} 件货物在内核中（疑似死锁）：\n{_primaryKernel.DescribeStall()}");
-            }
-            else
+            if (_primaryKernel.ActiveCount <= 0)
             {
                 WarehouseSimLog.Info($"[ConveyorKernel/Primary] 完成：{_primaryGoalCount} 件货物经内核送达取货点。");
+                return null;
             }
+
+            var stall = _primaryKernel.DescribeStall();
+            if (string.IsNullOrWhiteSpace(stall))
+            {
+                stall = $"仍有 {_primaryKernel.ActiveCount} 件货物在内核中，但没有可推进事件。";
+            }
+
+            WarehouseSimLog.Error(
+                $"[ConveyorKernel/Primary] 结束时仍有 {_primaryKernel.ActiveCount} 件货物在内核中（疑似死锁）：\n{stall}");
+            return stall;
         }
 
         /// <summary>到达取货点：把内核时间线写回旧数据结构（zone 链、路段时刻表、子任务、回放），再交给旧堆垛机流程。</summary>

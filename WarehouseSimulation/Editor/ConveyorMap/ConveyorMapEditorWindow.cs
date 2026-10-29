@@ -1160,7 +1160,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
             const string fieldName = "SupportedInfeedLogicalIds";
             EditorGUILayout.LabelField("支持的入库口", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "可走本站加工的入库口逻辑 ID（多个）。带本站标签的入库任务只从这些口放货（多站取并集）。留空=不限制。",
+                "可走本站加工的入库口逻辑 ID（多个）。同标签多站取并集；多工序标签再取交集。留空=不限制。",
                 MessageType.Info);
 
             var prop = element != null ? element.FindPropertyRelative(fieldName) : null;

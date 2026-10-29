@@ -63,7 +63,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         internal void InitKernel() => _kernel.Init();
 
-        internal void ReportKernelDiagnostics() => _kernel.ReportDiagnostics();
+        internal string ReportKernelDiagnostics() => _kernel.ReportDiagnostics();
 
         internal void FillPickupDiagnostics(SimEventDiagnostics diag)
         {

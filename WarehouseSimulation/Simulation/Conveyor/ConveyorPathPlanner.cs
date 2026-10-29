@@ -14,6 +14,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
     /// </summary>
     public static class ConveyorPathPlanner
     {
+        [ThreadStatic]
+        private static WarehouseJob _routeAccessJobScratch;
+
         #region 公开 API
 
         /// <summary>从指定入库口出发：在可取货点中按策略选最优路径。</summary>
@@ -159,6 +162,39 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             }
 
             var infeedNode = topology.InfeedNodeIndices[infeedPortIndex];
+            if (access.HasTags)
+            {
+                var job = JobForRouteAccess(access);
+                foreach (var pickupNode in topology.PickupNodeIndices)
+                {
+                    ref var pickupNodeData = ref topology.GetNode(pickupNode);
+                    if (!StackerInteractionModeUtility.AllowsInbound(in pickupNodeData))
+                    {
+                        continue;
+                    }
+
+                    if (!IsPickupAvailable(topology, bindings, pickupReservationCounts, pickupNode))
+                    {
+                        continue;
+                    }
+
+                    if (TryFindPathForStrategy(
+                            topology,
+                            bindings,
+                            infeedNode,
+                            pickupNode,
+                            job,
+                            out var path)
+                        && path != null
+                        && path.Count >= 2)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
             var reachablePickups = topology.GetAccessiblePickupNodeIndices(infeedNode, access);
             for (var i = 0; i < reachablePickups.Length; i++)
             {
@@ -236,7 +272,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                     continue;
                 }
 
-                if (topology.HasAccessiblePathByTransit(infeedNode, pickupNode, access))
+                if (HasCommittedRouteFromInfeed(topology, bindings, infeedNode, pickupNode, access))
                 {
                     return true;
                 }
@@ -445,6 +481,40 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
         #endregion
 
         #region 寻路与评分（内部）
+
+        /// <summary>
+        /// 与正式选路一致的可达性：有加工标签时必须能拼出途经全部工序站的路径，
+        /// 不能只用「可穿过加工站」的宽松 BFS（否则会把只通缠膜、不通整形的入库口当成可用）。
+        /// </summary>
+        private static bool HasCommittedRouteFromInfeed(
+            ConveyorMapTopology topology,
+            IWarehouseSimulationBindings bindings,
+            int infeedNode,
+            int pickupNode,
+            ConveyorRouteAccess access)
+        {
+            if (!access.HasTags)
+            {
+                return topology.HasAccessiblePathByTransit(infeedNode, pickupNode, access);
+            }
+
+            return TryFindPathForStrategy(
+                       topology,
+                       bindings,
+                       infeedNode,
+                       pickupNode,
+                       JobForRouteAccess(access),
+                       out var path)
+                   && path != null
+                   && path.Count >= 2;
+        }
+
+        private static WarehouseJob JobForRouteAccess(in ConveyorRouteAccess access)
+        {
+            _routeAccessJobScratch ??= new WarehouseJob(0, 0);
+            _routeAccessJobScratch.RequiredProcessTags = access.Tags;
+            return _routeAccessJobScratch;
+        }
 
         private static bool TryFindPathForStrategy(
             ConveyorMapTopology topology,

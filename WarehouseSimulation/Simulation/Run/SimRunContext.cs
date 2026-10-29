@@ -139,7 +139,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
 
         public void ScheduleFlowPlan() => _flow.Schedule();
 
-        public void ReportKernelDiagnostics() => _conveyor.ReportKernelDiagnostics();
+        public string ReportKernelDiagnostics() => _conveyor.ReportKernelDiagnostics();
 
         public void ReportLiveProgress()
         {

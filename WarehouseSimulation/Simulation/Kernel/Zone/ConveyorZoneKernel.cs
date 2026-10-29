@@ -393,6 +393,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
 
             FreeZone(c, c.Steps[c.Current].ZoneKey);
             foreach (var key in new List<string>(c.HeldLocks)) ReleaseLock(c, key);
+            ForgetLockWaiter(cargoId);
             c.Done = true;
             RemoveActive(c);
             _cargos.Remove(cargoId);
@@ -587,7 +588,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
                         return false;
                     }
 
-                    if (ls.Count >= Math.Max(1, claim.Capacity) || HasEarlierOppositeWaiter(claim.Key, c, claim.Direction))
+                    if (ls.Count >= Math.Max(1, claim.Capacity)
+                        || (c.Current < 0 && HasEarlierOppositeWaiter(claim.Key, c, claim.Direction)))
                     {
                         return false;
                     }
@@ -646,16 +648,41 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
 
         private bool HasEarlierOppositeWaiter(string key, Cargo c, int direction)
         {
-            if (!_lockWaiters.TryGetValue(key, out var w)) return false;
+            if (!_lockWaiters.TryGetValue(key, out var w) || w.Count == 0) return false;
+            List<int> stale = null;
+            var blocked = false;
             foreach (var pair in w)
             {
+                if (!_cargos.ContainsKey(pair.Key))
+                {
+                    stale ??= new List<int>();
+                    stale.Add(pair.Key);
+                    continue;
+                }
+
                 if (pair.Key != c.Id && pair.Value.Direction != direction && pair.Value.Since < c.WaitingSince - Eps)
                 {
-                    return true;
+                    blocked = true;
                 }
             }
 
-            return false;
+            if (stale != null)
+            {
+                for (var i = 0; i < stale.Count; i++)
+                {
+                    w.Remove(stale[i]);
+                }
+            }
+
+            return blocked;
+        }
+
+        private void ForgetLockWaiter(int cargoId)
+        {
+            foreach (var w in _lockWaiters.Values)
+            {
+                w.Remove(cargoId);
+            }
         }
 
         private void FreeZone(Cargo c, string key)
@@ -812,10 +839,18 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation.Kernel.Zone
                 }
                 foreach (var claim in step.AcquireOnMoveIn)
                 {
-                    if (!c.HeldLocks.Contains(claim.Key) && _locks.TryGetValue(claim.Key, out var ls) && ls.Count > 0
-                        && (ls.Direction != claim.Direction || ls.Count >= claim.Capacity))
+                    if (c.HeldLocks.Contains(claim.Key) || !_locks.TryGetValue(claim.Key, out var ls) || ls.Count <= 0)
+                    {
+                        continue;
+                    }
+
+                    if (ls.Direction != claim.Direction || ls.Count >= claim.Capacity)
                     {
                         sb.Append($" 锁{claim.Key}(n={ls.Count},dir={ls.Direction})");
+                    }
+                    else if (c.Current < 0 && HasEarlierOppositeWaiter(claim.Key, c, claim.Direction))
+                    {
+                        sb.Append($" 让行{claim.Key}");
                     }
                 }
 

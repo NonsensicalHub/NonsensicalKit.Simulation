@@ -22,6 +22,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Tests
             failed += Run(sb, "Z06_Dwell_ProcessService", Z06);
             failed += Run(sb, "Z07_Proximity_NeighbourBlocksEntry", Z07);
             failed += Run(sb, "Z08_ClaimZone_WithLocks_TransferAndRelease", Z08);
+            failed += Run(sb, "Z09_HeadOnCorridor_BundleDoesNotDeadlock", Z09);
+            failed += Run(sb, "Z10_DirectionToken_OppositeWaitsSameDirectionEnters", Z10);
+            failed += Run(sb, "Z11_PlacedCargo_NotYieldingToOppositeWaiter", Z11);
             sb.AppendLine(failed == 0 ? "ALL PASSED" : $"FAILED: {failed}");
             return sb.ToString();
         }
@@ -185,6 +188,173 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Tests
             k.TryGetTimeline(1, out var ms, out var arr, out _);
             if (Math.Abs(ms[2] - (arr[1] + 30)) > Tol) return $"service leave {ms[2]} != {arr[1] + 30}";
             return null;
+        }
+
+        /// <summary>
+        /// 双向直段逐段占锁会对顶：两端各进一步后互相占着对方下一段。
+        /// 进入前一次拿齐整段锁时，先到的先走完，另一辆再进。
+        /// </summary>
+        private static string Z09()
+        {
+            var perSegment = HeadOn("逐段", bundle: false);
+            if (perSegment == null)
+            {
+                return "逐段占锁应死锁，实际两车都到了终点";
+            }
+
+            var bundled = HeadOn("整段", bundle: true);
+            return bundled;
+        }
+
+        private static string HeadOn(string label, bool bundle)
+        {
+            var k = new ConveyorZoneKernel();
+            ZoneLockClaim Lock(string key, int dir) => new ZoneLockClaim { Key = key, Capacity = 1, Direction = dir };
+            List<ZoneKernelStep> East()
+            {
+                var steps = new List<ZoneKernelStep>
+                {
+                    new ZoneKernelStep { ZoneKey = "E0", HopSeconds = 1 },
+                    new ZoneKernelStep { ZoneKey = "S1", HopSeconds = 1 },
+                    new ZoneKernelStep { ZoneKey = "S2", HopSeconds = 1 },
+                    new ZoneKernelStep { ZoneKey = "S3", HopSeconds = 1 },
+                    new ZoneKernelStep { ZoneKey = "GE", HopSeconds = 1 },
+                };
+                if (bundle)
+                {
+                    steps[0].AcquireOnMoveIn.Add(Lock("L1", 1));
+                    steps[0].AcquireOnMoveIn.Add(Lock("L2", 1));
+                    steps[0].AcquireOnMoveIn.Add(Lock("L3", 1));
+                }
+                else
+                {
+                    steps[1].AcquireOnMoveIn.Add(Lock("L1", 1));
+                    steps[2].AcquireOnMoveIn.Add(Lock("L2", 1));
+                    steps[3].AcquireOnMoveIn.Add(Lock("L3", 1));
+                }
+
+                return steps;
+            }
+
+            List<ZoneKernelStep> West()
+            {
+                var steps = new List<ZoneKernelStep>
+                {
+                    new ZoneKernelStep { ZoneKey = "W0", HopSeconds = 1 },
+                    new ZoneKernelStep { ZoneKey = "S3", HopSeconds = 1 },
+                    new ZoneKernelStep { ZoneKey = "S2", HopSeconds = 1 },
+                    new ZoneKernelStep { ZoneKey = "S1", HopSeconds = 1 },
+                    new ZoneKernelStep { ZoneKey = "GW", HopSeconds = 1 },
+                };
+                if (bundle)
+                {
+                    steps[0].AcquireOnMoveIn.Add(Lock("L1", 2));
+                    steps[0].AcquireOnMoveIn.Add(Lock("L2", 2));
+                    steps[0].AcquireOnMoveIn.Add(Lock("L3", 2));
+                }
+                else
+                {
+                    steps[1].AcquireOnMoveIn.Add(Lock("L3", 2));
+                    steps[2].AcquireOnMoveIn.Add(Lock("L2", 2));
+                    steps[3].AcquireOnMoveIn.Add(Lock("L1", 2));
+                }
+
+                return steps;
+            }
+
+            List<ZoneLockRelease> Rel(params string[] keys)
+            {
+                var list = new List<ZoneLockRelease>();
+                foreach (var key in keys)
+                {
+                    list.Add(new ZoneLockRelease { Key = key, StepIndex = 4, DelaySeconds = 0 });
+                }
+
+                return list;
+            }
+
+            k.Submit(1, East(), Rel("L1", "L2", "L3"), 0);
+            k.Submit(2, West(), Rel("L1", "L2", "L3"), 0);
+            Drain(k, 100);
+            k.TryGetTimeline(1, out _, out var a1, out _);
+            k.TryGetTimeline(2, out _, out var a2, out _);
+            var eastDone = !double.IsNaN(a1[4]);
+            var westDone = !double.IsNaN(a2[4]);
+            if (eastDone && westDone)
+            {
+                return k.Violations.Count == 0 ? null : label + " " + string.Join(";", k.Violations);
+            }
+
+            if (k.TryPeekNextEventTime(out _))
+            {
+                return label + " 未到终点但仍有事件";
+            }
+
+            return label + $" 对顶 east={eastDone} west={westDone} active={k.ActiveCount}";
+        }
+
+        /// <summary>
+        /// 直道方向锁容量不限：同向可在锁还没放时进入；对向要等持有者到终点释放后才进。
+        /// </summary>
+        private static string Z10()
+        {
+            var k = new ConveyorZoneKernel();
+            ZoneLockClaim Token(int dir) => new ZoneLockClaim { Key = "corr", Capacity = int.MaxValue, Direction = dir };
+            List<ZoneKernelStep> Go(string prefix, string shared, int dir)
+            {
+                return new List<ZoneKernelStep>
+                {
+                    new ZoneKernelStep { ZoneKey = prefix + "0", HopSeconds = 1, AcquireOnMoveIn = new List<ZoneLockClaim> { Token(dir) } },
+                    new ZoneKernelStep { ZoneKey = shared, HopSeconds = 1 },
+                    new ZoneKernelStep { ZoneKey = prefix + "2", HopSeconds = 1 },
+                };
+            }
+
+            var rel = new List<ZoneLockRelease> { new ZoneLockRelease { Key = "corr", StepIndex = 2, DelaySeconds = 0 } };
+            k.Submit(1, Go("e", "S", 1), rel, 0);
+            k.Submit(3, Go("f", "T", 1), rel, 0.5);
+            k.Submit(2, Go("w", "U", 2), rel, 1.5);
+            Drain(k, 100);
+            k.TryGetTimeline(1, out _, out var leadArrive, out _);
+            k.TryGetTimeline(3, out var follow, out var followArrive, out _);
+            k.TryGetTimeline(2, out var opp, out _, out _);
+            if (double.IsNaN(leadArrive[2]) || double.IsNaN(followArrive[2]) || double.IsNaN(opp[2])) return "方向锁下有车没走完";
+            if (!(follow[0] < leadArrive[2])) return $"同向应在先导车释放前进入，follow={follow[0]} leadDone={leadArrive[2]}";
+            if (!(opp[0] >= followArrive[2] - Tol)) return $"对向进早了 opp={opp[0]} followDone={followArrive[2]}";
+            return k.Violations.Count == 0 ? null : string.Join(";", k.Violations);
+        }
+
+        /// <summary>
+        /// 已经占着位置的车不能为了等对向而停在路口上，否则后面的车出不去。
+        /// 还没进入线路的车仍然把锁让给更早的对向。
+        /// </summary>
+        private static string Z11()
+        {
+            var k = new ConveyorZoneKernel();
+            ZoneLockClaim Token(int dir) => new ZoneLockClaim { Key = "corr", Capacity = int.MaxValue, Direction = dir };
+            List<ZoneLockRelease> Rel() => new List<ZoneLockRelease> { new ZoneLockRelease { Key = "corr", StepIndex = 1, DelaySeconds = 0 } };
+            k.Submit(3, new List<ZoneKernelStep>
+            {
+                new ZoneKernelStep { ZoneKey = "H0", HopSeconds = 1, AcquireOnMoveIn = new List<ZoneLockClaim> { Token(1) } },
+                new ZoneKernelStep { ZoneKey = "H1", HopSeconds = 10 },
+            }, Rel(), 0);
+            k.Submit(2, new List<ZoneKernelStep>
+            {
+                new ZoneKernelStep { ZoneKey = "W0", HopSeconds = 1, AcquireOnMoveIn = new List<ZoneLockClaim> { Token(2) } },
+                new ZoneKernelStep { ZoneKey = "W1", HopSeconds = 1 },
+            }, Rel(), 0);
+            if (!k.TryClaimZone("P", 1)) return "占不住起点";
+            k.SubmitPlaced(1, new List<ZoneKernelStep>
+            {
+                new ZoneKernelStep { ZoneKey = "P", HopSeconds = 0 },
+                new ZoneKernelStep { ZoneKey = "N", HopSeconds = 1, AcquireOnMoveIn = new List<ZoneLockClaim> { Token(1) } },
+            }, Rel(), 0);
+            k.AdvanceTo(0);
+            k.TryGetTimeline(1, out var placed, out _, out _);
+            k.TryGetTimeline(2, out var opp, out _, out _);
+            if (double.IsNaN(placed[1])) return "已在线上的车被对向让行拦住了";
+            if (!double.IsNaN(opp[0])) return "对向不该在方向锁还被占着时进入";
+            return k.Violations.Count == 0 ? null : string.Join(";", k.Violations);
         }
     }
 }

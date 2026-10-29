@@ -147,12 +147,17 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         }
 
         /// <summary>
-        /// 根据所需加工标签，收集匹配停留加工站上「支持的入库口」逻辑 ID 的并集，并解析为入库口序号。
+        /// 根据所需加工标签，解析允许的入库口序号。
         /// </summary>
         /// <remarks>
-        /// 约定：某加工站 <c>SupportedInfeedLogicalIds</c> 为空或未配置 → 该站不限制入库口（不向并集贡献约束）。
-        /// 若所有匹配站均为空列表 → <paramref name="hasRestriction"/> 为 false，行为与旧版一致（可选任意入库口）。
-        /// 若至少有一个匹配站配置了非空列表 → 只允许并集内的入库口；解析不到任何有效入库口时并集为空，表示无可选口。
+        /// 约定：
+        /// <list type="bullet">
+        /// <item>某加工站 <c>SupportedInfeedLogicalIds</c> 为空 → 该站不贡献约束。</item>
+        /// <item>同一加工标签下多个站：取其支持入库口的并集。</item>
+        /// <item>多个加工标签之间：取各标签并集的交集（必须同时满足每道工序的入库口约束）。</item>
+        /// <item>若所有匹配站均未配置限制 → <paramref name="hasRestriction"/> 为 false。</item>
+        /// <item>某标签有限制但解析后为空，或跨标签交集为空 → 有限制且允许口为空。</item>
+        /// </list>
         /// 直入任务（无加工标签）请勿调用，或调用后 <paramref name="hasRestriction"/> 为 false。
         /// </remarks>
         /// <returns>true 表示参数可用并已写入结果；false 表示 topology 无效。</returns>
@@ -177,7 +182,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                 return true;
             }
 
-            var contributed = false;
+            HashSet<int> tagPorts = null;
+            var anyTagRestricted = false;
             for (var t = 0; t < requiredProcessTags.Length; t++)
             {
                 var tag = requiredProcessTags[t]?.Trim();
@@ -186,6 +192,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                     continue;
                 }
 
+                tagPorts ??= new HashSet<int>();
+                tagPorts.Clear();
+                var tagContributed = false;
                 for (var i = 0; i < topology.ProcessStationNodeIndices.Count; i++)
                 {
                     var nodeIndex = topology.ProcessStationNodeIndices[i];
@@ -200,12 +209,30 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
                         continue;
                     }
 
-                    contributed = true;
-                    AddMatchingInfeedPorts(topology, ids, allowedPortIndices);
+                    tagContributed = true;
+                    AddMatchingInfeedPorts(topology, ids, tagPorts);
                 }
+
+                if (!tagContributed)
+                {
+                    continue;
+                }
+
+                if (!anyTagRestricted)
+                {
+                    foreach (var port in tagPorts)
+                    {
+                        allowedPortIndices.Add(port);
+                    }
+
+                    anyTagRestricted = true;
+                    continue;
+                }
+
+                allowedPortIndices.RemoveWhere(port => !tagPorts.Contains(port));
             }
 
-            hasRestriction = contributed;
+            hasRestriction = anyTagRestricted;
             return true;
         }
 
@@ -331,6 +358,9 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Core
         public string Signature => _signature ?? string.Empty;
 
         public bool HasTags => _tags != null && _tags.Length > 0;
+
+        /// <summary>已归一化（小写、去重、排序）的加工标签；无标签时为 null。</summary>
+        public string[] Tags => _tags;
 
         public static ConveyorRouteAccess FromJob(WarehouseJob job) =>
             FromTags(job?.RequiredProcessTags);

@@ -138,11 +138,21 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             using (_ctx.WallClockProfiler.Begin(SimWallClockProfilePhases.PostDiagnostics))
             {
                 var queuePending = _ctx.Queue.Count;
-                _ctx.ReportKernelDiagnostics();
+                var kernelStall = _ctx.ReportKernelDiagnostics();
                 LastEventDiagnostics = _ctx.BuildEventDiagnostics(queuePending);
                 _ctx.FinalizeFailureCounts();
                 result.FailureCounts = new Dictionary<SimJobFailureReason, int>(_ctx.FailureCounts);
                 var failureSummary = SimJobFailureReasonLabels.FormatSummary(result.FailureCounts);
+
+                string WithStall(string diagnostics)
+                {
+                    if (string.IsNullOrWhiteSpace(kernelStall))
+                    {
+                        return diagnostics;
+                    }
+
+                    return diagnostics + "\n输送内核滞留：\n" + kernelStall;
+                }
 
                 if (_ctx.EventCount >= _ctx.Bindings.MaxSimEvents)
                 {
@@ -154,7 +164,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                         failureSummary = SimJobFailureReasonLabels.FormatSummary(result.FailureCounts);
                     }
 
-                    var diagnostics = SimEventDiagnosticsCollector.FormatPlainText(LastEventDiagnostics);
+                    var diagnostics = WithStall(SimEventDiagnosticsCollector.FormatPlainText(LastEventDiagnostics));
                     WarehouseSimLog.Error($"超过最大事件数 {_ctx.Bindings.MaxSimEvents}，仿真中止。\n{diagnostics}");
                     result.Success = false;
                     result.Message =
@@ -165,7 +175,7 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
                          || _ctx.Flow.OutboundWaitingCount > 0
                          || _ctx.Flow.HasPendingReleases())
                 {
-                    var diagnostics = SimEventDiagnosticsCollector.FormatPlainText(LastEventDiagnostics);
+                    var diagnostics = WithStall(SimEventDiagnosticsCollector.FormatPlainText(LastEventDiagnostics));
                     WarehouseSimLog.Warn($"事件队列已空但未完成全部任务。\n{diagnostics}");
                     result.Success = false;
                     result.Message =

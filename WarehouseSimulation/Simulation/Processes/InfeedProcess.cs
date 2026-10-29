@@ -314,8 +314,8 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Simulation
             if (restrictInfeedByProcessStation && _allowedPorts.Count == 0)
             {
                 WarehouseSimLog.Detail(
-                    $"入库等候 {_ctx.Flow.InboundWaitingCount} 箱：加工站「支持的入库口」并集为空或无法解析，" +
-                    "无法放货。请检查加工站配置的入库口逻辑 ID。");
+                    $"入库等候 {_ctx.Flow.InboundWaitingCount} 箱：加工站「支持的入库口」约束为空或无法解析，" +
+                    "无法放货。请检查各工序加工站配置的入库口逻辑 ID（多工序为交集）。");
                 return false;
             }
 
