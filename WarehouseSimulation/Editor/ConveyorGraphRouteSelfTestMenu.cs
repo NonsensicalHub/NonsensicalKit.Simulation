@@ -1,4 +1,4 @@
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 using NonsensicalKit.Simulation.WarehouseSimulation.Tests;
 
@@ -11,12 +11,6 @@ namespace NonsensicalKit.Simulation.WarehouseSimulation.Editor
         public static void RunZoneKernel()
         {
             Show("Zone Kernel", "=== ZoneKernel ===\n" + ConveyorZoneKernelSelfTests.RunAll());
-        }
-
-        [MenuItem("Tools/Warehouse Simulation/Run Scenario JSON Self-Tests")]
-        public static void RunScenarioJson()
-        {
-            Show("Scenario JSON", "=== ScenarioJSON ===\n" + WarehouseSimScenarioJsonSelfTests.RunAll());
         }
 
         [MenuItem("Tools/Warehouse Simulation/Run All Warehouse Sim Self-Tests")]
