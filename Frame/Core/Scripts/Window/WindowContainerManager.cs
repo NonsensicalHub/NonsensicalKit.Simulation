@@ -6,6 +6,9 @@ using UnityEngine;
 /// 全局窗口容器管理器。
 /// 负责创建窗口实例、打开/关闭窗口，支持单例窗口与多实例窗口。
 /// </summary>
+
+namespace Frame.Core.Window
+{
 public class WindowContainerManager : MonoBehaviour
 {
     [Header("窗口容器预制体")]
@@ -40,6 +43,13 @@ public class WindowContainerManager : MonoBehaviour
                 window.OnClosed -= HandleWindowClosed;
                 window.OnFocusRequested -= HandleWindowFocusRequested;
             }
+        }
+
+        if (!string.IsNullOrEmpty(m_windowName)
+            && IOCC.TryGet<WindowContainerManager>(m_windowName, out var registered)
+            && ReferenceEquals(registered, this))
+        {
+            IOCC.Set<WindowContainerManager>(m_windowName, null);
         }
     }
 
@@ -217,4 +227,5 @@ public class WindowContainerManager : MonoBehaviour
         target.transform.SetAsLastSibling();
         RegisterOpenedWindow(target);
     }
+}
 }

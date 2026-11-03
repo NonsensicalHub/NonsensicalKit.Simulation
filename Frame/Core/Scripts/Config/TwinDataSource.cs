@@ -7,6 +7,9 @@ using UnityEngine;
 /// 配置资产 <see cref="TwinDataSourceConfig"/> 只决定启动默认值；
 /// 运行时用 <see cref="SetMode"/> 自由切换，不会写回配置。
 /// </summary>
+
+namespace Frame.Core.Config
+{
 public static class TwinDataSource
 {
     /// <summary>当前运行时模式。</summary>
@@ -102,4 +105,5 @@ public static class TwinDataSource
     {
         SetMode(DefaultMode);
     }
+}
 }

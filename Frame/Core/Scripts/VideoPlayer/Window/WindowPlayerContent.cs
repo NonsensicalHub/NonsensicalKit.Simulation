@@ -2,7 +2,11 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
+using Frame.Core.Window;
 
+
+namespace Frame.Core.VideoPlayer
+{
 public class WindowPlayerContent : MonoBehaviour, IWindowContent
 {
     [SerializeField] private RawImage m_image;
@@ -18,15 +22,14 @@ public class WindowPlayerContent : MonoBehaviour, IWindowContent
         if (_isInit) return;
         if (m_useBuildInVideoPlayer)
         {
-            Destroy(GetComponentInChildren<Frame.VideoPlayer.CustomVLCPlayer>());
+            VideoPlayerComponentUtil.DestroyNonBuildInPlayers(gameObject);
             _videoPlayer = GetComponentInChildren<BuildInVideoPlayer>();
         }
         else
         {
-            Destroy(GetComponentInChildren<BuildInVideoPlayer>());
-            Destroy(GetComponentInChildren<VideoPlayer>());
+            VideoPlayerComponentUtil.DestroyBuildInPlayers(gameObject);
 
-            _videoPlayer = GetComponentInChildren<Frame.VideoPlayer.CustomVLCPlayer>();
+            _videoPlayer = VideoPlayerComponentUtil.GetPlayer(this);
         }
 
         _videoPlayer.Init(m_image);
@@ -52,4 +55,5 @@ public class WindowPlayerContent : MonoBehaviour, IWindowContent
         _videoPlayer.Stop();
         return true;
     }
+}
 }

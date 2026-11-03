@@ -5,7 +5,11 @@ using NaughtyAttributes;
 using NonsensicalKit.Core;
 using NonsensicalKit.UGUI.Table;
 using UnityEngine;
+using Frame.Core.Binding;
 
+
+namespace Frame.Core.Table
+{
 public class TableControl : NonsensicalMono
 {
     [SerializeField] private ScrollTable m_scrollTable;
@@ -237,4 +241,5 @@ public class ElementConfig
     public bool IsTheLast;
     public string Value;
     public float Width;
+}
 }

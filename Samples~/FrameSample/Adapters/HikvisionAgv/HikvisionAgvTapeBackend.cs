@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
-using Framework.Core;
+using Frame.Core.Abstractions;
 using HikvisionAgv;
 using NonsensicalKit.Core;
 using UnityEngine;
+using Frame.Core.RecordPlayback;
 
 /// <summary>
 /// Samples：海康 AGV JSONL 回放后端。挂到场景任意物体即可（建议与 AgvStatusTapePlayer 同物体）。
 /// 依赖宿主工程 HikvisionAgv（Network 的 StatusTape / StatusRequest + Runtime 事件与 DTO）。
 /// </summary>
+
+namespace Frame.Sample.Adapters
+{
 [DisallowMultipleComponent]
 public class HikvisionAgvTapeBackend : MonoBehaviour, IAgvStatusTapePlaybackBackend
 {
@@ -136,4 +140,5 @@ public class HikvisionAgvTapeBackend : MonoBehaviour, IAgvStatusTapePlaybackBack
         public int DataCount { get; }
         public string PositionSignature { get; }
     }
+}
 }

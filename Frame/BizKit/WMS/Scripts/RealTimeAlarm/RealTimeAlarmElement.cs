@@ -3,8 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-
-namespace Frame.RealTimeAlarm
+namespace Frame.BizKit.WMS.RealTimeAlarm
 {
     public class RealTimeAlarmElement : ListTableElement<RealTimeAlarmInfo>, IPointerClickHandler
     {

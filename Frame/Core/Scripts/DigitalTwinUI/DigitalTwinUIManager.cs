@@ -6,6 +6,9 @@ using NonsensicalKit.Core.Service;
 using NonsensicalKit.Tools.ObjectPool;
 using UnityEngine;
 
+
+namespace Frame.Core.DigitalTwinUI
+{
 [ServicePrefab("Services/DigitalTwinUIManager")]
 public class DigitalTwinUIManager : NonsensicalMono, IMonoService
 {
@@ -17,6 +20,7 @@ public class DigitalTwinUIManager : NonsensicalMono, IMonoService
     private Dictionary<string, GameObjectPoolMk2> _pools;
     private readonly Dictionary<string, UIPoint> _uiPoints = new();
     private readonly Dictionary<string, GameObject> _uiPointsObjs = new();
+    private readonly Dictionary<string, string> _uiPointTypes = new();
     private bool _listenerReady;
 
     public bool IsReady => _listenerReady;
@@ -37,7 +41,6 @@ public class DigitalTwinUIManager : NonsensicalMono, IMonoService
             _pools.Add(item.Type, new GameObjectPoolMk2(item.Prefab, OnReset, OnInit));
         }
 
-        // 先挂监听并缓存，避免 UIPoint 早于各 UI Init 发出的注册丢失
         IOCC.AddListener<UIPoint>(RegisterUIPointKey, OnRegisterUIPointMessage);
         _listenerReady = true;
         InitCompleted?.Invoke();
@@ -50,6 +53,8 @@ public class DigitalTwinUIManager : NonsensicalMono, IMonoService
             IOCC.RemoveListener<UIPoint>(RegisterUIPointKey, OnRegisterUIPointMessage);
         _listenerReady = false;
         _uiPoints.Clear();
+        _uiPointsObjs.Clear();
+        _uiPointTypes.Clear();
     }
 
     private void OnInit(GameObject UIbase)
@@ -62,13 +67,9 @@ public class DigitalTwinUIManager : NonsensicalMono, IMonoService
         UIbase.SetActive(false);
     }
 
-    /// <summary>
-    /// 供 UIPoint 直接注册，不依赖 IOCC 时序。
-    /// </summary>
     public void RegisterUIPoint(UIPoint uiPoint)
     {
         CacheUIPoint(uiPoint);
-        // 同步广播，已就绪的 UI 监听者可立即收到
         IOCC.Set(RegisterUIPointKey, uiPoint);
     }
 
@@ -105,13 +106,13 @@ public class DigitalTwinUIManager : NonsensicalMono, IMonoService
                 go = _pools[info.Type].New();
                 go.transform.SetParent(m_canvas.transform);
                 _uiPointsObjs.Add(info.ID, go);
+                _uiPointTypes[info.ID] = info.Type;
             }
 
             if (go.TryGetComponent<IDigitalTwinUI>(out var v))
             {
                 v.Init(info.Point, info);
 
-                // Init 里才 AddListener，补发已缓存的 UIPoint，避免时序丢失
                 if (TryGetUIPoint(info.ID, out var uiPoint))
                     IOCC.Set(RegisterUIPointKey, uiPoint);
             }
@@ -125,6 +126,32 @@ public class DigitalTwinUIManager : NonsensicalMono, IMonoService
             LogCore.Warning($"类型：{info.Type} 的预制体尚未配置");
         }
     }
+
+    /// <summary>场景点销毁时归还对象池并清缓存。</summary>
+    public void Unregister(string id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return;
+        }
+
+        if (_uiPointsObjs.TryGetValue(id, out var go) && go != null)
+        {
+            if (_uiPointTypes.TryGetValue(id, out var type) && _pools.TryGetValue(type, out var pool))
+            {
+                pool.Store(go);
+            }
+            else
+            {
+                Destroy(go);
+            }
+
+            _uiPointsObjs.Remove(id);
+        }
+
+        _uiPointTypes.Remove(id);
+        _uiPoints.Remove(id);
+    }
 }
 
 [Serializable]
@@ -132,4 +159,5 @@ public class DigitalTwinUIPrefabConfig
 {
     public string Type;
     public GameObject Prefab;
+}
 }

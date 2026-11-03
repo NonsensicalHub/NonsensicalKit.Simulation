@@ -5,6 +5,9 @@ using NonsensicalKit.Core.Service.Config;
 using NonsensicalKit.Tools.CameraTool;
 using UnityEngine;
 
+
+namespace Frame.Core.FocusCamera
+{
 public class ConfigurableCamera : NonsensicalCamera
 {
     [HorizontalLine(color: EColor.Blue)]
@@ -114,4 +117,5 @@ public class ConfigurableCamera : NonsensicalCamera
             m_config.data.cameraConfigs.Add(temp);
         }
     }
+}
 }

@@ -7,7 +7,11 @@ using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using Frame.Core.Binding;
 
+
+namespace Frame.Core.Editor
+{
 public class JsonBindingEditorWindow : EditorWindow
 {
     private enum LogLevel { Info, Success, Warning, Error }
@@ -579,9 +583,9 @@ public class JsonBindingEditorWindow : EditorWindow
     private void SyncComponents(GameObject src, GameObject dst)
     {
         // 移除 dst 上多余的组件（源上不存在的）
-        var dstComps = new List<Component>(dst.GetComponents<Component>());
+        var dstComps = new List<UnityEngine.Component>(dst.GetComponents<UnityEngine.Component>());
         var srcTypes = new HashSet<Type>();
-        foreach (var c in src.GetComponents<Component>())
+        foreach (var c in src.GetComponents<UnityEngine.Component>())
             if (c != null)
                 srcTypes.Add(c.GetType());
 
@@ -596,7 +600,7 @@ public class JsonBindingEditorWindow : EditorWindow
         }
 
         // 复制源组件到目标（UnityEditorInternal 提供的内部 API）
-        foreach (var srcComp in src.GetComponents<Component>())
+        foreach (var srcComp in src.GetComponents<UnityEngine.Component>())
         {
             if (srcComp == null || srcComp is Transform) continue;
 
@@ -725,5 +729,6 @@ public class JsonBindingEditorWindow : EditorWindow
 
     private void AddLog(LogLevel level, string msg) =>
         _logs.Add(new LogEntry { Level = level, Message = msg });
+}
 }
 #endif

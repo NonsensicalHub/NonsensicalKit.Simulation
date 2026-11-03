@@ -8,6 +8,9 @@ using UnityEngine;
 /// 在线模式由真实接口 Binder / Request 接管。
 /// 会监听 <see cref="TwinDataSource.ModeChanged"/>，运行时切换时自动启停。
 /// </summary>
+
+namespace Frame.Core.Config
+{
 public abstract class MockDataProviderBase : NonsensicalMono
 {
     [SerializeField, Tooltip("为 true 时即使在线也启用 Mock（仅调试用）")]
@@ -79,4 +82,5 @@ public abstract class MockDataProviderBase : NonsensicalMono
     {
         Debug.Log($"[{GetType().Name}] 在线模式，跳过 Mock 数据。", this);
     }
+}
 }

@@ -1,6 +1,6 @@
 {
   "name": "Frame.Core.Editor",
-  "rootNamespace": "",
+  "rootNamespace": "Frame.Core.Editor",
   "references": [
     "Frame.Core",
     "NonsensicalKit.Core.Runtime",
@@ -9,12 +9,13 @@
     "NonsensicalKit.NaughtyAttributes.Editor",
     "Unity.TextMeshPro"
   ],
-  "includePlatforms": [ "Editor" ],
+  "includePlatforms": [
+    "Editor"
+  ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": false,
   "precompiledReferences": [
-    "MQTTnet.dll",
     "Newtonsoft.Json.dll"
   ],
   "autoReferenced": true,

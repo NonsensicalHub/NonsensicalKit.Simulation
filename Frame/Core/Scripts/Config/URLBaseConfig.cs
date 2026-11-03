@@ -1,10 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using NaughtyAttributes;
 using NonsensicalKit.Core.Service.Config;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
+
+namespace Frame.Core.Config
+{
 [CreateAssetMenu(fileName = "URLBaseConfig", menuName = "ScriptableObjects/URLBaseConfig")]
 public class URLBaseConfig : ConfigObject
 {
@@ -53,6 +56,9 @@ public class WarehouseServerEntry
 
     [Tooltip("该后台的 HTTP 根地址，勿带末尾斜杠")]
     public string BaseUrl;
+
+    [Tooltip("该后台鉴权头（可选）。空则回退 URLBaseData.Authorization")]
+    public string Authorization;
 }
 
 [Serializable]
@@ -73,4 +79,5 @@ public class URLBaseData : ConfigData
 
     [Header("MQTT订阅")]
     public List<MQTTConfig> MqttTopics = new List<MQTTConfig>();
+}
 }

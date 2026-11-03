@@ -2,6 +2,9 @@ using System;
 using TMPro;
 using UnityEngine;
 
+
+namespace Frame.BizKit.WMS.RealTimeAlarm
+{
 public class WarningDetailCell : MonoBehaviour
 {
     [SerializeField] private TMP_Text m_text;
@@ -18,4 +21,5 @@ public class WarningDetailCell : MonoBehaviour
         m_text.text = info.Item1;
         m_text2.text = info.Item2;
     }
+}
 }

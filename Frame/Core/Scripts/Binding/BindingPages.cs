@@ -15,6 +15,9 @@ using UnityEngine;
 ///.
 /// "$prefab" 字段指定从 Resources 加载的预制体名，"$content"字段作为内容递归绑定。
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingPages : BindingToken
 {
     [Tooltip("页面挂载的父节点。为空则使用自身 Transform。")]
@@ -86,4 +89,5 @@ public class BindingPages : BindingToken
 
         return result;
     }
+}
 }

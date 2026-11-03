@@ -2,6 +2,9 @@ using Newtonsoft.Json.Linq;
 using NonsensicalKit.Core.DagLogicNode;
 using UnityEngine;
 
+
+namespace Frame.Core.Binding
+{
 public class BindingNodeSwitcher : BindingToken
 {
     [SerializeField] private DagNodeSwitcher m_dagNodeSwitcher;
@@ -27,4 +30,5 @@ public class BindingNodeSwitcher : BindingToken
 
         return new JValue(m_dagNodeSwitcher.TargetNodeID);
     }
+}
 }

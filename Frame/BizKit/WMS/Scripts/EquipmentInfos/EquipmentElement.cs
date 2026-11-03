@@ -3,8 +3,7 @@ using NonsensicalKit.Core.DagLogicNode;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-
-namespace Frame.Equipment
+namespace Frame.BizKit.WMS.Equipment
 {
     public class EquipmentElement : NonsensicalMono
     {

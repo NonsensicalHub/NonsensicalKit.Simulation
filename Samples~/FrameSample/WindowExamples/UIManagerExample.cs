@@ -2,10 +2,14 @@ using NaughtyAttributes;
 using NonsensicalKit.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using Frame.Core.Window;
 
 /// <summary>
 /// 在任意脚本中打开窗口的示例。可在 Inspector 用 Button，或绑定 UI Button。
 /// </summary>
+
+namespace Frame.Sample.WindowExamples
+{
 public class UIManagerExample : MonoBehaviour
 {
     [SerializeField] private string m_windowName = "DemoWindow";
@@ -58,4 +62,5 @@ public class UIManagerExample : MonoBehaviour
                 $"[UIManagerExample] 未找到 WindowContainerManager「{m_windowName}」。请确认场景中已挂载且 m_windowName 一致。");
         }
     }
+}
 }

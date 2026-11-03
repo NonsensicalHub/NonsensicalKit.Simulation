@@ -5,6 +5,9 @@ using NonsensicalKit.UGUI;
 using NonsensicalKit.WebGL;
 using UnityEngine;
 
+
+namespace Frame.Core.Component
+{
 public partial class WebBrowser
 {
     private RectTransform _rect;
@@ -87,5 +90,6 @@ public partial class WebBrowser
         _x = new Vector3(_vs[0].x / Screen.width, _vs[0].y / Screen.height);
         _y = new Vector3(_vs[1].x / Screen.width, _vs[1].y / Screen.height);
     }
+}
 }
 #endif

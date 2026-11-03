@@ -4,6 +4,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+
+namespace Frame.Core.Table
+{
 public class TableElement : MonoBehaviour
 {
     [SerializeField] private Image m_bgImage;
@@ -56,4 +59,5 @@ public class TableElement : MonoBehaviour
             return elementObj.GetComponentInChildren<TMP_Text>();
         }
     }
+}
 }

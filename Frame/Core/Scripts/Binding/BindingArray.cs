@@ -6,6 +6,9 @@ using UnityEngine;
 /// 数组绑定：根据 JArray 动态生成子项预制体，并递归绑定每个子项。
 /// 每个数组元素必须是 JObject，对应子预制体上的 BindingToken。
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingArray : BindingToken
 {
     [Tooltip("每个数组元素对应的子项预制体。")]
@@ -74,4 +77,5 @@ public class BindingArray : BindingToken
         m_itemPrefab.SetActive(false);
         return list;
     }
+}
 }

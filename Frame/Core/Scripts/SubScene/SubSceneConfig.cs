@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-
-namespace Framework.Core
+namespace Frame.Core.SubScene
 {
     // =========================================================================
     //  单条场景声明

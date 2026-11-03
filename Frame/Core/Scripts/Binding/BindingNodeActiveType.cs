@@ -3,6 +3,9 @@ using Newtonsoft.Json.Linq;
 using NonsensicalKit.Core.DagLogicNode;
 using UnityEngine;
 
+
+namespace Frame.Core.Binding
+{
 public class BindingNodeActiveType : BindingToken
 {
     [SerializeField] private DagNodeControlActive m_dagNodeControl;
@@ -31,4 +34,5 @@ public class BindingNodeActiveType : BindingToken
 
         return new JValue(m_dagNodeControl.CheckType);
     }
+}
 }

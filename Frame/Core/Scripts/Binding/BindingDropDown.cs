@@ -5,6 +5,9 @@ using NonsensicalKit.UGUI;
 using TMPro;
 using UnityEngine;
 
+
+namespace Frame.Core.Binding
+{
 public class BindingDropDown : BindingToken
 {
     [SerializeField] private TMP_Dropdown m_dropdown;
@@ -43,4 +46,5 @@ public class BindingDropDown : BindingToken
 
         return options;
     }
+}
 }

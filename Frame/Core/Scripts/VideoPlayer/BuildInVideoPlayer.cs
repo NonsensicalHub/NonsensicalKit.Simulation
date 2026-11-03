@@ -2,10 +2,14 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
+using UnityVideoPlayer = UnityEngine.Video.VideoPlayer;
 
+
+namespace Frame.Core.VideoPlayer
+{
 public class BuildInVideoPlayer : MonoBehaviour, IVideoPlayer
 {
-    [SerializeField] private VideoPlayer m_videoPlayer;
+    [SerializeField] private UnityVideoPlayer m_videoPlayer;
 
     [SerializeField] private Vector2Int m_renderTextureSize = new Vector2Int(1280, 720);
     private RenderTexture m_renderTexture;
@@ -55,4 +59,5 @@ public class BuildInVideoPlayer : MonoBehaviour, IVideoPlayer
     {
         m_videoPlayer.Stop();
     }
+}
 }

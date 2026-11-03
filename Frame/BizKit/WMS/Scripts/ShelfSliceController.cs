@@ -6,6 +6,9 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 
+
+namespace Frame.BizKit.WMS
+{
 public class ShelfSliceController : NonsensicalMono
 {
     // 外部可监听当前是否存在列动画（例如用于禁用交互）。
@@ -489,4 +492,5 @@ public class ShelfSliceController : NonsensicalMono
     }
 
     #endregion
+}
 }

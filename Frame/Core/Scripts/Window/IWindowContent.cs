@@ -3,6 +3,9 @@
 /// 窗口在实例化预制体后会调用 OnContentInit 传入参数，
 /// 关闭前会调用 OnContentClose 用于清理。
 /// </summary>
+
+namespace Frame.Core.Window
+{
 public interface IWindowContent
 {
     /// <summary>
@@ -26,4 +29,5 @@ public interface IWindowHandleReceiver
 {
     string WindowHandle { get; set; }
     void SetWindowHandle(string windowHandle);
+}
 }

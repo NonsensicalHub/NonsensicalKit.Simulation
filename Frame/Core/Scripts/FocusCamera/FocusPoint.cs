@@ -1,12 +1,18 @@
 using NonsensicalKit.Core;
 using UnityEngine;
 
+
+namespace Frame.Core.FocusCamera
+{
 public class FocusPoint : MonoBehaviour
 {
     [SerializeField] private string m_id;
     [SerializeField] private GameObject m_point;
 
     [SerializeField] private bool m_autoInit = true;
+
+    [SerializeField, Tooltip("ConfigurableCamera 写入 IOCC 时的名称，需与相机组件一致")]
+    private string m_focusCameraIoccName = "FocusCamera";
 
     private bool _subscribed;
 
@@ -65,6 +71,15 @@ public class FocusPoint : MonoBehaviour
 
     private void FocusEquipment()
     {
-        IOCC.Get<ConfigurableCamera>("FocusCamera").StartFocus(transform);
+        if (!IOCC.TryGet<ConfigurableCamera>(m_focusCameraIoccName, out var cam) || cam == null)
+        {
+            Debug.LogWarning(
+                $"[FocusPoint] 未找到 ConfigurableCamera「{m_focusCameraIoccName}」，跳过注视。id={m_id}",
+                this);
+            return;
+        }
+
+        cam.StartFocus(transform);
     }
+}
 }

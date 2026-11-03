@@ -1,7 +1,11 @@
 using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
+using Frame.Core.Binding;
 
+
+namespace Frame.BizKit.WMS
+{
 public class BindingStorageAnatomyControl : BindingToken
 {
     [SerializeField] private StorageAnatomyControl m_control;
@@ -69,4 +73,5 @@ public class BindingStorageAnatomyControl : BindingToken
             ["货架解剖量词"] = quantifier
         };
     }
+}
 }

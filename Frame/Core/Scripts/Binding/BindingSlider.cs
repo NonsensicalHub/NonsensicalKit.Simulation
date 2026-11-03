@@ -6,6 +6,9 @@ using UnityEngine.UI;
 /// 绑定 Slider 数值（可选手动设置 min/max）。
 /// JSON：number，或 { "value": 0.5, "min"?: 0, "max"?: 1 }
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingSlider : BindingToken
 {
     [SerializeField] private Slider m_slider;
@@ -92,4 +95,5 @@ public class BindingSlider : BindingToken
 
         return float.TryParse(token.ToString(), out value);
     }
+}
 }

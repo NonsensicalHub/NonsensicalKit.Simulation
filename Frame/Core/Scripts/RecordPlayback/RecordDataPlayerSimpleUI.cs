@@ -7,6 +7,9 @@ using UnityEngine.UI;
 /// <summary>
 /// 运行时生成一套回放 UI：打开按钮 + 可拖拽面板（含关闭）。
 /// </summary>
+
+namespace Frame.Core.RecordPlayback
+{
 public class RecordDataPlayerSimpleUI : MonoBehaviour
 {
     [SerializeField] private RecordDataPlayer m_player;
@@ -437,4 +440,5 @@ public class RecordDataPlayerSimpleUI : MonoBehaviour
         toggle.isOn = false;
         return toggle;
     }
+}
 }

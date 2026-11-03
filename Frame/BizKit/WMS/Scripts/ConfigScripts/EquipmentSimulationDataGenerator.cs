@@ -1,14 +1,18 @@
 using System.Collections.Generic;
-using Frame.Equipment;
+using Frame.BizKit.WMS.Equipment;
 using Newtonsoft.Json;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using Frame.Core.Config;
 
 /// <summary>
 /// 离线 Mock：设备详情查询 Handler。在线时不注册，由真实接口 Handler 接管。
 /// 可选：外部可通过 <see cref="SetEquipmentInfoSuspended"/> 临时挂起本 Handler（例如业务侧接管查询）。
 /// 无外部脚本时本组件行为与原框架一致。
 /// </summary>
+
+namespace Frame.BizKit.WMS
+{
 public class EquipmentSimulationDataGenerator : MockDataProviderBase
 {
     private bool _mockActive;
@@ -94,4 +98,5 @@ public class EquipmentSimulationDataGenerator : MockDataProviderBase
 
         return (baseDic, dic);
     }
+}
 }

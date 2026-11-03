@@ -4,6 +4,9 @@ using NonsensicalKit.Core.DagLogicNode;
 using TMPro;
 using UnityEngine;
 
+
+namespace Frame.BizKit.WMS
+{
 public class StorageAnatomyControl : NonsensicalMono
 {
     [SerializeField] private TMP_Dropdown m_dropDown;
@@ -46,4 +49,5 @@ public class StorageAnatomyControl : NonsensicalMono
     {
         IOCC.Set<int>(_levelCommand, -1);
     }
+}
 }

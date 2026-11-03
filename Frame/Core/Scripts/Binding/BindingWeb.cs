@@ -1,10 +1,14 @@
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using Frame.Core.Component;
 
 /// <summary>
 /// 绑定内嵌网页浏览器。
 /// JSON 格式：字符串 URL，或 { "Url": "...", "UrlType": "Http|StreamingAssets|File" }
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingWeb : BindingToken
 {
     [SerializeField] private WebBrowser m_webBrowser;
@@ -60,4 +64,5 @@ public class BindingWeb : BindingToken
             ["UrlType"] = m_webBrowser.CurrentUrlType.ToString()
         };
     }
+}
 }

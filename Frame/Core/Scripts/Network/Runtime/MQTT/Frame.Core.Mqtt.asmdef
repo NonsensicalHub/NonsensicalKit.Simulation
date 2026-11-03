@@ -1,0 +1,24 @@
+{
+  "name": "Frame.Core.Mqtt",
+  "rootNamespace": "Frame.Core.Mqtt",
+  "references": [
+    "Frame.Core",
+    "UniTask",
+    "NonsensicalKit.Core.Runtime",
+    "NonsensicalKit.NaughtyAttributes",
+    "NonsensicalKit.DigitalTwin.Motion",
+    "NonsensicalKit.WebGL.WebBridge"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [
+    "MQTTnet.dll",
+    "Newtonsoft.Json.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

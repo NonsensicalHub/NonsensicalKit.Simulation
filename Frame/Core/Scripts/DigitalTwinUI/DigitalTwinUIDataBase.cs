@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+
+namespace Frame.Core.DigitalTwinUI
+{
 [System.Serializable]
 public class DigitalTwinUIDataBase : ConfigData
 {
@@ -10,4 +13,5 @@ public class DigitalTwinUIDataBase : ConfigData
     /// 在哪些节点会显示
     /// </summary>
     public string[] ShowNodes;
+}
 }

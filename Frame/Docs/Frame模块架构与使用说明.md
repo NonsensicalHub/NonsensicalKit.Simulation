@@ -1,4 +1,4 @@
-# Frame 模块架构与使用说明
+﻿# Frame 模块架构与使用说明
 
 > 目标定位：**Frame 是一套与具体项目业务解耦的通用框架，核心能力是"模板预制体 + JSON 数据"驱动 UI 与数字孪生功能的快速生成**，最终希望做到——新项目只需准备「UI 模板预制体」与「业务 JSON」，即可低代码/零代码拼出一整套项目 UI 与配套运行时功能（弹窗、世界空间标签、网络接入、设备信息、报警、表格图表、检索等）。
 >
@@ -17,7 +17,7 @@ Assets/Frame/
 ├─ Core/                          ★通用框架（新项目优先只依赖本层）
 │  ├─ Scripts/
 │  │  ├─ Abstractions/            可选插件接口 + FrameOptionalServices
-│  │  ├─ Binding/ Window/ DigitalTwinUI/ NetWork/ Config/
+│  │  ├─ Binding/ Window/ DigitalTwinUI/ Network/ Config/
 │  │  ├─ RecordPlayback/ FocusCamera/ Table/ UI/ Component/ VideoPlayer/ SubScene/
 │  │  └─ …
 │  ├─ Editor/                     JSON Binding 等
@@ -25,7 +25,7 @@ Assets/Frame/
 ├─ BizKit/WMS/                    ★仓储/冷链业务件（非仓储可不引用）
 │  ├─ Scripts/ … / Editor/
 │  └─ Frame.BizKit.WMS.asmdef
-├─ ThirdParty/                    XCharts、ZCalendar
+├─ （ThirdParty 已迁至 Samples~/FrameSample/ThirdParty）
 ├─ Docs/                          本文档
 └─ README.txt
 
@@ -171,7 +171,7 @@ public abstract class BindingToken : MonoBehaviour
 
 ---
 
-## 5. 网络与配置中心（NetWork / Config）
+## 5. 网络与配置中心（Network / Config）
 
 这一层是把 UI 和"真实数据源"对接起来的桥梁，同样走**配置驱动**：
 
@@ -206,7 +206,7 @@ public abstract class BindingToken : MonoBehaviour
 - **注视相机**：在场景 `FocusPointManager` 上配置 `m_focusCameraPrefab`（或指定场景内 `m_camera`）。示例资源：`Assets/FrameSample/WmsDemo/Resources/注视相机.prefab`。
 - **`Assets/FrameSample/WmsDemo/`**：演示用 Prefabs / Resources / Sprites（含 `RecordPlaybackControl.prefab`、业务页面模板、`Sprites/ai image` 皮肤等）。录制回放 UI 直接引用该 Prefab，无需 Editor 生成脚本。
 - **`Assets/FrameSample/Adapters/`**：可选 `HikvisionAgv` / `HighlightPlus` 接口实现；VLC / Vuplex 实现已在 Core（仍依赖宿主 `Assets/Plugins`）。
-- **`ThirdParty/`**：`XCharts`（图表库）、`ZCalendar`（日历选择控件）。
+- **`Samples~/FrameSample/ThirdParty/`**：`XCharts`（图表库）、`ZCalendar`（日历选择控件）；不再放在 `Frame/` 下。图表 binder 见同 Sample 的 `Optional/XCharts`。
 
 ---
 

@@ -1,11 +1,15 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Frame.Core.Window;
 
 /// <summary>
 /// 示例：角色详情内容，可被加载到 WindowContainer 中。
 /// 若未在 Inspector 绑定，会按子节点名 Name / Avatar / Description 自动查找。
 /// </summary>
+
+namespace Frame.Sample.WindowExamples
+{
 public class CharacterDetailContent : MonoBehaviour, IWindowContent
 {
     [SerializeField] private TextMeshProUGUI _nameLabel;
@@ -61,4 +65,5 @@ public class CharacterDetailContent : MonoBehaviour, IWindowContent
         Debug.Log("[CharacterDetailContent] 正在关闭，执行清理逻辑...");
         return true;
     }
+}
 }

@@ -1,10 +1,14 @@
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using Frame.Core.UI;
 
 /// <summary>
 /// 绑定 SliderInputField 组合控件（信号 ID + 数值范围）。
-/// JSON：{ "绑定信号": "...", "货架切片数量": n }
+/// JSON 优先英文键 signal / max；兼容旧键「绑定信号」「货架切片数量」。
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingSliderInputField : BindingToken
 {
     [SerializeField] private SliderInputField m_sliderInputField;
@@ -28,14 +32,13 @@ public class BindingSliderInputField : BindingToken
             return;
         }
 
-        if (obj.TryGetValue("绑定信号", out var signal))
+        if (TryGetString(obj, out var signal, "signal", "绑定信号"))
         {
-            m_sliderInputField.SignalID = signal.Value<string>();
+            m_sliderInputField.SignalID = signal;
         }
 
-        if (obj.TryGetValue("货架切片数量", out var value))
+        if (TryGetInt(obj, out var max, "max", "货架切片数量"))
         {
-            int max = value.Value<int>();
             m_sliderInputField.SetRange(1, max);
             m_sliderInputField.DefaultValue = max;
         }
@@ -48,15 +51,46 @@ public class BindingSliderInputField : BindingToken
             LogWarning($"{name} 缺少 SliderInputField");
             return new JObject
             {
-                ["绑定信号"] = string.Empty,
-                ["货架切片数量"] = 0
+                ["signal"] = string.Empty,
+                ["max"] = 0
             };
         }
 
         return new JObject
         {
-            ["绑定信号"] = m_sliderInputField.SignalID ?? string.Empty,
-            ["货架切片数量"] = Mathf.RoundToInt(m_sliderInputField.MaxValue)
+            ["signal"] = m_sliderInputField.SignalID ?? string.Empty,
+            ["max"] = Mathf.RoundToInt(m_sliderInputField.MaxValue)
         };
     }
+
+    private static bool TryGetString(JObject obj, out string value, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (obj.TryGetValue(key, out var token) && token != null && token.Type != JTokenType.Null)
+            {
+                value = token.Value<string>();
+                return true;
+            }
+        }
+
+        value = null;
+        return false;
+    }
+
+    private static bool TryGetInt(JObject obj, out int value, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (obj.TryGetValue(key, out var token) && token != null && token.Type != JTokenType.Null)
+            {
+                value = token.Value<int>();
+                return true;
+            }
+        }
+
+        value = 0;
+        return false;
+    }
+}
 }

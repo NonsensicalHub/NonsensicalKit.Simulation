@@ -1,6 +1,6 @@
 {
   "name": "Frame.Core",
-  "rootNamespace": "",
+  "rootNamespace": "Frame.Core",
   "references": [
     "UniTask",
     "NonsensicalKit.Core.Runtime",
@@ -10,7 +10,6 @@
     "NonsensicalKit.UGUI.Table",
     "NonsensicalKit.WebGL.WebBridge",
     "Unity.Cinemachine",
-    "XCharts.Runtime",
     "Unity.TextMeshPro"
   ],
   "includePlatforms": [],
@@ -18,9 +17,7 @@
   "allowUnsafeCode": false,
   "overrideReferences": false,
   "precompiledReferences": [
-    "MQTTnet.dll",
     "DOTween.dll",
-    "LibVLCSharp.dll",
     "Newtonsoft.Json.dll"
   ],
   "autoReferenced": true,

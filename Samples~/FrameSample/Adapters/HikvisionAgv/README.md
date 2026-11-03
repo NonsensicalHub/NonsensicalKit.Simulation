@@ -1,6 +1,6 @@
 # HikvisionAgv 适配器
 
-实现 `Framework.Core.IAgvStatusTapePlaybackBackend`，供 `AgvStatusTapePlayer` 使用。
+实现 `Frame.Core.Abstractions.IAgvStatusTapePlaybackBackend`，供 `AgvStatusTapePlayer` 使用。
 
 ## 接线
 

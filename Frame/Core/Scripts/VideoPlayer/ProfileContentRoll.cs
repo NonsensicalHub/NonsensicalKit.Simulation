@@ -4,27 +4,20 @@ using NonsensicalKit.Core.DagLogicNode;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-
-namespace Frame.VideoPlayer
+namespace Frame.Core.VideoPlayer
 {
     public class ProfileContentRoll : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
-        /// <summary>
-        /// 内容区域RectTransform
-        /// </summary>
         private RectTransform rect;
 
-        /// <summary>
-        /// ScrollView
-        /// </summary>
         public GameObject Parent;
 
         [SerializeField] private int waitTime = 2;
         [SerializeField] private ScrollRect _scrollView;
 
-        /// <summary>
-        /// ScrollView的RectTransform
-        /// </summary>
+        [Tooltip("进入后允许滚动的 DAG 节点名；空则不订阅节点事件。")]
+        [SerializeField] private string m_enableNodeName = "设备管理";
+
         private RectTransform parentRect;
 
         private float rectOriginY;
@@ -37,35 +30,86 @@ namespace Frame.VideoPlayer
 
         [SerializeField] private bool canStartCoroutine = true;
 
-        /// <summary>
-        /// 内容高度是否大于窗口高度
-        /// </summary>
         private bool isContentBiggerThanView = false;
 
-        /// <summary>
-        /// 倍率,此处当作方向使用
-        /// </summary>
         private int mul;
 
         public bool CanRun = true;
 
+        private bool _nodeSubscribed;
+
         private void Awake()
         {
-            IOCC.Subscribe((int)DagLogicNodeEnum.NodeEnter, "设备管理", () => NonsensicalInstance.Instance.DelayDoIt(0, () => CanRun = true));
-            IOCC.Subscribe((int)DagLogicNodeEnum.NodeExit, "设备管理", () => NonsensicalInstance.Instance.DelayDoIt(0, () => CanRun = false));
+            if (string.IsNullOrEmpty(m_enableNodeName))
+            {
+                return;
+            }
+
+            IOCC.Subscribe((int)DagLogicNodeEnum.NodeEnter, m_enableNodeName, OnEnableNodeEnter);
+            IOCC.Subscribe((int)DagLogicNodeEnum.NodeExit, m_enableNodeName, OnEnableNodeExit);
+            _nodeSubscribed = true;
+        }
+
+        private void OnDestroy()
+        {
+            if (!_nodeSubscribed || string.IsNullOrEmpty(m_enableNodeName))
+            {
+                return;
+            }
+
+            IOCC.Unsubscribe((int)DagLogicNodeEnum.NodeEnter, m_enableNodeName, OnEnableNodeEnter);
+            IOCC.Unsubscribe((int)DagLogicNodeEnum.NodeExit, m_enableNodeName, OnEnableNodeExit);
+            _nodeSubscribed = false;
+        }
+
+        private void OnEnableNodeEnter()
+        {
+            if (NonsensicalInstance.Instance != null)
+            {
+                NonsensicalInstance.Instance.DelayDoIt(0, () => CanRun = true);
+            }
+            else
+            {
+                CanRun = true;
+            }
+        }
+
+        private void OnEnableNodeExit()
+        {
+            if (NonsensicalInstance.Instance != null)
+            {
+                NonsensicalInstance.Instance.DelayDoIt(0, () => CanRun = false);
+            }
+            else
+            {
+                CanRun = false;
+            }
         }
 
         void Start()
         {
             rect = GetComponent<RectTransform>();
+            if (Parent == null)
+            {
+                Debug.LogWarning("[ProfileContentRoll] Parent 未赋值。", this);
+                enabled = false;
+                return;
+            }
+
             parentRect = Parent.GetComponent<RectTransform>();
+            if (parentRect == null || _scrollView == null)
+            {
+                Debug.LogWarning("[ProfileContentRoll] 缺少 RectTransform / ScrollRect。", this);
+                enabled = false;
+                return;
+            }
+
             rectOriginY = rect.position.y;
         }
 
-        // Update is called once per frame
         void Update()
         {
-            if (CanRun == false) return;
+            if (CanRun == false || rect == null || parentRect == null || _scrollView == null) return;
 
             isContentBiggerThanView = rect.sizeDelta.y > parentRect.sizeDelta.y;
             isAtBottom = _scrollView.normalizedPosition.y <= 0f;
@@ -75,14 +119,12 @@ namespace Frame.VideoPlayer
                 IOCC.Set<int>("rollDirection", mul);
             }
 
-            //如果滚动到底，运行协程
             if (isAtBottom && isRoll && canStartCoroutine && isContentBiggerThanView)
             {
                 canStartCoroutine = false;
                 StartCoroutine(StopAndBack());
             }
 
-            //滚动
             if (isRoll && isContentBiggerThanView)
             {
                 rect.position = new Vector3(rect.position.x, rect.position.y + (rollSpeed * Time.deltaTime * mul), 0);
@@ -102,22 +144,16 @@ namespace Frame.VideoPlayer
         IEnumerator StopAndBack()
         {
             isRoll = false;
-            //结尾停
             yield return new WaitForSeconds(waitTime);
-            _scrollView.normalizedPosition = new Vector2(0, 0.001f);
+            if (_scrollView != null)
+            {
+                _scrollView.normalizedPosition = new Vector2(0, 0.001f);
+            }
+
             mul = -1;
             IOCC.Set<int>("rollDirection", mul);
             isRoll = true;
             canStartCoroutine = true;
         }
-
-
-        /*    /// <summary>
-            /// 返回顶部
-            /// </summary>
-            private void BackToTop()
-            {
-                rect.position = new Vector3(rect.position.x, rectOriginY, 0);
-            }*/
     }
 }

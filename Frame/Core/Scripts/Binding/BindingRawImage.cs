@@ -6,6 +6,9 @@ using UnityEngine.UI;
 /// 绑定 RawImage 纹理（从 Resources 加载 Texture）。
 /// JSON：字符串 或 { "value": "Resources相对路径" }
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingRawImage : BindingToken
 {
     [SerializeField] private RawImage m_rawImage;
@@ -56,4 +59,5 @@ public class BindingRawImage : BindingToken
             : string.Empty;
         return new JValue(hint);
     }
+}
 }

@@ -6,8 +6,9 @@ using NonsensicalKit.Core;
 using NonsensicalKit.Core.Timer;
 using UnityEngine;
 using Random = UnityEngine.Random;
-
-namespace Frame.RealTimeAlarm
+using Frame.BizKit.WMS.RealTimeAlarm;
+using Frame.Core.Config;
+namespace Frame.BizKit.WMS
 {
     /// <summary>
     /// 离线 Mock：实时报警列表与详情。在线时跳过，由真实报警接口接管。

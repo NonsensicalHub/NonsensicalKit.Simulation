@@ -1,6 +1,9 @@
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
+
+namespace Frame.Core.Binding
+{
 public class BindingObject : BindingToken
 {
     [SerializeField] private GameObject m_root;
@@ -26,4 +29,5 @@ public class BindingObject : BindingToken
 
         return JsonBindingHelper.CollectFirstChildren(m_root);
     }
+}
 }

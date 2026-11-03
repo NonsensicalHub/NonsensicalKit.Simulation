@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-
-namespace Frame.Equipment
+namespace Frame.BizKit.WMS.Equipment
 {
     public class GlossariesTableManager : MonoBehaviour
     {

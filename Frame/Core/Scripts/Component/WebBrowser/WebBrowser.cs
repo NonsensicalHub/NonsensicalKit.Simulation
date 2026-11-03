@@ -1,6 +1,9 @@
 using System;
 using UnityEngine;
 
+
+namespace Frame.Core.Component
+{
 public enum UrlType
 {
     Http,
@@ -53,4 +56,5 @@ public partial class WebBrowser : MonoBehaviour
     private partial string DealWithUrl(string url);
     
 
+}
 }

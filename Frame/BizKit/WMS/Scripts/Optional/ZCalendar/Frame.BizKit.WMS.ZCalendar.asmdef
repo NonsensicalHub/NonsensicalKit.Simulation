@@ -1,0 +1,27 @@
+{
+  "name": "Frame.BizKit.WMS.ZCalendar",
+  "rootNamespace": "Frame.BizKit.WMS.ZCalendar",
+  "references": [
+    "Frame.Core",
+    "Frame.BizKit.WMS",
+    "ZCalendar",
+    "UniTask",
+    "NonsensicalKit.Core.Runtime",
+    "NonsensicalKit.NaughtyAttributes",
+    "NonsensicalKit.UGUI.Items",
+    "NonsensicalKit.UGUI.Table",
+    "Unity.TextMeshPro"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [
+    "DOTween.dll",
+    "Newtonsoft.Json.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

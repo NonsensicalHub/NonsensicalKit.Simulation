@@ -6,6 +6,9 @@ using UnityEngine;
 /// 正向：JSON → Prefab  (BindToken)
 /// 反向：Prefab → JSON  (CollectJson)
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public abstract class BindingToken : MonoBehaviour
 {
     [Tooltip("绑定路径，多级用 '/' 分隔。顶层示例: Title；嵌套示例: Head/Title")]
@@ -59,4 +62,5 @@ public abstract class BindingToken : MonoBehaviour
             return new JValue("");
         }
     }
+}
 }

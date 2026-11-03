@@ -1,6 +1,6 @@
 {
   "name": "Frame.BizKit.WMS",
-  "rootNamespace": "",
+  "rootNamespace": "Frame.BizKit.WMS",
   "references": [
     "Frame.Core",
     "UniTask",
@@ -10,9 +10,7 @@
     "NonsensicalKit.DigitalTwin.Warehouse",
     "NonsensicalKit.UGUI.Items",
     "NonsensicalKit.UGUI.Table",
-    "Unity.TextMeshPro",
-    "HikvisionAgv.Runtime",
-    "ZCalendar"
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

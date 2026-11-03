@@ -6,6 +6,9 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UIElements;
 
+
+namespace Frame.BizKit.WMS.Config
+{
 [CreateAssetMenu(fileName = "EquipmentImageConfig", menuName = "ScriptableObjects/EquipmentImageConfig")]
 public class EquipmentImageConfig : ConfigObject
 {
@@ -57,4 +60,5 @@ public class EquipmentImage
     {
         return Resources.Load<Sprite>(spritePath + m_Name);
     }
+}
 }

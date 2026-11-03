@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Framework.Core;
+using Frame.Core.Abstractions;
 using NaughtyAttributes;
 using NonsensicalKit.Core;
 using UnityEngine;
@@ -10,6 +10,9 @@ using UnityEngine;
 /// AGV JSONL 录制回放：按 unixMs 时间轴播放。
 /// 具体海康解析/发布由 <see cref="IAgvStatusTapePlaybackBackend"/> 提供（Samples 适配器注册）。
 /// </summary>
+
+namespace Frame.Core.RecordPlayback
+{
 public class AgvStatusTapePlayer : NonsensicalMono, IRecordPlaybackPlayer
 {
     [SerializeField] private List<RecordDataEntry> m_dataFiles = new();
@@ -387,4 +390,5 @@ public class AgvStatusTapePlayer : NonsensicalMono, IRecordPlaybackPlayer
             return unixMs.ToString();
         }
     }
+}
 }

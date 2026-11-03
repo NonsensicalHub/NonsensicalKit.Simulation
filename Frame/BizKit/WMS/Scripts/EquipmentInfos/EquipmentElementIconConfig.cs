@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
@@ -6,6 +6,9 @@ using NonsensicalKit.Core.Service.Config;
 using UnityEngine;
 using UnityEngine.Serialization;
 
+
+namespace Frame.BizKit.WMS.Equipment
+{
 [CreateAssetMenu(fileName = "EquipmentElementIconConfig", menuName = "ScriptableObjects/EquipmentElementIconConfig")]
 public class EquipmentElementIconConfig : ConfigObject
 {
@@ -100,4 +103,5 @@ public class IconConfig
 
         return Sprite;
     }
+}
 }

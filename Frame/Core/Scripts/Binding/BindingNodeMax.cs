@@ -4,6 +4,9 @@ using Newtonsoft.Json.Linq;
 using NonsensicalKit.Core.DagLogicNode;
 using UnityEngine;
 
+
+namespace Frame.Core.Binding
+{
 public class BindingNodeMax : BindingToken
 {
     [SerializeField] private DagNodeControlMax m_dagControlMax;
@@ -80,4 +83,5 @@ public class BindingNodeMax : BindingToken
 
         return string.Empty;
     }
+}
 }

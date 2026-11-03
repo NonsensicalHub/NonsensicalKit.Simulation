@@ -6,6 +6,9 @@ using UnityEngine.UI;
 /// 绑定 Image.fillAmount（Filled 类型进度/占比）。
 /// JSON：0~1 number，或 { "value": 0.75 }
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingFillAmount : BindingToken
 {
     [SerializeField] private Image m_image;
@@ -64,4 +67,5 @@ public class BindingFillAmount : BindingToken
 
         return float.TryParse(v.ToString(), out value);
     }
+}
 }

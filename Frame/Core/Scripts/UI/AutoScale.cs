@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
+
+namespace Frame.Core.UI
+{
 public class AutoScale : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [SerializeField] private CanvasGroup _canvasGroup;
@@ -79,4 +82,5 @@ public class AutoScale : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         _rectTransform.localScale = Vector3.one * _scale;
         _canvasGroup.alpha = _alpha;
     }
+}
 }

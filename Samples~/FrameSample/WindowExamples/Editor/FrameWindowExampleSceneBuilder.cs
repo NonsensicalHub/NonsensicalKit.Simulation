@@ -6,11 +6,15 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using Frame.Core.Window;
 
 /// <summary>
 /// 生成 FrameSample Window 最小示例场景与内容预制体。
 /// 菜单：Tools/FrameSample/Build Window Example Scene
 /// </summary>
+
+namespace Frame.Sample.WindowExamples
+{
 public static class FrameWindowExampleSceneBuilder
 {
     private const string ScenePath = "Assets/FrameSample/Scenes/FrameWindowExample.unity";
@@ -227,3 +231,4 @@ public static class FrameWindowExampleSceneBuilder
     }
 }
 #endif
+}

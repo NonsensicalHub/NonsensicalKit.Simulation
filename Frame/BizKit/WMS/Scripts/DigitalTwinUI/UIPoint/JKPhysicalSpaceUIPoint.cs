@@ -8,10 +8,14 @@ using NonsensicalKit.Tools;
 using NonsensicalKit.UGUI;
 using UnityEngine;
 using UnityEngine.UI;
+using Frame.Core.DigitalTwinUI;
 
 /// <summary>
 /// 悬浮标签 
 /// </summary>
+
+namespace Frame.BizKit.WMS.DigitalTwinUI
+{
 [RequireComponent(typeof(FollowGameObject))]
 public class JKPhysicalSpaceUIPoint : NonsensicalUI, IDigitalTwinUI
 {
@@ -141,4 +145,5 @@ public class JKPhysicalSpaceUIPoint : NonsensicalUI, IDigitalTwinUI
         CanvasGroup.blocksRaycasts = true;
         CanvasGroup.DoFade(1f, 0.2f);
     }*/
+}
 }

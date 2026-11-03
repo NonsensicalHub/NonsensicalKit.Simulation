@@ -1,11 +1,15 @@
 using System;
 using HighlightPlus;
 using UnityEngine;
+using Frame.Core.FocusCamera;
 
 /// <summary>
 /// 向 <see cref="FocusPointManager"/> 注入 HighlightPlus 高亮实现（Func），不实现 Core 接口。
 /// 挂在 FocusPointManager 同物体即可。
 /// </summary>
+
+namespace Frame.Sample.Adapters
+{
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(-50)]
 [AddComponentMenu("Frame Sample/HighlightPlus Focus Highlight")]
@@ -62,4 +66,5 @@ public class HighlightPlusFocusHighlight : MonoBehaviour
                 fx.highlighted = false;
         };
     }
+}
 }

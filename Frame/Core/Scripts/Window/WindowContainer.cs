@@ -5,6 +5,9 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+
+namespace Frame.Core.Window
+{
 public class WindowContainer : MonoBehaviour, IPointerClickHandler
 {
     [Header("标题栏")]
@@ -328,4 +331,5 @@ public class WindowContainer : MonoBehaviour, IPointerClickHandler
     {
         ToggleFullscreen();
     }
+}
 }

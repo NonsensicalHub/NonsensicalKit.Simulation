@@ -4,10 +4,15 @@ using System.Collections.Generic;
 using NaughtyAttributes;
 using NonsensicalKit.Core;
 using UnityEngine;
+using Frame.Core.Config;
+using Frame.Core.Network;
 
 /// <summary>
 /// 单条可回放录制文件（Inspector 预配，运行时下拉选择）。
 /// </summary>
+
+namespace Frame.Core.RecordPlayback
+{
 [Serializable]
 public class RecordDataEntry
 {
@@ -366,7 +371,7 @@ public class RecordDataPlayer : NonsensicalMono, IRecordPlaybackPlayer
             ? TwinDataSource.Mode
             : TwinDataSourceMode.Online;
         TwinDataSource.SetMode(TwinDataSourceMode.Offline);
-        IOCC.Publish(MQTTMessageAggregator.UseOfflineDataEvent, true);
+        IOCC.Publish(FrameMqttEvents.UseOfflineData, true);
         _switchedToOffline = true;
         if (m_log)
         {
@@ -382,7 +387,7 @@ public class RecordDataPlayer : NonsensicalMono, IRecordPlaybackPlayer
         }
 
         TwinDataSource.SetMode(_modeBeforeOffline);
-        IOCC.Publish(MQTTMessageAggregator.UseOfflineDataEvent, false);
+        IOCC.Publish(FrameMqttEvents.UseOfflineData, false);
         _switchedToOffline = false;
         if (m_log)
         {
@@ -495,4 +500,5 @@ public class RecordDataPlayer : NonsensicalMono, IRecordPlaybackPlayer
 
         return map;
     }
+}
 }

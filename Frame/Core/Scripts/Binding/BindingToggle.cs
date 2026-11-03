@@ -6,6 +6,9 @@ using UnityEngine.UI;
 /// 绑定 Toggle.isOn。
 /// JSON：bool / 0|1 / "true"|"false"，或 { "value": ... }
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingToggle : BindingToken
 {
     [SerializeField] private Toggle m_toggle;
@@ -74,4 +77,5 @@ public class BindingToggle : BindingToken
                 return false;
         }
     }
+}
 }

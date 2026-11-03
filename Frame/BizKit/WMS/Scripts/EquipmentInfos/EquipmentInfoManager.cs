@@ -10,7 +10,7 @@ using UnityEngine;
 /// 用于接收网络部分初步处理号的设备数据,并转发给UI作为显示
 /// 包括信息显示与报警显示 消息订阅 
 /// </summary>
-namespace Frame.Equipment
+namespace Frame.BizKit.WMS.Equipment
 {
     public class EquipmentInfoManager : NonsensicalMono
     {

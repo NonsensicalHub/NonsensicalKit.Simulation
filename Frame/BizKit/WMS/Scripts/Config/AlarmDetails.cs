@@ -5,6 +5,9 @@ using NaughtyAttributes;
 using NonsensicalKit.Core.Service.Config;
 using UnityEngine;
 
+
+namespace Frame.BizKit.WMS.Config
+{
 [CreateAssetMenu(fileName = "AlarmDetailsConfig", menuName = "ScriptableObjects/AlarmDetailsConfig")]
 public class AlarmDetailsConfig : ConfigObject
 {
@@ -105,4 +108,5 @@ public class AlarmDetailsElement
     public string m_Code;
     public string m_Details;
     public string m_Resolution;
+}
 }

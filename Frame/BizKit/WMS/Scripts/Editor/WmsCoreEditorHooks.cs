@@ -2,13 +2,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CusAttribute;
+using Frame.Core.Attributes;
 using UnityEditor;
 using UnityEngine;
+using Frame.BizKit.WMS.Config;
+using Frame.Core.Config;
+using Frame.Core.Network.Editor;
 
 /// <summary>
 /// 把仓储报警设备表接到 Core 扩展点，避免 Core 引用 RealTimeSctObj。
 /// </summary>
+
+namespace Frame.BizKit.WMS.Editor
+{
 [InitializeOnLoad]
 internal static class WmsCoreEditorHooks
 {
@@ -85,5 +91,6 @@ internal static class WmsCoreEditorHooks
             .Select(x => x.m_DeviceID)
             .ToList();
     }
+}
 }
 #endif

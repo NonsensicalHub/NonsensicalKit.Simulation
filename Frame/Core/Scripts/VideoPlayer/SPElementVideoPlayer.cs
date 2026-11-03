@@ -5,6 +5,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
+
+namespace Frame.Core.VideoPlayer
+{
 public class SPElementVideoPlayer : NonsensicalUI
 {
     [SerializeField] private bool localtest;
@@ -30,15 +33,14 @@ public class SPElementVideoPlayer : NonsensicalUI
         Subscribe<ElementVideoInfo>("setTopforThisJKInfo", SetTopForThisJkInfo);
         if (m_useBuildInVideoPlayer)
         {
-            Destroy(m_playerPrefab.GetComponent<Frame.VideoPlayer.CustomVLCPlayer>());
+            VideoPlayerComponentUtil.DestroyNonBuildInPlayers(m_playerPrefab);
             _videoPlayer = m_playerPrefab.GetComponent<BuildInVideoPlayer>();
         }
         else
         {
-            Destroy(m_playerPrefab.GetComponent<BuildInVideoPlayer>());
-            Destroy(m_playerPrefab.GetComponent<VideoPlayer>());
+            VideoPlayerComponentUtil.DestroyBuildInPlayers(m_playerPrefab);
 
-            _videoPlayer = m_playerPrefab.GetComponent<Frame.VideoPlayer.CustomVLCPlayer>();
+            _videoPlayer = VideoPlayerComponentUtil.GetPlayer(m_playerPrefab);
         }
 
         _videoPlayer.Init(m_image);
@@ -123,4 +125,5 @@ public class SPElementVideoPlayer : NonsensicalUI
         ChangeSelf(tar);
         _videoPlayer.Stop();
     }
+}
 }

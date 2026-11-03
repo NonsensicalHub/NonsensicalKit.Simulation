@@ -1,0 +1,25 @@
+{
+  "name": "Frame.Core.Network.Editor",
+  "rootNamespace": "Frame.Core.Network.Editor",
+  "references": [
+    "Frame.Core",
+    "Frame.Core.Mqtt",
+    "NonsensicalKit.Core.Runtime",
+    "NonsensicalKit.NaughtyAttributes",
+    "NonsensicalKit.NaughtyAttributes.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [
+    "MQTTnet.dll",
+    "Newtonsoft.Json.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

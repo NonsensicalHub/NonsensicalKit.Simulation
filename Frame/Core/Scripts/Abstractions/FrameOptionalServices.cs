@@ -1,6 +1,5 @@
 using System;
-
-namespace Framework.Core
+namespace Frame.Core.Abstractions
 {
     /// <summary>
     /// 可选插件适配器的轻量注册表（目前仅 AGV 回放后端）。

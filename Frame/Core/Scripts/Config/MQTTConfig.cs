@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+
+namespace Frame.Core.Config
+{
 [System.Serializable]
 public class MQTTConfig
 {
@@ -61,4 +64,5 @@ public class MQTTConfig
 
         into.Add(topic);
     }
+}
 }

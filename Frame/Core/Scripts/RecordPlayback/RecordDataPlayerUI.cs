@@ -5,6 +5,9 @@ using UnityEngine.UI;
 /// <summary>
 /// 录制回放 UI：输送线 / AGV 共用一套控件，切换模式不打断另一路播放。
 /// </summary>
+
+namespace Frame.Core.RecordPlayback
+{
 public class RecordDataPlayerUI : MonoBehaviour
 {
     public enum PlaybackMode
@@ -627,4 +630,5 @@ public class RecordDataPlayerUI : MonoBehaviour
                 $"进度：{player.PlayIndex}/{player.LineCount}  ({player.Progress * 100f:0.0}%)";
         }
     }
+}
 }

@@ -8,9 +8,12 @@ using UnityEngine;
 /// WebBrowser 的 Standalone 对接。通过反射使用 Vuplex，避免 Core asmdef 硬依赖 Plugins 脚本程序集。
 /// 宿主需提供 Assets/Plugins/Vuplex，并在 Resources 放置 CanvasWebViewPrefab。
 /// </summary>
+
+namespace Frame.Core.Component
+{
 public partial class WebBrowser
 {
-    public Component m_WebViewPrefab;
+    public UnityEngine.Component m_WebViewPrefab;
 
     private static readonly Type CanvasWebViewPrefabType =
         Type.GetType("Vuplex.WebView.CanvasWebViewPrefab, Assembly-CSharp-firstpass")
@@ -90,5 +93,6 @@ public partial class WebBrowser
         var load = webView.GetType().GetMethod("LoadUrl", new[] { typeof(string) });
         load?.Invoke(webView, new object[] { URL });
     }
+}
 }
 #endif

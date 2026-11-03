@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Frame.Equipment;
+using Frame.BizKit.WMS.Equipment;
 using NonsensicalKit.Core;
 using NonsensicalKit.Core.DagLogicNode;
 using NonsensicalKit.Core.Service;
 using UnityEngine;
 
+
+namespace Frame.BizKit.WMS.Equipment
+{
 public class EquipmentElementIconManager : NonsensicalMono
 {
     [SerializeField] private GameObject _iconPrefab;
@@ -84,4 +87,5 @@ public class EquipmentElementIconManager : NonsensicalMono
         if (_equipmentInfoManager == null) return;
         _equipmentInfoManager.Dispose();
     }
+}
 }

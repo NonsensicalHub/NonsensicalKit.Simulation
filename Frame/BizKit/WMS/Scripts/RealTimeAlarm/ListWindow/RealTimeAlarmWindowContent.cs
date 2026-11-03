@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
-using Frame.RealTimeAlarm;
+using Frame.BizKit.WMS.RealTimeAlarm;
 using Newtonsoft.Json;
 using NonsensicalKit.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Frame.Core.Table;
+using Frame.Core.Window;
 
+
+namespace Frame.BizKit.WMS.RealTimeAlarm
+{
 public class RealTimeAlarmWindowContent : NonsensicalMono, IWindowContent, IWindowHandleReceiver
 {
     [SerializeField] private string m_tableID = "实时报警详情";
@@ -134,4 +139,5 @@ public class RealTimeAlarmWindowContent : NonsensicalMono, IWindowContent, IWind
     {
         PublishWithID("onNextButton", m_tableID);
     }
+}
 }

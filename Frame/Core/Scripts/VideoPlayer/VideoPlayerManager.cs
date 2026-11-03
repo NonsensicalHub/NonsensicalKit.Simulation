@@ -2,9 +2,7 @@ using System.Collections.Generic;
 using NonsensicalKit.Core;
 using NonsensicalKit.Tools.ObjectPool;
 using UnityEngine;
-
-
-namespace Frame.VideoPlayer
+namespace Frame.Core.VideoPlayer
 {
     /// <summary>
     /// 监控视频播放器对象池管理器。
@@ -36,7 +34,7 @@ namespace Frame.VideoPlayer
 
             if (m_useBuildInVideoPlayer)
             {
-                Destroy(playerPrefab.GetComponent<Frame.VideoPlayer.CustomVLCPlayer>());
+                VideoPlayerComponentUtil.DestroyNonBuildInPlayers(playerPrefab);
             }
 
             else
@@ -76,7 +74,7 @@ namespace Frame.VideoPlayer
         /// <summary>
         /// 从对象池获取一个播放器实例，并挂到 activeParent。
         /// </summary>
-        public T GetObj<T>() where T : Component
+        public T GetObj<T>() where T : UnityEngine.Component
         {
             if (_pool == null) return null;
 

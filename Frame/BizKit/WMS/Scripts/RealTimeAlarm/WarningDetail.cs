@@ -1,11 +1,15 @@
 using System.Collections.Generic;
-using Frame.RealTimeAlarm;
+using Frame.BizKit.WMS.RealTimeAlarm;
 using NonsensicalKit.Core.Service;
 using NonsensicalKit.Core.Service.Config;
 using NonsensicalKit.Tools.ObjectPool;
 using NonsensicalKit.UGUI;
 using UnityEngine;
+using Frame.BizKit.WMS.Config;
 
+
+namespace Frame.BizKit.WMS.RealTimeAlarm
+{
 public class WarningDetail : NonsensicalUI
 {
     /// <summary>在线详情默认只展示第一个报警点的排查文案；改为更大值即可显示多个。</summary>
@@ -144,4 +148,5 @@ public class WarningDetail : NonsensicalUI
         cell.transform.SetParent(m_pool);
         cell.SetActive(false);
     }
+}
 }

@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using NonsensicalKit.Core.Service.Config;
 using UnityEngine;
-
-namespace Frame.RealTimeAlarm
+namespace Frame.BizKit.WMS.Config
 {
     [CreateAssetMenu(fileName = "StackerAlarmCategoryConfig", menuName = "ScriptableObjects/StackerAlarmCategoryConfig")]
     public class StackerAlarmCategoryConfig : ConfigObject

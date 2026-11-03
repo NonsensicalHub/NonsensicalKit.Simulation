@@ -1,15 +1,18 @@
 using System;
-using Frame.VideoPlayer;
 using NaughtyAttributes;
 using NonsensicalKit.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using Frame.Core.Binding;
 
 /// <summary>
 /// 类似 <see cref="JKElement"/> 的“视频播放元素”：当元素滑动到视口边缘/范围内时自动取出播放器播放，离开则停止并回收。
 /// </summary>
+
+namespace Frame.Core.VideoPlayer
+{
 public class ElementVideoPlayer : NonsensicalMono
 {
     [Header("Data")]
@@ -66,7 +69,7 @@ public class ElementVideoPlayer : NonsensicalMono
                 vlcPlayer = manager.GetVideoPlayer();
                 if (vlcPlayer == null)
                 {
-                    Debug.LogWarning($"{nameof(ElementVideoPlayer)}: 对象池未能提供 {nameof(Frame.VideoPlayer.CustomVLCPlayer)}。", this);
+                    Debug.LogWarning($"{nameof(ElementVideoPlayer)}: 对象池未能提供 {nameof(IVideoPlayer)}。", this);
                     return;
                 }
 
@@ -101,7 +104,7 @@ public class ElementVideoPlayer : NonsensicalMono
                     vlcPlayer.Stop();
                     if (manager != null)
                     {
-                        manager.StoreObj(((Component)vlcPlayer).gameObject);
+                        manager.StoreObj(((UnityEngine.Component)vlcPlayer).gameObject);
                     }
 
                     vlcPlayer = null;
@@ -236,4 +239,5 @@ public class ElementVideoInfo
     public string Serial;
     public string Description;
     public string Url;
+}
 }

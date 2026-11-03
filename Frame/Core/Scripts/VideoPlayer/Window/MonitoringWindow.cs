@@ -1,6 +1,10 @@
 using NonsensicalKit.Core;
 using UnityEngine;
+using Frame.Core.Window;
 
+
+namespace Frame.Core.VideoPlayer
+{
 public class MonitoringWindow : NonsensicalMono
 {
     [SerializeField] private string m_windowName;
@@ -28,4 +32,5 @@ public class MonitoringWindow : NonsensicalMono
             value.OpenWindow(m_windowConfig, m_selfWindowContentPrefab, _infoTemp);
         }
     }
+}
 }

@@ -7,6 +7,9 @@ using UnityEngine.UI;
 /// 绑定 Button 上的文案（自身或子节点 TMP_Text）。
 /// JSON：字符串 或 { "value": "..." }
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingButtonText : BindingToken
 {
     [SerializeField] private Button m_button;
@@ -62,4 +65,5 @@ public class BindingButtonText : BindingToken
             m_label = GetComponentInChildren<TMP_Text>(true);
         }
     }
+}
 }

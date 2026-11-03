@@ -5,6 +5,9 @@ using UnityEngine.UI;
 /// 将子节点沿扇形弧线均匀分布的布局组件。
 /// 角度约定：0° 朝上（+Y），正角度默认逆时针。
 /// </summary>
+
+namespace Frame.Core.UI
+{
 [AddComponentMenu("Layout/Fan Layout Group")]
 [DisallowMultipleComponent]
 public class FanLayoutGroup : LayoutGroup
@@ -219,4 +222,5 @@ public class FanLayoutGroup : LayoutGroup
         m_Radius = Mathf.Max(0f, m_Radius);
     }
 #endif
+}
 }

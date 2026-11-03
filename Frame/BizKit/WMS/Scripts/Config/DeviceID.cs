@@ -1,9 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using NaughtyAttributes;
 using NonsensicalKit.Core.Service.Config;
 using UnityEngine;
 
+
+namespace Frame.BizKit.WMS.Config
+{
 [CreateAssetMenu(fileName = "DeviceIDConfig", menuName = "ScriptableObjects/DeviceIDConfig")]
 public class DeviceIDConfig : ConfigObject
 {
@@ -38,4 +41,5 @@ public class DeviceIDConfig : ConfigObject
 public class DeviceIDData : ConfigData
 {
     public List<string> m_DeviceIDs = new List<string>();
+}
 }

@@ -7,6 +7,9 @@ using UnityEngine;
 /// 将 JToken 的字符串值绑定到 TMP_Text 组件。
 /// JSON 格式：普通字符串 或 { "value": "..." }
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingText : BindingToken
 {
     [SerializeField] private TMP_Text m_txt_text;
@@ -35,4 +38,5 @@ public class BindingText : BindingToken
     {
         return new JValue(m_txt_text.text);
     }
+}
 }

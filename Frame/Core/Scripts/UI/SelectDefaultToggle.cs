@@ -2,6 +2,9 @@ using NonsensicalKit.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
+
+namespace Frame.Core.UI
+{
 public class SelectDefaultToggle : NonsensicalMono
 {
     [SerializeField] private int m_defaultToggleIndex = 1;
@@ -17,4 +20,5 @@ public class SelectDefaultToggle : NonsensicalMono
         _defaultToggle ??= transform.GetChild(m_defaultToggleIndex).GetComponent<Toggle>();
         _defaultToggle.isOn = true;
     }
+}
 }

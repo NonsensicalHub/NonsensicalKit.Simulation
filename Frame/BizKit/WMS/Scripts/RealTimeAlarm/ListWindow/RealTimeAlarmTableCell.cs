@@ -3,6 +3,9 @@ using NonsensicalKit.UGUI.Table;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
+
+namespace Frame.BizKit.WMS.RealTimeAlarm
+{
 public class RealTimeAlarmTableCell : ScrollTableCell, IPointerClickHandler
 {
     private bool _canClick = false;
@@ -31,4 +34,5 @@ public class RealTimeAlarmTableCell : ScrollTableCell, IPointerClickHandler
             IOCC.Publish("showRealTimeAlarm", _rowIndex);
         }
     }
+}
 }

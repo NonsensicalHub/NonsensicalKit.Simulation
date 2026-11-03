@@ -5,8 +5,7 @@ using NonsensicalKit.Core;
 using NonsensicalKit.Tools;
 using NonsensicalKit.UGUI.Table;
 using UnityEngine;
-
-namespace Frame.RealTimeAlarm
+namespace Frame.BizKit.WMS.RealTimeAlarm
 {
     public class RealTimeAlarmTable : NonsensicalMono
     {

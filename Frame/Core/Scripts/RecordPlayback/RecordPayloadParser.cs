@@ -9,6 +9,9 @@ using UnityEngine;
 /// 固定头：yyyy-MM-dd HH:mm:ss.fff|ticks(18)|key(5)|EE|
 /// MQ 额外：变长频道 + '|' + 正文；其它事件：'|' 后整段即为正文。
 /// </summary>
+
+namespace Frame.Core.RecordPlayback
+{
 public static class RecordPayloadParser
 {
     public const char FieldSeparator = '|';
@@ -260,4 +263,5 @@ public static class RecordPayloadParser
 
         return trim ? value.Trim() : value;
     }
+}
 }

@@ -4,12 +4,18 @@ using UnityEngine;
 /// <summary>
 /// 挂载在悬浮标签跟随节点上,用于生成标签
 /// </summary>
+
+namespace Frame.Core.DigitalTwinUI
+{
 public class DigitalTwinUIPoint : MonoBehaviour
 {
     [SerializeField] private string m_Type;
     [SerializeField] private string m_ID;
     [SerializeField] private ShowDagNode m_dagNodeConfig;
     [SerializeField] private bool autoSetID;
+
+    private DigitalTwinUIManager _manager;
+    private bool _registered;
 
     private void Start()
     {
@@ -18,7 +24,24 @@ public class DigitalTwinUIPoint : MonoBehaviour
 
     private void OnGetConfig(DigitalTwinUIManager manager)
     {
-        manager.Register(new DigitalTwinUIInfo(gameObject, m_Type, m_ID,m_dagNodeConfig));
+        _manager = manager;
+        manager.Register(new DigitalTwinUIInfo(gameObject, m_Type, m_ID, m_dagNodeConfig));
+        _registered = true;
+    }
+
+    private void OnDestroy()
+    {
+        if (!_registered)
+        {
+            return;
+        }
+
+        if (_manager != null)
+        {
+            _manager.Unregister(m_ID);
+        }
+
+        _registered = false;
     }
 
     void OnValidate()
@@ -49,4 +72,5 @@ public class ShowDagNode
 {
     public string DependencyNode;
     public string[] ShowNodes;
+}
 }

@@ -6,6 +6,9 @@ using UnityEngine;
 /// 绑定 TMP_InputField 文本。
 /// JSON：字符串 或 { "value": "..." }
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingInputField : BindingToken
 {
     [SerializeField] private TMP_InputField m_inputField;
@@ -40,4 +43,5 @@ public class BindingInputField : BindingToken
 
         return new JValue(m_inputField.text ?? string.Empty);
     }
+}
 }

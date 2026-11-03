@@ -1,7 +1,11 @@
 using NaughtyAttributes;
 using NonsensicalKit.Core;
 using UnityEngine;
+using Frame.Core.Window;
 
+
+namespace Frame.BizKit.WMS.RealTimeAlarm
+{
 public class RealTimeAlarmWindow : NonsensicalMono
 {
     [SerializeField] private string m_windowName;
@@ -19,4 +23,5 @@ public class RealTimeAlarmWindow : NonsensicalMono
             value.OpenWindow(m_windowConfig, m_selfWindowContentPrefab, null);
         }
     }
+}
 }

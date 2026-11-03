@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-
-namespace Framework.Core
+namespace Frame.Core.Abstractions
 {
     /// <summary>AGV JSONL 回放帧（与具体插件 DTO 解耦）。</summary>
     public interface IAgvStatusTapeFrame

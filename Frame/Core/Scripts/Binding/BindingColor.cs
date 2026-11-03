@@ -7,6 +7,9 @@ using UnityEngine.UI;
 /// 绑定 Graphic / TMP_Text 颜色。
 /// JSON："#RRGGBB" / "#RRGGBBAA"，或 { "r","g","b","a" } / { "value": "#..." }
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingColor : BindingToken
 {
     [SerializeField] private Graphic m_graphic;
@@ -116,4 +119,5 @@ public class BindingColor : BindingToken
 
         return ColorUtility.TryParseHtmlString(s, out color);
     }
+}
 }

@@ -5,8 +5,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-
-namespace Framework.Core
+namespace Frame.Core.SubScene
 {
     /// <summary>子场景加载实现方式。UniTask 基于 PlayerLoop，WebGL 可用；勿用 Thread/Task.Run。</summary>
     public enum SubSceneLoadBackend { Coroutine, UniTask }

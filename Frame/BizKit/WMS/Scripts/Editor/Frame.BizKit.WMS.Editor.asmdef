@@ -1,10 +1,10 @@
 {
   "name": "Frame.BizKit.WMS.Editor",
-  "rootNamespace": "",
+  "rootNamespace": "Frame.BizKit.WMS.Editor",
   "references": [
     "Frame.Core",
     "Frame.Core.Editor",
-    "Frame.Core.Net.Editor",
+    "Frame.Core.Network.Editor",
     "Frame.BizKit.WMS",
     "NonsensicalKit.Core.Runtime",
     "NonsensicalKit.Core.Editor",
@@ -12,7 +12,9 @@
     "NonsensicalKit.NaughtyAttributes.Editor",
     "NonsensicalKit.DigitalTwin.Motion"
   ],
-  "includePlatforms": [ "Editor" ],
+  "includePlatforms": [
+    "Editor"
+  ],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": false,
@@ -22,3 +24,4 @@
   "versionDefines": [],
   "noEngineReferences": false
 }
+

@@ -14,6 +14,9 @@ using UnityEngine;
 /// <summary>
 /// 注视焦点管理。注视相机在 Inspector 配置；高亮由外部注入 <see cref="HighlightHandler"/>（未赋值则跳过）。
 /// </summary>
+
+namespace Frame.Core.FocusCamera
+{
 public class FocusPointManager : NonsensicalMono
 {
     [SerializeField] private bool m_autoExit;
@@ -313,19 +316,24 @@ public class FocusPointConfig
                 m_FocusDistance = (0.6f * diagonal) / Mathf.Tan(fov * 0.5f);
             }
 
-            var np = new GameObject("CalculationCenter")
+            if (m_FocusCenter != null
+                && m_FocusCenter.name == "CalculationCenter"
+                && m_FocusCenter.parent == m_FocusPoints[0])
             {
-                transform =
-                {
-                    position = m_Bounds.center + m_Offset
-                }
-            };
-            np.transform.SetParent(m_FocusPoints[0], false);
-            m_FocusCenter = np.transform;
+                m_FocusCenter.position = m_Bounds.center + m_Offset;
+            }
+            else
+            {
+                var np = new GameObject("CalculationCenter");
+                np.transform.SetParent(m_FocusPoints[0], false);
+                np.transform.position = m_Bounds.center + m_Offset;
+                m_FocusCenter = np.transform;
+            }
         }
         else
         {
             m_FocusCenter = m_FocusPoints[0];
         }
     }
+}
 }

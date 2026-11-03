@@ -1,4 +1,4 @@
-namespace Frame.RealTimeAlarm
+namespace Frame.BizKit.WMS.RealTimeAlarm
 {
     public class RealTimeAlarmInfo
     {

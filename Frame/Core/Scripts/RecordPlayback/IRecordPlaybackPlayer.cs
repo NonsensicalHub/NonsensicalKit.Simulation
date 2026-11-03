@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>输送线 / AGV 等离线回放器共用接口，供 RecordDataPlayerUI 绑定。</summary>
+
+namespace Frame.Core.RecordPlayback
+{
 public interface IRecordPlaybackPlayer
 {
     bool IsPlaying { get; }
@@ -22,4 +25,5 @@ public interface IRecordPlaybackPlayer
     void Play();
     void Stop();
     void TogglePause();
+}
 }

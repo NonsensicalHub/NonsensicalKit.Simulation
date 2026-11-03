@@ -6,6 +6,9 @@ using UnityEngine.UI;
 /// 将 Resources 精灵路径绑定到 Image。
 /// JSON 格式：字符串 或 { "value": "Resources相对路径" }
 /// </summary>
+
+namespace Frame.Core.Binding
+{
 public class BindingSprite : BindingToken
 {
     [SerializeField] private Image m_image;
@@ -59,4 +62,5 @@ public class BindingSprite : BindingToken
             : string.Empty;
         return new JValue(hint);
     }
+}
 }

@@ -2,10 +2,14 @@ using NonsensicalKit.Core;
 using NonsensicalKit.Core.Service;
 using UnityEngine;
 using UnityEngine.Events;
+using Frame.Core.Binding;
 
 /// <summary>
 /// 通过ID与悬浮标签绑定,响应标签的交互事件
 /// </summary>
+
+namespace Frame.Core.DigitalTwinUI
+{
 public class UIPoint : MonoBehaviour
 {
     [BindableParam("IconID")] public string m_IconID;
@@ -53,4 +57,5 @@ public class UIPoint : MonoBehaviour
     {
         m_OnHoverExit?.Invoke();
     }
+}
 }

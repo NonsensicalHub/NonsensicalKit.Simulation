@@ -4,6 +4,9 @@ using UnityEngine;
 /// <summary>
 /// 窗口配置参数，用于控制窗口的大小、标题、图标等
 /// </summary>
+
+namespace Frame.Core.Window
+{
 [Serializable]
 public struct WindowConfig
 {
@@ -49,4 +52,5 @@ public struct WindowConfig
         AlwaysInit = true,
         OnCloseCallback = null
     };
+}
 }

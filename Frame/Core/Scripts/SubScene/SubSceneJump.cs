@@ -2,12 +2,14 @@ using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-using Framework.Core;
 using UnityEngine.Events;
 
 /// <summary>
 /// 子场景跳转封装：统一走 <see cref="SubSceneManager"/>，场景名须已在 SubSceneConfig 中声明。
 /// </summary>
+
+namespace Frame.Core.SubScene
+{
 public class SubSceneJump : MonoBehaviour
 {
     [Header("Inspector / UnityEvent 无参调用")]
@@ -141,4 +143,5 @@ public class SubSceneJump : MonoBehaviour
         Debug.LogError("[SubSceneJump] SubSceneManager.Instance 为空，请确认常驻场景里已挂载 SubSceneManager。");
         return false;
     }
+}
 }

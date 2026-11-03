@@ -10,6 +10,9 @@ using UnityEngine.Events;
 /// 退出 Focus 时全部类型执行 OnExit，并恢复物体显示。
 /// Type 与 EquipmentElementIconConfig.m_Config.Type 对齐。
 /// </summary>
+
+namespace Frame.Core.FocusCamera
+{
 public class HideEnvironmentObjController : NonsensicalMono
 {
     [Serializable]
@@ -138,4 +141,5 @@ public class HideEnvironmentObjController : NonsensicalMono
         _cachedStates.Clear();
         _hasCached = false;
     }
+}
 }

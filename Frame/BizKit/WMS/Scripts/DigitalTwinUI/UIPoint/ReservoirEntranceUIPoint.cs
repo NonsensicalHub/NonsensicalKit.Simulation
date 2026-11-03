@@ -9,7 +9,11 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using Frame.Core.DigitalTwinUI;
 
+
+namespace Frame.BizKit.WMS.DigitalTwinUI
+{
 [RequireComponent(typeof(FollowGameObject))]
 public class ReservoirEntranceUIPoint : NonsensicalUI, IDigitalTwinUI, IPointerEnterHandler, IPointerExitHandler
 {
@@ -134,4 +138,5 @@ public class ReservoirEntranceUIPoint : NonsensicalUI, IDigitalTwinUI, IPointerE
         CanvasGroup.blocksRaycasts = true;
         CanvasGroup.DoFade(1f, 0.2f);
     }
+}
 }

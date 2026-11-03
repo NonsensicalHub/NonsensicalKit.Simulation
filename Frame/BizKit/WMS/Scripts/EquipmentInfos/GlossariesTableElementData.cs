@@ -1,4 +1,4 @@
-namespace Frame.Equipment
+namespace Frame.BizKit.WMS.Equipment
 {
     public enum GlossariesInfoType
     {

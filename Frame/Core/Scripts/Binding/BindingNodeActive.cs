@@ -2,6 +2,9 @@ using Newtonsoft.Json.Linq;
 using NonsensicalKit.Core.DagLogicNode;
 using UnityEngine;
 
+
+namespace Frame.Core.Binding
+{
 public class BindingNodeActive : BindingToken
 {
 
@@ -26,4 +29,5 @@ public class BindingNodeActive : BindingToken
         }
         return new JValue(m_dagNodeControl.NodeId);
     }
+}
 }

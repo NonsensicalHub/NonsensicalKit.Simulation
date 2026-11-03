@@ -3,8 +3,7 @@ using Cysharp.Threading.Tasks;
 using NonsensicalKit.Core;
 using NonsensicalKit.Tools.ObjectPool;
 using UnityEngine;
-
-namespace Frame.Equipment
+namespace Frame.BizKit.WMS.Equipment
 {
     public class GlossariesTable : NonsensicalMono
     {

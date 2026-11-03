@@ -6,11 +6,15 @@ using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem.UI;
 #endif
+using Frame.Core.Window;
 
 /// <summary>
 /// FrameSample Window 最小演示：运行时搭建 Canvas / 按钮 / WindowContainerManager，
 /// 窗口壳从 Resources 加载（WmsDemo 设备管理 Window），内容预制体运行时生成。
 /// </summary>
+
+namespace Frame.Sample.WindowExamples
+{
 public class FrameWindowExampleBootstrap : MonoBehaviour
 {
     public const string DefaultWindowName = "DemoWindow";
@@ -204,4 +208,5 @@ public class FrameWindowExampleBootstrap : MonoBehaviour
 
         field.SetValue(target, value);
     }
+}
 }

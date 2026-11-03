@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using NaughtyAttributes;
 using NonsensicalKit.Core.Service.Config;
 using UnityEngine;
+using Frame.BizKit.WMS.RealTimeAlarm;
 
 
+
+namespace Frame.BizKit.WMS.Config
+{
 [CreateAssetMenu(fileName = "RealTimeAlarmInfo", menuName = "ScriptableObjects/RealTimeAlarmInfo")]
 public class RealTimeSctObj : ConfigObject
 {
@@ -84,4 +88,5 @@ public class InformativeGenerateTemplates
     public string deviceName;
     public int count;
     public int m_equipmentType;
+}
 }

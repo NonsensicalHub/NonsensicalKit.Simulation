@@ -6,8 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
-
-namespace Frame.Equipment
+namespace Frame.BizKit.WMS.Equipment
 {
     /// <summary>
     ///设备详情处理器

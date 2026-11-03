@@ -8,6 +8,9 @@ using System.Collections.Generic;
 /// - MQ → MQTTMessage，SR → SignalRMessage
 /// 仅配置各事件正文解析方式（因项目而异）。
 /// </summary>
+
+namespace Frame.Core.RecordPlayback
+{
 [Serializable]
 public class RecordParseConfig
 {
@@ -37,4 +40,5 @@ public class RecordEventRule
     public string payloadPattern;
 
     public bool trimParts = true;
+}
 }
