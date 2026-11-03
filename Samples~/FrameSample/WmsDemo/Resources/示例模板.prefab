@@ -698,7 +698,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u6B66\u6C49\u65B0\u82AF\u667A\u80FD\u4ED3\u50A8\u6570\u5B57\u5B6A\u751F\u5E73\u53F0"
+  m_text: "\u51B7\u94FE\u6570\u5B57\u5B6A\u751F\u793A\u4F8B\u5E73\u53F0"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 697d3611eb6fdff4eb99f8d4a775cb5c, type: 2}
   m_sharedMaterial: {fileID: -5963540817906001490, guid: 697d3611eb6fdff4eb99f8d4a775cb5c,
@@ -782,7 +782,7 @@ GameObject:
   - component: {fileID: 104176421019570331}
   - component: {fileID: 7801244956722016199}
   m_Layer: 5
-  m_Name: "\u65B0\u82AF\u6A21\u677F"
+  m_Name: "\u793A\u4F8B\u6A21\u677F"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

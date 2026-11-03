@@ -1,4 +1,4 @@
-﻿# Frame 目录结构
+# Frame 目录结构
 
 ```
 Frame/
@@ -52,3 +52,7 @@ Samples~/FrameSample/   # Package Manager「Frame Sample」
 - 详见各 asmdef 的 
 ootNamespace 与源文件 
 amespace。
+
+
+## 可选依赖
+见 [OPTIONAL_DEFINES.md](OPTIONAL_DEFINES.md)。已取消手写 FRAME_* 项目宏；WebGL 仅保留 versionDefines 自动检测。

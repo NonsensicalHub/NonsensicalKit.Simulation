@@ -62,3 +62,7 @@ Frame — 可复用框架（UI + 数字孪生运行时）
 - Core：Frame.Core.*（按目录）；可选 Frame.Core.Mqtt / Frame.Core.VLC；Sample 图表 Frame.Core.XCharts
 - BizKit：Frame.BizKit.WMS.*；可选 Hikvision / ZCalendar
 - 旧 Framework.Core / Frame.VideoPlayer / Frame.Equipment / Frame.RealTimeAlarm / CusAttribute 已迁入
+
+
+
+WebGL：Optional/WebGL 用 versionDefines 检测 nonsensicalkit.webgl，自动 FRAME_NK_WEBGL；无包不编译、无硬依赖。

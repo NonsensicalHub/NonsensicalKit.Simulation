@@ -1,19 +1,27 @@
 {
-  "name": "Frame.Core.VLC",
-  "rootNamespace": "Frame.Core.VLC",
-  "references": [
-    "Frame.Core",
-    "Unity.TextMeshPro"
-  ],
-  "includePlatforms": [],
-  "excludePlatforms": [],
-  "allowUnsafeCode": false,
-  "overrideReferences": false,
-  "precompiledReferences": [
-    "LibVLCSharp.dll"
-  ],
-  "autoReferenced": true,
-  "defineConstraints": [],
-  "versionDefines": [],
-  "noEngineReferences": false
+    "name":  "Frame.Core.VLC",
+    "rootNamespace":  "Frame.Core.VLC",
+    "references":  [
+                       "Frame.Core",
+                       "Unity.TextMeshPro"
+                   ],
+    "includePlatforms":  [
+
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+                                  "LibVLCSharp.dll"
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+
+                       ],
+    "noEngineReferences":  false
 }

@@ -1,27 +1,26 @@
 #if UNITY_WEBGL && !UNITY_EDITOR
 using System;
-using System.IO;
-using NonsensicalKit.UGUI;
-using NonsensicalKit.WebGL;
+using Frame.Core.Abstractions;
 using UnityEngine;
-
 
 namespace Frame.Core.Component
 {
+/// <summary>
+/// WebGL 平台桩：转发到 FrameOptionalServices.WebBrowserWebGl。
+/// 真实 WebIframe 调用在 Frame.Core.WebGL（安装 nonsensicalkit.webgl 后由 versionDefines 自动编译）。
+/// </summary>
 public partial class WebBrowser
 {
-    private RectTransform _rect;
-    private string _canvasID;
-
-    private Vector3[] _vs = new Vector3[2];
-    private Vector3 _x, _y;
-
     private partial string DealWithUrl(string url)
     {
+        var backend = FrameOptionalServices.WebBrowserWebGl;
+        if (backend != null)
+            return backend.DealWithUrl(this, url);
+
         return m_urlType switch
         {
             UrlType.Http => url,
-            UrlType.StreamingAssets => Path.Combine(Application.streamingAssetsPath, url),
+            UrlType.StreamingAssets => System.IO.Path.Combine(Application.streamingAssetsPath, url),
             UrlType.File => url,
             _ => throw new ArgumentOutOfRangeException()
         };
@@ -29,67 +28,27 @@ public partial class WebBrowser
 
     private partial void Init()
     {
-        _rect = GetComponent<RectTransform>();
-        _canvasID = System.Guid.NewGuid().ToString();
-        WebIframe.Instance.Create(_canvasID);
+        var backend = FrameOptionalServices.WebBrowserWebGl;
+        if (backend == null)
+        {
+            Debug.LogWarning("[WebBrowser] 未注册 WebGL 后端。请安装 com.nonsensicallab.nonsensicalkit.webgl（Frame.Core.WebGL 会自动启用）。");
+            return;
+        }
+
+        backend.OnInit(this);
     }
 
     public partial void LoadUrl(string url)
     {
-        if (string.IsNullOrEmpty(url) || _rect == null)
-        {
-            Debug.LogWarning("url is null or empty or 画布不存在 ");
-            return;
-        }
-
-        if (string.IsNullOrEmpty(_canvasID))
-        {
-            _canvasID = System.Guid.NewGuid().ToString();
-        }
-
-        URL = url;
-        GetPoint();
-        WebIframe.Instance.Change(_x.x, _x.y, _y.x, _y.y, URL, _canvasID);
+        FrameOptionalServices.WebBrowserWebGl?.OnLoadUrl(this, url);
     }
 
-    private void OnEnable()
-    {
-        if (string.IsNullOrEmpty(URL) || _rect == null)
-        {
-            return;
-        }
+    private void OnEnable() => FrameOptionalServices.WebBrowserWebGl?.OnEnable(this);
 
-        GetPoint();
-        WebIframe.Instance.Change(_x.x, _x.y, _y.x, _y.y, URL, _canvasID);
-    }
+    private void OnDisable() => FrameOptionalServices.WebBrowserWebGl?.OnDisable(this);
 
-    private void OnDisable()
-    {
-        if (!string.IsNullOrEmpty(_canvasID) && WebIframe.Instance != null)
-        {
-            WebIframe.Instance.Close(_canvasID);
-        }
-    }
-
-    private void OnRectTransformDimensionsChange()
-    {
-        if (string.IsNullOrEmpty(URL) || _rect == null)
-        {
-            return;
-        }
-
-        GetPoint();
-        WebIframe.Instance.Change(_x.x, _x.y, _y.x, _y.y, URL, _canvasID);
-    }
-
-    private void GetPoint()
-    {
-        if (_rect == null)
-            return;
-        _rect.GetWorldMinMax(ref _vs);
-        _x = new Vector3(_vs[0].x / Screen.width, _vs[0].y / Screen.height);
-        _y = new Vector3(_vs[1].x / Screen.width, _vs[1].y / Screen.height);
-    }
+    private void OnRectTransformDimensionsChange() =>
+        FrameOptionalServices.WebBrowserWebGl?.OnRectTransformDimensionsChange(this);
 }
 }
 #endif

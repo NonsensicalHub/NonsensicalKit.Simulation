@@ -12,15 +12,12 @@ using NonsensicalKit.Core.Service.Config;
 using UnityEngine;
 using Frame.Core.Network;
 using Frame.Core.Config;
+using Frame.Core.Abstractions;
 #if UNITY_EDITOR || !UNITY_WEBGL
 using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Protocol;
 #endif
-#if UNITY_WEBGL
-using NonsensicalKit.WebGL;
-#endif
-
 /// <summary>
 /// MQTT 连接管理：从 URLBaseConfig 读取 Broker 参数，支持 PC(WebSocket) 与 WebGL。
 /// 注意：m_mqttPassword / URLBase Authorization 仅供运行时配置，生产密钥勿打进包默认资产。
@@ -207,7 +204,7 @@ public class MQTTManager : NonsensicalMono, IMonoService
 #elif UNITY_WEBGL
         if (PlatformInfo.IsWebGL)
         {
-            WebMQTT.Instance?.CloseAll();
+            FrameOptionalServices.WebMqtt?.CloseAll();
         }
 #endif
     }
@@ -494,7 +491,7 @@ public class MQTTManager : NonsensicalMono, IMonoService
 
         if (!(m_recordTopic && _subscribeTopics.Contains(topic)))
         {
-            WebMQTT.Instance.Subscribe(BuildWebUrl(), topic);
+            FrameOptionalServices.WebMqtt?.Subscribe(BuildWebUrl(), topic);
         }
 
         if (m_recordTopic && !_subscribeTopics.Contains(topic))
@@ -523,7 +520,7 @@ public class MQTTManager : NonsensicalMono, IMonoService
             return;
         }
 
-        WebMQTT.Instance.SendMessage(BuildWebUrl(), topic, message);
+        FrameOptionalServices.WebMqtt?.SendMessage(BuildWebUrl(), topic, message);
     }
 #endif
 
@@ -531,7 +528,7 @@ public class MQTTManager : NonsensicalMono, IMonoService
     private void InitWebMqtt(string[] _)
     {
         string url = BuildWebUrl();
-        WebMQTT.Instance.Connect(url, m_mqttUser, m_mqttPassword);
+        FrameOptionalServices.WebMqtt?.Connect(url, m_mqttUser, m_mqttPassword);
         if (!_webMqttSubscribed)
         {
             IOCC.Subscribe<string, string>("MQTTMessage", OnWebMqttMessageReceived);

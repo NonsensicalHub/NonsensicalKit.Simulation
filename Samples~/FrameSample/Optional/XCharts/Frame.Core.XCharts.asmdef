@@ -1,18 +1,28 @@
 {
-  "name": "Frame.Core.XCharts",
-  "rootNamespace": "Frame.Core.XCharts",
-  "references": [
-    "Frame.Core",
-    "XCharts.Runtime",
-    "Unity.TextMeshPro"
-  ],
-  "includePlatforms": [],
-  "excludePlatforms": [],
-  "allowUnsafeCode": false,
-  "overrideReferences": false,
-  "precompiledReferences": [],
-  "autoReferenced": true,
-  "defineConstraints": [],
-  "versionDefines": [],
-  "noEngineReferences": false
+    "name":  "Frame.Core.XCharts",
+    "rootNamespace":  "Frame.Core.XCharts",
+    "references":  [
+                       "Frame.Core",
+                       "XCharts.Runtime",
+                       "Unity.TextMeshPro"
+                   ],
+    "includePlatforms":  [
+
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+
+                       ],
+    "noEngineReferences":  false
 }

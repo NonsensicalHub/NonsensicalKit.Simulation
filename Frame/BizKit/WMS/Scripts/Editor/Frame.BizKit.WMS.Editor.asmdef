@@ -1,27 +1,34 @@
 {
-  "name": "Frame.BizKit.WMS.Editor",
-  "rootNamespace": "Frame.BizKit.WMS.Editor",
-  "references": [
-    "Frame.Core",
-    "Frame.Core.Editor",
-    "Frame.Core.Network.Editor",
-    "Frame.BizKit.WMS",
-    "NonsensicalKit.Core.Runtime",
-    "NonsensicalKit.Core.Editor",
-    "NonsensicalKit.NaughtyAttributes",
-    "NonsensicalKit.NaughtyAttributes.Editor",
-    "NonsensicalKit.DigitalTwin.Motion"
-  ],
-  "includePlatforms": [
-    "Editor"
-  ],
-  "excludePlatforms": [],
-  "allowUnsafeCode": false,
-  "overrideReferences": false,
-  "precompiledReferences": [],
-  "autoReferenced": true,
-  "defineConstraints": [],
-  "versionDefines": [],
-  "noEngineReferences": false
-}
+    "name":  "Frame.BizKit.WMS.Editor",
+    "rootNamespace":  "Frame.BizKit.WMS.Editor",
+    "references":  [
+                       "Frame.Core",
+                       "Frame.Core.Editor",
+                       "Frame.Core.Network.Editor",
+                       "Frame.BizKit.WMS",
+                       "NonsensicalKit.Core.Runtime",
+                       "NonsensicalKit.Core.Editor",
+                       "NonsensicalKit.NaughtyAttributes",
+                       "NonsensicalKit.NaughtyAttributes.Editor",
+                       "NonsensicalKit.DigitalTwin.Motion"
+                   ],
+    "includePlatforms":  [
+                             "Editor"
+                         ],
+    "excludePlatforms":  [
 
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+
+                       ],
+    "noEngineReferences":  false
+}

@@ -1,6 +1,6 @@
 # BizKit.WMS — 仓储 / 冷链业务件
 
-**非仓储项目请不要依赖本层。** 新项目优先只引用 `Frame.Core`。
+**非仓储项目请不要依赖本层。** 新项目优先只引用 `Frame.Core`。本层已不再使用 `FRAME_BIZKIT_WMS` 项目宏；不需要仓储时不要引用/挂载 BizKit 类型即可（见 `Docs/OPTIONAL_DEFINES.md`）。
 
 ## 用途
 仓储数字孪生业务：货位/设备信息、实时报警、Twin HTTP（`WmsUrls`）、业务 DigitalTwinUI 点位、搜索工具等。

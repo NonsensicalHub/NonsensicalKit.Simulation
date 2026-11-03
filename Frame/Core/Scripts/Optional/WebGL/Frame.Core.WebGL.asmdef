@@ -1,0 +1,34 @@
+{
+    "name":  "Frame.Core.WebGL",
+    "rootNamespace":  "Frame.Core.WebGL",
+    "references":  [
+                       "Frame.Core",
+                       "NonsensicalKit.Core.Runtime",
+                       "NonsensicalKit.UGUI.Items",
+                       "NonsensicalKit.WebGL.WebBridge",
+                       "Unity.TextMeshPro"
+                   ],
+    "includePlatforms":  [
+
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+                              "FRAME_NK_WEBGL"
+                          ],
+    "versionDefines":  [
+                           {
+                               "name":  "com.nonsensicallab.nonsensicalkit.webgl",
+                               "expression":  "0.0.0",
+                               "define":  "FRAME_NK_WEBGL"
+                           }
+                       ],
+    "noEngineReferences":  false
+}

@@ -1,27 +1,34 @@
 {
-  "name": "Frame.Core",
-  "rootNamespace": "Frame.Core",
-  "references": [
-    "UniTask",
-    "NonsensicalKit.Core.Runtime",
-    "NonsensicalKit.NaughtyAttributes",
-    "NonsensicalKit.DigitalTwin.Motion",
-    "NonsensicalKit.UGUI.Items",
-    "NonsensicalKit.UGUI.Table",
-    "NonsensicalKit.WebGL.WebBridge",
-    "Unity.Cinemachine",
-    "Unity.TextMeshPro"
-  ],
-  "includePlatforms": [],
-  "excludePlatforms": [],
-  "allowUnsafeCode": false,
-  "overrideReferences": false,
-  "precompiledReferences": [
-    "DOTween.dll",
-    "Newtonsoft.Json.dll"
-  ],
-  "autoReferenced": true,
-  "defineConstraints": [],
-  "versionDefines": [],
-  "noEngineReferences": false
+    "name":  "Frame.Core",
+    "rootNamespace":  "Frame.Core",
+    "references":  [
+                       "UniTask",
+                       "NonsensicalKit.Core.Runtime",
+                       "NonsensicalKit.NaughtyAttributes",
+                       "NonsensicalKit.DigitalTwin.Motion",
+                       "NonsensicalKit.UGUI.Items",
+                       "NonsensicalKit.UGUI.Table",
+                       "Unity.Cinemachine",
+                       "Unity.TextMeshPro"
+                   ],
+    "includePlatforms":  [
+
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+                                  "DOTween.dll",
+                                  "Newtonsoft.Json.dll"
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+
+                       ],
+    "noEngineReferences":  false
 }

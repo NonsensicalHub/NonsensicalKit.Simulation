@@ -1,23 +1,31 @@
 {
-  "name": "Frame.BizKit.WMS.Hikvision",
-  "rootNamespace": "Frame.BizKit.WMS.Hikvision",
-  "references": [
-    "Frame.Core",
-    "Frame.BizKit.WMS",
-    "NonsensicalKit.Core.Runtime",
-    "NonsensicalKit.NaughtyAttributes",
-    "NonsensicalKit.DigitalTwin.Motion",
-    "HikvisionAgv.Runtime"
-  ],
-  "includePlatforms": [],
-  "excludePlatforms": [],
-  "allowUnsafeCode": false,
-  "overrideReferences": false,
-  "precompiledReferences": [
-    "Newtonsoft.Json.dll"
-  ],
-  "autoReferenced": true,
-  "defineConstraints": [],
-  "versionDefines": [],
-  "noEngineReferences": false
+    "name":  "Frame.BizKit.WMS.Hikvision",
+    "rootNamespace":  "Frame.BizKit.WMS.Hikvision",
+    "references":  [
+                       "Frame.Core",
+                       "Frame.BizKit.WMS",
+                       "NonsensicalKit.Core.Runtime",
+                       "NonsensicalKit.NaughtyAttributes",
+                       "NonsensicalKit.DigitalTwin.Motion",
+                       "HikvisionAgv.Runtime"
+                   ],
+    "includePlatforms":  [
+
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+                                  "Newtonsoft.Json.dll"
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+
+                       ],
+    "noEngineReferences":  false
 }
