@@ -1,0 +1,29 @@
+{
+  "name": "Frame.BizKit.WMS",
+  "rootNamespace": "",
+  "references": [
+    "Frame.Core",
+    "UniTask",
+    "NonsensicalKit.Core.Runtime",
+    "NonsensicalKit.NaughtyAttributes",
+    "NonsensicalKit.DigitalTwin.Motion",
+    "NonsensicalKit.DigitalTwin.Warehouse",
+    "NonsensicalKit.UGUI.Items",
+    "NonsensicalKit.UGUI.Table",
+    "Unity.TextMeshPro",
+    "HikvisionAgv.Runtime",
+    "ZCalendar"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [
+    "DOTween.dll",
+    "Newtonsoft.Json.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

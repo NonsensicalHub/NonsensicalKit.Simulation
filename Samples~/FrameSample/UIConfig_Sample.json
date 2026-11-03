@@ -1,0 +1,442 @@
+{
+  "Title": "冷链数字孪生示例平台",
+  "PageButton": [
+    {
+      "按钮文本": "数字库区",
+      "前往节点": "数字库区"
+    },
+    {
+      "按钮文本": "设备管理",
+      "前往节点": "设备管理"
+    },
+    {
+      "按钮文本": "库存管理",
+      "前往节点": "库存管理"
+    },
+    {
+      "按钮文本": "数据统计",
+      "前往节点": "数据统计"
+    },
+    {
+      "按钮文本": "任务清单",
+      "前往节点": "任务清单"
+    }
+  ],
+  "Pages": [
+    {
+      "$prefab": "库区页面",
+      "$content": {
+        "显示节点": "库区",
+        "库区介绍图片": "Sprites/SampleWarehouseIntro",
+        "库区介绍文本": "        本示例项目展示冷链立体库数字孪生界面结构，仅供演示。园区含多栋保税冷库与查验库，建筑高度约 25.5 米；冷库区为智能化立体库，穿堂为多层建筑，主要用于冷冻食品仓储演示。文中面积、库号均为虚构示例数据，请按实际项目替换。",
+        "可返回节点": [
+          "出入库流程",
+          "切换视角"
+        ],
+        "按钮组": [
+          {
+            "注释": "主菜单",
+            "显示节点": "库区",
+            "显示节点控制": "ParentSelect",
+            "按钮": [
+              {
+                "$prefab": "NormalButton",
+                "$content": {
+                  "普通按钮配置": {
+                    "文本": "出入库流程",
+                    "未选择图片": "Sprites/UnselectedImage",
+                    "选择图片": "Sprites/SelectedImage",
+                    "切换节点": "出入库流程"
+                  }
+                }
+              },
+              {
+                "$prefab": "NormalButton",
+                "$content": {
+                  "普通按钮配置": {
+                    "文本": "切换视角",
+                    "未选择图片": "Sprites/UnselectedImage",
+                    "选择图片": "Sprites/SelectedImage",
+                    "切换节点": "切换视角"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "注释": "流程控制",
+            "显示节点": "出入库流程",
+            "显示节点控制": "ChildSelect",
+            "按钮": [
+              {
+                "$prefab": "NormalButton",
+                "$content": {
+                  "普通按钮配置": {
+                    "文本": "全览",
+                    "未选择图片": "Sprites/UnselectedImage",
+                    "选择图片": "Sprites/SelectedImage",
+                    "切换节点": "全览"
+                  }
+                }
+              },
+              {
+                "$prefab": "NormalButton",
+                "$content": {
+                  "普通按钮配置": {
+                    "文本": "入库",
+                    "未选择图片": "Sprites/UnselectedImage",
+                    "选择图片": "Sprites/SelectedImage",
+                    "切换节点": "入库"
+                  }
+                }
+              },
+              {
+                "$prefab": "NormalButton",
+                "$content": {
+                  "普通按钮配置": {
+                    "文本": "出库",
+                    "未选择图片": "Sprites/UnselectedImage",
+                    "选择图片": "Sprites/SelectedImage",
+                    "切换节点": "出库"
+                  }
+                }
+              },
+              {
+                "$prefab": "NormalButton",
+                "$content": {
+                  "普通按钮配置": {
+                    "文本": "充电",
+                    "未选择图片": "Sprites/UnselectedImage",
+                    "选择图片": "Sprites/SelectedImage",
+                    "切换节点": "充电"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "注释": "视角控制",
+            "显示节点": "切换视角",
+            "显示节点控制": "ChildSelect",
+            "按钮": [
+              {
+                "$prefab": "NormalButton",
+                "$content": {
+                  "普通按钮配置": {
+                    "文本": "自由视角",
+                    "未选择图片": "Sprites/UnselectedImage",
+                    "选择图片": "Sprites/SelectedImage",
+                    "切换节点": "自由视角"
+                  }
+                }
+              },
+              {
+                "$prefab": "ViewControlButton",
+                "$content": {
+                  "定位按钮配置": {
+                    "定位视角节点名称": "定位视角",
+                    "定位视角文本": "定位视角",
+                    "货架解剖节点名称": "货架层数"
+                  }
+                }
+              },
+              {
+                "$prefab": "NormalButton",
+                "$content": {
+                  "普通按钮配置": {
+                    "文本": "第一人称视角",
+                    "未选择图片": "Sprites/UnselectedImage",
+                    "选择图片": "Sprites/SelectedImage",
+                    "切换节点": "第一人称视角"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "$prefab": "设备管理/SB管理",
+      "$content": {
+        "MainLeftTop": {
+          "Title": "实时报警",
+          "Pages": [
+            {
+              "$prefab": "设备管理/左上/实时报警ScrollView",
+              "$content": {
+                "ScrollViewContent": {
+                  "Pages": [
+                    {
+                      "$prefab": "设备管理/左上/报警Element",
+                      "$content": {}
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "MainLeftBottom": {
+          "Title": "监控视频",
+          "Pages": [
+            {
+              "$prefab": "设备管理/左下/监控视频ScrollView",
+              "$content": {
+                "ScrollViewContent": {
+                  "Elements": [
+                    {
+                      "*": {
+                        "VideoPaths": [
+                          "/Video/Sample_AGV.mp4",
+                          "/Video/Sample_CTU.mp4",
+                          "/Video/Sample_Stacker.mp4"
+                        ],
+                        "LocalTest": true,
+                        "Url": "",
+                        "IconID": "01",
+                        "ShowNode": [
+                          "设备管理"
+                        ]
+                      },
+                      "Index": "01",
+                      "Alias": "示例监控1"
+                    },
+                    {
+                      "*": {
+                        "VideoPaths": [
+                          "/Video/Sample_AGV.mp4",
+                          "/Video/Sample_CTU.mp4",
+                          "/Video/Sample_Stacker.mp4"
+                        ],
+                        "LocalTest": true,
+                        "Url": "",
+                        "IconID": "02",
+                        "ShowNode": [
+                          "设备管理"
+                        ]
+                      },
+                      "Index": "02",
+                      "Alias": "示例监控2"
+                    },
+                    {
+                      "*": {
+                        "VideoPaths": [
+                          "/Video/Sample_AGV.mp4",
+                          "/Video/Sample_CTU.mp4",
+                          "/Video/Sample_Stacker.mp4"
+                        ],
+                        "LocalTest": true,
+                        "Url": "",
+                        "IconID": "03",
+                        "ShowNode": [
+                          "设备管理"
+                        ]
+                      },
+                      "Index": "03",
+                      "Alias": "示例监控3"
+                    },
+                    {
+                      "*": {
+                        "VideoPaths": [
+                          "/Video/Sample_AGV.mp4",
+                          "/Video/Sample_CTU.mp4",
+                          "/Video/Sample_Stacker.mp4"
+                        ],
+                        "LocalTest": true,
+                        "Url": "",
+                        "IconID": "04",
+                        "ShowNode": [
+                          "设备管理"
+                        ]
+                      },
+                      "Index": "04",
+                      "Alias": "示例监控4"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$prefab": "设备管理/左下/监控视频TopElement",
+              "$content": {}
+            }
+          ]
+        },
+        "MainRight": {
+          "Title": "设备管理",
+          "Top": [
+            {
+              "$prefab": "设备管理/右/设备管理TypeIconScrollView",
+              "$content": {
+                "ScrollViewContent": {
+                  "Elements": []
+                }
+              }
+            }
+          ],
+          "Bottom": [
+            {
+              "$prefab": "设备管理/右/设备ElementScrollView",
+              "$content": {
+                "ScrollViewContent": {
+                  "Elements": []
+                }
+              }
+            }
+          ]
+        },
+        "Center": {
+          "center": [
+            {
+              "$prefab": "设备管理/Window/设备管理WindowManager",
+              "$content": {}
+            },
+            {
+              "$prefab": "设备管理/WarningDetail",
+              "$content": {}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "$prefab": "库存管理/KC管理",
+      "$content": {
+        "显示节点": "库存管理",
+        "货架切片": {
+          "绑定信号": "示例一号库",
+          "货架切片数量": 16
+        },
+        "货物搜索": [
+          {
+            "Type": "String",
+            "Text": "物料名称"
+          },
+          {
+            "Type": "String",
+            "Text": "物料编码"
+          },
+          {
+            "Type": "String",
+            "Text": "商品编号"
+          },
+          {
+            "Type": "String",
+            "Text": "货位号"
+          },
+          {
+            "Type": "DataRange",
+            "Text": "入库时间"
+          },
+          {
+            "Type": "String",
+            "Text": "综合模糊"
+          }
+        ],
+        "MainLeft": {
+          "Top": [
+            {
+              "$prefab": "库存管理/库存信息",
+              "$content": {
+                "Title": "库存信息",
+                "LT_Title": "总计货位",
+                "LT_Count": "1000",
+                "LB_Title": "托盘占位",
+                "LB_Count": "500",
+                "RT_Title": "控制货位",
+                "RT_Count": "900",
+                "RB_Title": "库存量",
+                "RB_Count": "480",
+                "RB_Unit": "(吨)",
+                "C_Title": "当前货位总量",
+                "C_Count": "1500",
+                "pieChart": {
+                  "Data": [
+                    60,
+                    25,
+                    15
+                  ]
+                }
+              }
+            }
+          ],
+          "Mid": [
+            {
+              "$prefab": "库存管理/库龄分布",
+              "$content": {
+                "Title": "库龄分布",
+                "LC_Title": "库龄分布",
+                "R_Element": [
+                  {
+                    "R_Sprite": "Sprites/1",
+                    "R_Title": "0-90",
+                    "R_Count": "600",
+                    "R_Percent": "60%"
+                  },
+                  {
+                    "R_Sprite": "Sprites/2",
+                    "R_Title": "90-360",
+                    "R_Count": "250",
+                    "R_Percent": "25%"
+                  },
+                  {
+                    "R_Sprite": "Sprites/3",
+                    "R_Title": "≥360",
+                    "R_Count": "150",
+                    "R_Percent": "15%"
+                  }
+                ]
+              }
+            }
+          ],
+          "Bottom": [
+            {
+              "$prefab": "库存管理/关键库存信息",
+              "$content": {
+                "Title": "关键库存信息",
+                "*": {
+                  "是否单独标题行": true,
+                  "标题行高": 30,
+                  "默认单元格宽度": 80,
+                  "默认单元格高度": 26,
+                  "是否指定列宽": true,
+                  "列宽": [
+                    75,
+                    95,
+                    70,
+                    80,
+                    70
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "$prefab": "网页页面",
+      "$content": {
+        "显示节点": "数据统计",
+        "网页路径": {
+          "Url": "WebPanel/sample-bi/data-bi.html",
+          "UrlType": "streamingassets"
+        }
+      }
+    },
+    {
+      "$prefab": "网页页面",
+      "$content": {
+        "显示节点": "任务清单",
+        "网页路径": {
+          "Url": "WebPanel/sample-bi/task-list.html",
+          "UrlType": "streamingassets"
+        }
+      }
+    },
+    {
+      "$prefab": "MainBG"
+    }
+  ]
+}

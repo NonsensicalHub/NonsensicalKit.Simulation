@@ -16,3 +16,9 @@
 - `ParametricModelingShelves`：货架参数化生成、层间距调整与货位显隐示例。
 - `WarehouseSimulation`：出入库仿真。
 - `ScriptAnimation`：Timeline 脚本动画综合演示（路网、叉车、堆垛机、机械臂、开箱、缠膜；含 OpenBox / FilmWrapping 子场景）。
+## Frame（DaTang）
+
+- 运行时/工具：`Frame/`（`Frame.Core`、`Frame.BizKit.WMS` 等 asmdef）
+- 示例：Package Manager → **NonsensicalKit.Simulation** → Samples → **Frame Sample**（`Samples~/FrameSample`）
+- 宿主需自备：Cinemachine、DOTween、UniTask、TextMeshPro 等；`Resources/Services`（MQTTManager、DigitalTwinUIManager）由项目提供，不在包内
+- ThirdParty：`Frame/ThirdParty` 含 XCharts、ZCalendar（随 Frame 进包）

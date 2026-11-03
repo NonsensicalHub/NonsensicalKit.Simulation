@@ -1,0 +1,30 @@
+{
+  "name": "Frame.Core",
+  "rootNamespace": "",
+  "references": [
+    "UniTask",
+    "NonsensicalKit.Core.Runtime",
+    "NonsensicalKit.NaughtyAttributes",
+    "NonsensicalKit.DigitalTwin.Motion",
+    "NonsensicalKit.UGUI.Items",
+    "NonsensicalKit.UGUI.Table",
+    "NonsensicalKit.WebGL.WebBridge",
+    "Unity.Cinemachine",
+    "XCharts.Runtime",
+    "Unity.TextMeshPro"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [
+    "MQTTnet.dll",
+    "DOTween.dll",
+    "LibVLCSharp.dll",
+    "Newtonsoft.Json.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

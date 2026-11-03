@@ -1,0 +1,147 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 298738e26593423499436b73de189cd2, type: 3}
+  m_Name: EquipmentElementIconConfig
+  m_EditorClassIdentifier: 
+  data:
+    ConfigID: ID35d313c2
+    Types:
+    - m_BelongNode: "\u4E00\u53F7\u5E93"
+      m_IsDefault: 1
+      m_Config:
+      - Name: "AGV\u53C9\u8F66"
+        Count: 1
+        PrefixID: AB
+        Sprite: {fileID: 21300000, guid: 705ccd50f0ba11d48bb9ff20630cbeba, type: 3}
+        Type: "AGV\u53C9\u8F66"
+        CustomID: 1
+        CustomIDStrings:
+        - 12497
+        m_SpritePath: "Thumbnails/New/AGV \u53C9\u8F66"
+      - Name: AMR
+        Count: 6
+        PrefixID: AC
+        Sprite: {fileID: 21300000, guid: afa0d32f55973d9468e6550122c91cd5, type: 3}
+        Type: AMR
+        CustomID: 1
+        CustomIDStrings:
+        - 30395
+        - 30396
+        - 30397
+        - 30399
+        - 30400
+        - 30402
+        m_SpritePath: 'Thumbnails/New/AGV '
+      - Name: "\u5806\u579B\u673A"
+        Count: 8
+        PrefixID: AD
+        Sprite: {fileID: 21300000, guid: 23d401a67bf28b34cbc01292654b10b8, type: 3}
+        Type: "\u5806\u579B\u673A"
+        CustomID: 1
+        CustomIDStrings:
+        - DDJ_01
+        - DDJ_02
+        - DDJ_03
+        - DDJ_04
+        - DDJ_05
+        - DDJ_06
+        - DDJ_07
+        - DDJ_08
+        m_SpritePath: "Thumbnails/\u5806\u579B\u673A"
+      - Name: "\u63D0\u5347\u673A"
+        Count: 6
+        PrefixID: AE
+        Sprite: {fileID: 21300000, guid: 1d7a8b37072adc146bb074b44e444dd2, type: 3}
+        Type: "\u63D0\u5347\u673A"
+        CustomID: 1
+        CustomIDStrings:
+        - TSJ_01
+        - TSJ_02
+        - TSJ_03
+        - TSJ_04
+        - TSJ_05
+        - TSJ_06
+        m_SpritePath: Thumbnails/New/TSJ
+      - Name: "\u7F20\u819C\u673A"
+        Count: 1
+        PrefixID: AF
+        Sprite: {fileID: 21300000, guid: 4abf72882dd7c77478bdf201eb851f81, type: 3}
+        Type: "\u7F20\u819C\u673A"
+        CustomID: 1
+        CustomIDStrings:
+        - CMJ_1089
+        m_SpritePath: Thumbnails/New/CMJ
+      - Name: "\u6574\u5F62\u673A"
+        Count: 1
+        PrefixID: AG
+        Sprite: {fileID: 21300000, guid: d9b4efcf32514c647a78e231c9b90a8c, type: 3}
+        Type: "\u6574\u5F62\u673A"
+        CustomID: 1
+        CustomIDStrings:
+        - ZXJ_1106
+        m_SpritePath: Thumbnails/New/ZXJ
+    - m_BelongNode: "\u4E8C\u53F7\u5E93"
+      m_IsDefault: 0
+      m_Config:
+      - Name: "AGV\u53C9\u8F66"
+        Count: 1
+        PrefixID: AB
+        Sprite: {fileID: 21300000, guid: 705ccd50f0ba11d48bb9ff20630cbeba, type: 3}
+        Type: "AGV\u53C9\u8F66"
+        CustomID: 1
+        CustomIDStrings:
+        - 12497
+        m_SpritePath: "Thumbnails/New/AGV \u53C9\u8F66"
+      - Name: AMR
+        Count: 6
+        PrefixID: AC
+        Sprite: {fileID: 21300000, guid: afa0d32f55973d9468e6550122c91cd5, type: 3}
+        Type: AMR
+        CustomID: 1
+        CustomIDStrings:
+        - 30395
+        - 30396
+        - 30397
+        - 30399
+        - 30400
+        - 30402
+        m_SpritePath: 'Thumbnails/New/AGV '
+      - Name: "\u5806\u579B\u673A"
+        Count: 8
+        PrefixID: AD
+        Sprite: {fileID: 21300000, guid: 23d401a67bf28b34cbc01292654b10b8, type: 3}
+        Type: "\u5806\u579B\u673A"
+        CustomID: 1
+        CustomIDStrings:
+        - DDJ_01
+        - DDJ_02
+        - DDJ_03
+        - DDJ_04
+        - DDJ_05
+        - DDJ_06
+        - DDJ_07
+        - DDJ_08
+        m_SpritePath: "Thumbnails/\u5806\u579B\u673A"
+      - Name: "\u63D0\u5347\u673A"
+        Count: 6
+        PrefixID: AE
+        Sprite: {fileID: 21300000, guid: 1d7a8b37072adc146bb074b44e444dd2, type: 3}
+        Type: "\u63D0\u5347\u673A"
+        CustomID: 1
+        CustomIDStrings:
+        - TSJ_1008
+        - TSJ_1009
+        - TSJ_1088
+        - TSJ_1102
+        - TSJ_1195
+        - TSJ_1196
+        m_SpritePath: Thumbnails/New/TSJ

@@ -1,0 +1,24 @@
+{
+  "name": "Frame.Core.Editor",
+  "rootNamespace": "",
+  "references": [
+    "Frame.Core",
+    "NonsensicalKit.Core.Runtime",
+    "NonsensicalKit.Core.Editor",
+    "NonsensicalKit.NaughtyAttributes",
+    "NonsensicalKit.NaughtyAttributes.Editor",
+    "Unity.TextMeshPro"
+  ],
+  "includePlatforms": [ "Editor" ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [
+    "MQTTnet.dll",
+    "Newtonsoft.Json.dll"
+  ],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

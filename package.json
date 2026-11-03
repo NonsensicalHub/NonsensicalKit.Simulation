@@ -7,10 +7,11 @@
   "version": "0.9.4",
   "unity": "2021.3",
   "license": "MIT",
-  "description": "模拟实训与脚本动画能力包，覆盖交互训练、库存导航、参数化货架，以及 Timeline 脚本动画（路网、叉车、堆垛机、机械臂、开箱、缠膜等）。依赖 Core、DigitalTwin、Timeline；缠膜 Shader 需 URP。",
+  "description": "模拟实训与脚本动画能力包，覆盖交互训练、库存导航、参数化货架，以及 Timeline 脚本动画（路网、叉车、堆垛机、机械臂、开箱、缠膜等）。另含 DaTang Frame（数字孪生 UI/窗口/MQTT 等，见 Frame/）。依赖 Core、DigitalTwin、UGUI、Timeline；缠膜 Shader 需 URP。Frame 另需宿主提供 Cinemachine/DOTween/UniTask 等。",
   "dependencies": {
     "com.nonsensicallab.nonsensicalkit.core": "1.0.7",
-    "com.nonsensicallab.nonsensicalkit.digitaltwin": "1.1.2",
+    "com.nonsensicallab.nonsensicalkit.digitaltwin": "1.2.0",
+    "com.nonsensicallab.nonsensicalkit.ugui": "1.0.3",
     "com.unity.timeline": "1.6.5"
   },
   "samples": [
@@ -33,6 +34,11 @@
       "displayName": "ScriptAnimation",
       "description": "Timeline 脚本动画综合演示（含 OpenBox、FilmWrapping 子场景）。导入后可用菜单 Tools/ScriptAnimation 打开。",
       "path": "Samples~/ScriptAnimation"
+    },
+    {
+      "displayName": "Frame Sample",
+      "description": "DaTang Frame 示例：Window 演示场景、可选 HikvisionAgv/HighlightPlus 适配器、WmsDemo 资源。导入后见 Samples/FrameSample。",
+      "path": "Samples~/FrameSample"
     }
   ]
 }
