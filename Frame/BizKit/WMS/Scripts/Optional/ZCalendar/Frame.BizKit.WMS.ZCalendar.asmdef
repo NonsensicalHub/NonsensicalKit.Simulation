@@ -21,7 +21,9 @@
     "Newtonsoft.Json.dll"
   ],
   "autoReferenced": true,
-  "defineConstraints": [],
+  "defineConstraints": [
+    "FRAME_ENABLE_ZCALENDAR"
+  ],
   "versionDefines": [],
   "noEngineReferences": false
 }

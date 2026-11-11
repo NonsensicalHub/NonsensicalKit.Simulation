@@ -13,7 +13,9 @@
     "LibVLCSharp.dll"
   ],
   "autoReferenced": true,
-  "defineConstraints": [],
+  "defineConstraints": [
+    "FRAME_ENABLE_VLC"
+  ],
   "versionDefines": [],
   "noEngineReferences": false
 }

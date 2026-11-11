@@ -17,7 +17,9 @@
     "Newtonsoft.Json.dll"
   ],
   "autoReferenced": true,
-  "defineConstraints": [],
+  "defineConstraints": [
+    "FRAME_ENABLE_HIKVISION"
+  ],
   "versionDefines": [],
   "noEngineReferences": false
 }
