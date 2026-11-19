@@ -5,8 +5,6 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.9.4] - 2026-10-23
-
 ### Changed
 
 - 仿真 HTML 报告「任务与子任务明细」改为紧凑 JSON + 前端按需渲染，业务数据保留，显著减小单文件体积
@@ -50,3 +48,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - 修复布局调整后的程序集引用问题
 
+## [0.9.4] - 2026-10-23
+
+### Added
+
+- 新增 CineShot 运镜模块（Timeline 电影运镜：九种机位、焦点/景深、分镜铺轨）。

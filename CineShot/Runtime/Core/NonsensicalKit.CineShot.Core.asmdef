@@ -1,0 +1,28 @@
+{
+    "name": "NonsensicalKit.CineShot.Core",
+    "rootNamespace": "CineShot.Core",
+    "references": [
+        "Unity.Timeline",
+        "NonsensicalKit.CineShot.Compat"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.cinemachine",
+            "expression": "2.8.0",
+            "define": "CM_2_8_OR_NEWER"
+        },
+        {
+            "name": "com.unity.cinemachine",
+            "expression": "[3.0.0,999.0.0)",
+            "define": "CM_V3_OR_NEWER"
+        }
+    ],
+    "noEngineReferences": false
+}
