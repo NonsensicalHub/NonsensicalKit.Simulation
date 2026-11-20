@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1c7dd8735be89440addedea735519a9, type: 3}
+  m_Name: "\u56FE\u5E93_\u9759\u6001"
+  m_EditorClassIdentifier: 
+  m_Id: 4652498f69ea42a4a5afb8dd965f409d
+  displayName: "\u56FE\u5E93_\u9759\u6001"
+  rigKind: 0
+  rigParams:
+    A: {x: 0, y: 1.6, z: -3.5}
+    B: {x: 0, y: 0, z: 0}
+    C: {x: 0, y: 0, z: 0}
+    P0: 0
+    P1: 0
+    P2: 0
+    P3: 0
+    I0: 0
+    I1: 0
+  defaultDuration: 3
+  targetBinding:
+    mode: 1
+    lookAtOffset: {x: 0, y: 1.6, z: 0}
+    followOffset: {x: 0, y: 0, z: 0}
+    damping: 0
+  compositionOffset: {x: 0, y: 0, z: 0}
+  fov: 40
+  nearClip: 0.1
+  farClip: 1000
+  focusMode: 1
+  focusDistance: 10
+  focusSettings:
+    dofMode: 1
+    damping: 6
+    maxFocusSpeed: 20
+    pullDuration: 0.5
+    aperture: 5.6
+    focalLength: 50
+    bladeCount: 5
+    focusLayerMask:
+      serializedVersion: 2
+      m_Bits: 4294967295
+    hyperfocalCircleOfConfusion: 0.00003
+  easeIn: {fileID: 0}
+  easeOut: {fileID: 0}
+  priority: 0
+  tags: []
+  handheld:
+    enabled: 0
+    parameters:
+      A: {x: 0, y: 0, z: 0}
+      B: {x: 0, y: 0, z: 0}
+      C: {x: 0, y: 0, z: 0}
+      P0: 0
+      P1: 0
+      P2: 0
+      P3: 0
+      I0: 0
+      I1: 0
+  matchPoint:
+    position: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0, w: 0}
+    fov: 0
+    valid: 0
+  parentGuid: 

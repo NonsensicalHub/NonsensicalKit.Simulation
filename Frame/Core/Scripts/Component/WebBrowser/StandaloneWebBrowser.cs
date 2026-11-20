@@ -1,4 +1,4 @@
-#if (UNITY_EDITOR || UNITY_STANDALONE_WIN) && !UNITY_WEBGL
+#if UNITY_EDITOR || UNITY_STANDALONE_WIN
 using System;
 using System.Reflection;
 using NonsensicalKit.UGUI;

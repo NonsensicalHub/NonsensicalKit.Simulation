@@ -1,0 +1,25 @@
+{
+    "name": "NonsensicalKit.CineShot.Tests.PlayMode",
+    "rootNamespace": "CineShot.Tests",
+    "references": [
+        "NonsensicalKit.CineShot.Core",
+        "NonsensicalKit.CineShot.Compat",
+        "NonsensicalKit.CineShot.Output",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "Unity.Timeline"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
