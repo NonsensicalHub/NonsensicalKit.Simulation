@@ -65,7 +65,7 @@
                                 <ui:Slider name="occupancy" low-value="0" high-value="100" value="0" class="speed-slider task-input" />
                                 <ui:Toggle name="occupancy-random" label="随机选取货位" class="field task-input" />
                                 <ui:Label text="流程计划" class="section" />
-                                <ui:IntegerField name="flow-seed" label="随机种子" value="42" class="field task-input" />
+                                <ui:TextField name="flow-seed" label="随机种子" value="42" class="field task-input" />
                                 <ui:VisualElement name="flow-list" />
                                 <ui:Button name="flow-add" text="添加一段流程" class="quiet task-input" />
                                 <ui:Label name="strategy-note" text="策略" class="section" />

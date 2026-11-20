@@ -1,4 +1,4 @@
-{
+﻿{
     "name":  "Frame.Core",
     "rootNamespace":  "Frame.Core",
     "references":  [
@@ -8,8 +8,12 @@
                        "NonsensicalKit.DigitalTwin.Motion",
                        "NonsensicalKit.UGUI.Items",
                        "NonsensicalKit.UGUI.Table",
+                       "Cinemachine",
                        "Unity.Cinemachine",
-                       "Unity.TextMeshPro"
+                       "Unity.TextMeshPro",
+                       "NonsensicalKit.UGUI.SimpleSignalControl",
+                       "NonsensicalKit.DigitalTwin.Render",
+                       "Unity.InputSystem"
                    ],
     "includePlatforms":  [
 
@@ -28,7 +32,21 @@
 
                           ],
     "versionDefines":  [
-
+                           {
+                               "name":  "com.unity.inputsystem",
+                               "expression":  "1.0.0",
+                               "define":  "FRAME_HAS_INPUT_SYSTEM"
+                           },
+                           {
+                               "name":  "com.unity.cinemachine",
+                               "expression":  "[2.0.0,3.0.0)",
+                               "define":  "CINEMACHINE_2"
+                           },
+                           {
+                               "name":  "com.unity.cinemachine",
+                               "expression":  "3.0.0",
+                               "define":  "CINEMACHINE_3"
+                           }
                        ],
     "noEngineReferences":  false
 }

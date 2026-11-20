@@ -15,7 +15,7 @@
 
                          ],
     "allowUnsafeCode":  false,
-    "overrideReferences":  false,
+    "overrideReferences":  true,
     "precompiledReferences":  [
                                   "MQTTnet.dll",
                                   "Newtonsoft.Json.dll"

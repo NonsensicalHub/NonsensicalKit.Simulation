@@ -1,14 +1,20 @@
 using NonsensicalKit.Core;
 using UnityEngine;
-#if UNITY_2022_3_OR_NEWER
+#if CINEMACHINE_3
 using Unity.Cinemachine;
-#else
+#elif CINEMACHINE_2
 using Cinemachine;
 #endif
 
 
 namespace Frame.Core.FocusCamera
 {
+#if !CINEMACHINE_2 && !CINEMACHINE_3
+[DisallowMultipleComponent]
+public class SetSoloCamera : MonoBehaviour
+{
+}
+#else
 [DefaultExecutionOrder(32000)]
 [DisallowMultipleComponent]
 public class SetSoloCamera : NonsensicalMono
@@ -43,6 +49,7 @@ public class SetSoloCamera : NonsensicalMono
         if (m_control != null)
             m_control.enabled = false;
         Subscribe("SwitchSoloCamera", Switch);
+        SyncActiveStatus();
     }
 
     private void OnDisable()
@@ -51,6 +58,7 @@ public class SetSoloCamera : NonsensicalMono
             m_control.enabled = false;
         ClearSoloIfCurrent();
         m_mode = 0;
+        SyncActiveStatus();
     }
 
     private void Update()
@@ -78,6 +86,7 @@ public class SetSoloCamera : NonsensicalMono
         m_fromFov = GetSoloFov();
         m_elapsed = 0f;
         m_mode = 1;
+        SyncActiveStatus();
         if (m_blendInDuration <= 0f)
             FinishEnter();
     }
@@ -99,6 +108,7 @@ public class SetSoloCamera : NonsensicalMono
         m_mode = 3;
         if (m_blendOutDuration <= 0f)
             m_mode = 0;
+        SyncActiveStatus();
     }
 
     private void LateUpdate()
@@ -126,7 +136,10 @@ public class SetSoloCamera : NonsensicalMono
                 Quaternion.Slerp(m_fromRot, m_output.transform.rotation, w));
             m_output.fieldOfView = Mathf.Lerp(m_fromFov, m_output.fieldOfView, w);
             if (w >= 1f)
+            {
                 m_mode = 0;
+                SyncActiveStatus();
+            }
         }
     }
 
@@ -135,25 +148,41 @@ public class SetSoloCamera : NonsensicalMono
         AlignSolo(m_output.transform.position, m_output.transform.rotation, m_output.fieldOfView);
         SetSoloCameraFunc(m_soloCamera);
         m_mode = 2;
+        SyncActiveStatus();
         if (m_control != null)
             m_control.enabled = true;
     }
 
+    private void SyncActiveStatus()
+    {
+        // mode 1/2：切入中或已开启；mode 0/3：关闭或切出中
+        IOCC.Set<bool>("SoloCameraActive", m_mode == 1 || m_mode == 2);
+    }
+
     private void ClearSoloIfCurrent()
     {
+#if CINEMACHINE_3
         if (m_soloCamera != null && ReferenceEquals(CinemachineCore.SoloCamera, m_soloCamera))
             CinemachineCore.SoloCamera = null;
+#else
+        if (m_soloCamera != null && ReferenceEquals(CinemachineBrain.SoloCamera, m_soloCamera))
+            CinemachineBrain.SoloCamera = null;
+#endif
     }
 
     private static void SetSoloCameraFunc(CinemachineVirtualCameraBase camera)
     {
+#if CINEMACHINE_3
         CinemachineCore.SoloCamera = camera;
+#else
+        CinemachineBrain.SoloCamera = camera;
+#endif
     }
 
     private void AlignSolo(Vector3 pos, Quaternion rot, float fov)
     {
         m_soloCamera.ForceCameraPosition(pos, rot);
-#if UNITY_2022_3_OR_NEWER
+#if CINEMACHINE_3
         if (m_soloCamera is CinemachineCamera vcam)
         {
             LensSettings lens = vcam.Lens;
@@ -172,7 +201,7 @@ public class SetSoloCamera : NonsensicalMono
 
     private float GetSoloFov()
     {
-#if UNITY_2022_3_OR_NEWER
+#if CINEMACHINE_3
         return m_soloCamera is CinemachineCamera vcam
             ? vcam.Lens.FieldOfView
             : m_soloCamera.State.Lens.FieldOfView;
@@ -195,4 +224,5 @@ public class SetSoloCamera : NonsensicalMono
         return m_output != null;
     }
 }
+#endif
 }

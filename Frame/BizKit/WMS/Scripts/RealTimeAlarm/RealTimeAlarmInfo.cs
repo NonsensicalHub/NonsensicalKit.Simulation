@@ -8,7 +8,7 @@ namespace Frame.BizKit.WMS.RealTimeAlarm
         public const string SnapshotHandler = "getRealTimeAlarmSnapshot";
 
         /// <summary>
-        /// 历史报警分页查询。在线由 AlarmEpisodeService 占位，离线由模拟器提供。
+        /// 历史报警分页查询。在线由 AlarmEpisodeService 用 MQTT 快照分页，离线由模拟器提供。
         /// </summary>
         public const string HistoryListHandler = "getAlarmList";
 

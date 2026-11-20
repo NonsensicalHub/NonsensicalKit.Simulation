@@ -65,7 +65,7 @@ public sealed class WarehouseSimTaskConfigView
     private Label _strategyNote;
     private Slider _occupancy;
     private Toggle _occupancyRandom;
-    private IntegerField _seed;
+    private TextField _seed;
     private DropdownField _placement;
     private DropdownField _port;
     private DropdownField _routing;
@@ -100,7 +100,7 @@ public sealed class WarehouseSimTaskConfigView
         _flowList = root.Q("flow-list");
         _occupancy = root.Q<Slider>("occupancy");
         _occupancyRandom = root.Q<Toggle>("occupancy-random");
-        _seed = root.Q<IntegerField>("flow-seed");
+        _seed = root.Q<TextField>("flow-seed");
         _placement = root.Q<DropdownField>("placement");
         _port = root.Q<DropdownField>("port");
         _routing = root.Q<DropdownField>("routing");
@@ -248,7 +248,7 @@ public sealed class WarehouseSimTaskConfigView
         _occupancy?.SetValueWithoutNotify(percent);
         SetOccupancyLabel(percent);
         _occupancyRandom?.SetValueWithoutNotify(_scenario.InitialOccupancyRandom);
-        _seed?.SetValueWithoutNotify(_scenario.FlowRandomSeed);
+        _seed?.SetValueWithoutNotify(_scenario.FlowRandomSeed.ToString());
 
         if (_strategy != null)
         {
@@ -287,14 +287,25 @@ public sealed class WarehouseSimTaskConfigView
         RefreshPreview();
     }
 
-    private void OnSeedChanged(ChangeEvent<int> evt)
+    private void OnSeedChanged(ChangeEvent<string> evt)
     {
         if (_syncing || _scenario == null)
         {
             return;
         }
 
-        _scenario.FlowRandomSeed = evt.newValue;
+        if (!TryParseInt(evt.newValue, 0, out var seed))
+        {
+            _seed?.SetValueWithoutNotify(_scenario.FlowRandomSeed.ToString());
+            return;
+        }
+
+        _scenario.FlowRandomSeed = seed;
+        if (seed.ToString() != evt.newValue)
+        {
+            _seed?.SetValueWithoutNotify(seed.ToString());
+        }
+
         NotifyChanged();
     }
 
@@ -462,8 +473,7 @@ public sealed class WarehouseSimTaskConfigView
         });
         card.Add(warehouses);
 
-        var quantity = new IntegerField("数量") { value = Mathf.Max(1, entry.Quantity), isDelayed = true };
-        StyleField(quantity, "这一段要处理的箱数。");
+        var quantity = CreateIntField("数量", Mathf.Max(1, entry.Quantity), "这一段要处理的箱数。");
         quantity.RegisterValueChangedCallback(evt =>
         {
             if (_syncing)
@@ -471,23 +481,24 @@ public sealed class WarehouseSimTaskConfigView
                 return;
             }
 
-            var clamped = Mathf.Max(1, evt.newValue);
-            entry.Quantity = clamped;
-            if (clamped != evt.newValue)
+            if (!TryParseInt(evt.newValue, 1, out var parsed))
             {
-                quantity.SetValueWithoutNotify(clamped);
+                quantity.SetValueWithoutNotify(entry.Quantity.ToString());
+                return;
+            }
+
+            var clamped = Mathf.Max(1, parsed);
+            entry.Quantity = clamped;
+            if (clamped.ToString() != evt.newValue)
+            {
+                quantity.SetValueWithoutNotify(clamped.ToString());
             }
 
             RefreshPreview();
         });
         card.Add(quantity);
 
-        var delay = new FloatField("起始延迟(秒)")
-        {
-            value = Mathf.Max(0f, entry.StartDelaySeconds),
-            isDelayed = true,
-        };
-        StyleField(delay, "这一段第一箱相对仿真开始的延迟。");
+        var delay = CreateFloatField("起始延迟(秒)", Mathf.Max(0f, entry.StartDelaySeconds), "这一段第一箱相对仿真开始的延迟。");
         delay.RegisterValueChangedCallback(evt =>
         {
             if (_syncing)
@@ -495,11 +506,17 @@ public sealed class WarehouseSimTaskConfigView
                 return;
             }
 
-            var clamped = Mathf.Max(0f, evt.newValue);
-            entry.StartDelaySeconds = clamped;
-            if (!Mathf.Approximately(clamped, evt.newValue))
+            if (!TryParseFloat(evt.newValue, 0f, out var parsed))
             {
-                delay.SetValueWithoutNotify(clamped);
+                delay.SetValueWithoutNotify(FormatFloat(entry.StartDelaySeconds));
+                return;
+            }
+
+            var clamped = Mathf.Max(0f, parsed);
+            entry.StartDelaySeconds = clamped;
+            if (!Mathf.Approximately(clamped, parsed) || FormatFloat(clamped) != evt.newValue)
+            {
+                delay.SetValueWithoutNotify(FormatFloat(clamped));
             }
 
             RefreshPreview();
@@ -557,18 +574,8 @@ public sealed class WarehouseSimTaskConfigView
 
     private void AddStaggeredFields(VisualElement parent, SimFlowPlanEntry entry)
     {
-        var qtyMin = new IntegerField("每次最少")
-        {
-            value = Mathf.Max(1, entry.RandomQuantityMin),
-            isDelayed = true,
-        };
-        var qtyMax = new IntegerField("每次最多")
-        {
-            value = Mathf.Max(qtyMin.value, entry.RandomQuantityMax),
-            isDelayed = true,
-        };
-        StyleField(qtyMin, "分次释放时，每一批的最少箱数。与最多相等时为固定批量。");
-        StyleField(qtyMax, "分次释放时，每一批的最多箱数。");
+        var qtyMin = CreateIntField("每次最少", Mathf.Max(1, entry.RandomQuantityMin), "分次释放时，每一批的最少箱数。与最多相等时为固定批量。");
+        var qtyMax = CreateIntField("每次最多", Mathf.Max(Mathf.Max(1, entry.RandomQuantityMin), entry.RandomQuantityMax), "分次释放时，每一批的最多箱数。");
         qtyMin.RegisterValueChangedCallback(evt =>
         {
             if (_syncing)
@@ -576,17 +583,23 @@ public sealed class WarehouseSimTaskConfigView
                 return;
             }
 
-            var min = Mathf.Max(1, evt.newValue);
-            entry.RandomQuantityMin = min;
-            if (min != evt.newValue)
+            if (!TryParseInt(evt.newValue, 1, out var parsed))
             {
-                qtyMin.SetValueWithoutNotify(min);
+                qtyMin.SetValueWithoutNotify(entry.RandomQuantityMin.ToString());
+                return;
+            }
+
+            var min = Mathf.Max(1, parsed);
+            entry.RandomQuantityMin = min;
+            if (min.ToString() != evt.newValue)
+            {
+                qtyMin.SetValueWithoutNotify(min.ToString());
             }
 
             if (entry.RandomQuantityMax < min)
             {
                 entry.RandomQuantityMax = min;
-                qtyMax.SetValueWithoutNotify(min);
+                qtyMax.SetValueWithoutNotify(min.ToString());
             }
 
             RefreshPreview();
@@ -598,11 +611,17 @@ public sealed class WarehouseSimTaskConfigView
                 return;
             }
 
-            var max = Mathf.Max(entry.RandomQuantityMin, evt.newValue);
-            entry.RandomQuantityMax = max;
-            if (max != evt.newValue)
+            if (!TryParseInt(evt.newValue, entry.RandomQuantityMin, out var parsed))
             {
-                qtyMax.SetValueWithoutNotify(max);
+                qtyMax.SetValueWithoutNotify(entry.RandomQuantityMax.ToString());
+                return;
+            }
+
+            var max = Mathf.Max(entry.RandomQuantityMin, parsed);
+            entry.RandomQuantityMax = max;
+            if (max.ToString() != evt.newValue)
+            {
+                qtyMax.SetValueWithoutNotify(max.ToString());
             }
 
             RefreshPreview();
@@ -610,18 +629,8 @@ public sealed class WarehouseSimTaskConfigView
         parent.Add(qtyMin);
         parent.Add(qtyMax);
 
-        var intervalMin = new FloatField("间隔下限(秒)")
-        {
-            value = Mathf.Max(0.01f, entry.RandomIntervalMinSeconds),
-            isDelayed = true,
-        };
-        var intervalMax = new FloatField("间隔上限(秒)")
-        {
-            value = Mathf.Max(intervalMin.value, entry.RandomIntervalMaxSeconds),
-            isDelayed = true,
-        };
-        StyleField(intervalMin, "两批之间的最短间隔。与上限相等时为固定间隔。");
-        StyleField(intervalMax, "两批之间的最长间隔。");
+        var intervalMin = CreateFloatField("间隔下限(秒)", Mathf.Max(0.01f, entry.RandomIntervalMinSeconds), "两批之间的最短间隔。与上限相等时为固定间隔。");
+        var intervalMax = CreateFloatField("间隔上限(秒)", Mathf.Max(Mathf.Max(0.01f, entry.RandomIntervalMinSeconds), entry.RandomIntervalMaxSeconds), "两批之间的最长间隔。");
         intervalMin.RegisterValueChangedCallback(evt =>
         {
             if (_syncing)
@@ -629,17 +638,23 @@ public sealed class WarehouseSimTaskConfigView
                 return;
             }
 
-            var min = Mathf.Max(0.01f, evt.newValue);
-            entry.RandomIntervalMinSeconds = min;
-            if (!Mathf.Approximately(min, evt.newValue))
+            if (!TryParseFloat(evt.newValue, 0.01f, out var parsed))
             {
-                intervalMin.SetValueWithoutNotify(min);
+                intervalMin.SetValueWithoutNotify(FormatFloat(entry.RandomIntervalMinSeconds));
+                return;
+            }
+
+            var min = Mathf.Max(0.01f, parsed);
+            entry.RandomIntervalMinSeconds = min;
+            if (!Mathf.Approximately(min, parsed) || FormatFloat(min) != evt.newValue)
+            {
+                intervalMin.SetValueWithoutNotify(FormatFloat(min));
             }
 
             if (entry.RandomIntervalMaxSeconds < min)
             {
                 entry.RandomIntervalMaxSeconds = min;
-                intervalMax.SetValueWithoutNotify(min);
+                intervalMax.SetValueWithoutNotify(FormatFloat(min));
             }
 
             RefreshPreview();
@@ -651,11 +666,17 @@ public sealed class WarehouseSimTaskConfigView
                 return;
             }
 
-            var max = Mathf.Max(entry.RandomIntervalMinSeconds, evt.newValue);
-            entry.RandomIntervalMaxSeconds = max;
-            if (!Mathf.Approximately(max, evt.newValue))
+            if (!TryParseFloat(evt.newValue, entry.RandomIntervalMinSeconds, out var parsed))
             {
-                intervalMax.SetValueWithoutNotify(max);
+                intervalMax.SetValueWithoutNotify(FormatFloat(entry.RandomIntervalMaxSeconds));
+                return;
+            }
+
+            var max = Mathf.Max(entry.RandomIntervalMinSeconds, parsed);
+            entry.RandomIntervalMaxSeconds = max;
+            if (!Mathf.Approximately(max, parsed) || FormatFloat(max) != evt.newValue)
+            {
+                intervalMax.SetValueWithoutNotify(FormatFloat(max));
             }
 
             RefreshPreview();
@@ -1026,6 +1047,65 @@ public sealed class WarehouseSimTaskConfigView
         };
         StyleField(field, tooltip);
         return field;
+    }
+
+
+    // Unity 2021.3: numeric UITK fields are Editor-only; use TextField + parse for Runtime.
+    private static TextField CreateIntField(string label, int value, string tooltip)
+    {
+        var field = new TextField(label)
+        {
+            value = value.ToString(),
+            isDelayed = true,
+        };
+        StyleField(field, tooltip);
+        return field;
+    }
+
+    private static TextField CreateFloatField(string label, float value, string tooltip)
+    {
+        var field = new TextField(label)
+        {
+            value = FormatFloat(value),
+            isDelayed = true,
+        };
+        StyleField(field, tooltip);
+        return field;
+    }
+
+    private static bool TryParseInt(string text, int fallback, out int value)
+    {
+        if (int.TryParse(text != null ? text.Trim() : string.Empty, out value))
+        {
+            return true;
+        }
+
+        value = fallback;
+        return false;
+    }
+
+    private static bool TryParseFloat(string text, float fallback, out float value)
+    {
+        if (float.TryParse(text != null ? text.Trim() : string.Empty,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out value))
+        {
+            return true;
+        }
+
+        if (float.TryParse(text != null ? text.Trim() : string.Empty, out value))
+        {
+            return true;
+        }
+
+        value = fallback;
+        return false;
+    }
+
+    private static string FormatFloat(float value)
+    {
+        return value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private static void StyleField(VisualElement field, string tooltip)

@@ -1,4 +1,4 @@
-{
+﻿{
     "name":  "Frame.BizKit.WMS.Hikvision",
     "rootNamespace":  "Frame.BizKit.WMS.Hikvision",
     "references":  [
@@ -7,7 +7,8 @@
                        "NonsensicalKit.Core.Runtime",
                        "NonsensicalKit.NaughtyAttributes",
                        "NonsensicalKit.DigitalTwin.Motion",
-                       "HikvisionAgv.Runtime"
+                       "HikvisionAgv.Runtime",
+                       "UniTask"
                    ],
     "includePlatforms":  [
 

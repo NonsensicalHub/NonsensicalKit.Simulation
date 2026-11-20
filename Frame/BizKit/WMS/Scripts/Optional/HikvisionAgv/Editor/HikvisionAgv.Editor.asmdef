@@ -1,0 +1,25 @@
+﻿{
+    "name": "HikvisionAgv.Editor",
+    "rootNamespace": "HikvisionAgv.Editor",
+    "references": [
+        "HikvisionAgv.Runtime",
+        "Frame.Core",
+        "Frame.BizKit.WMS.Hikvision",
+        "NonsensicalKit.Core.Runtime",
+        "NonsensicalKit.ScriptAnimation.Runtime",
+        "NonsensicalKit.NaughtyAttributes"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

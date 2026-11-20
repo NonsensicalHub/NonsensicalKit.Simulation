@@ -1,4 +1,4 @@
-# HighlightPlus 高亮注入
+﻿# HighlightPlus 高亮注入
 
 向 `FocusPointManager.HighlightHandler`（`Func<GameObject, Action>`）赋值，用 HighlightPlus 开关 `HighlightEffect.highlighted`。
 
@@ -18,3 +18,7 @@ focusPointManager.HighlightHandler = go =>
     return () => { if (fx != null) fx.highlighted = false; };
 };
 ```
+
+## InteractableHighlightEffect
+
+实现 IInteractable3DHighlight，驱动 HighlightPlus HighlightEffect.highlighted。需宿主工程有 HighlightPlus。

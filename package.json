@@ -1,44 +1,49 @@
 {
-  "name": "com.nonsensicallab.nonsensicalkit.simulation",
-  "displayName": "NonsensicalKit.Simulation",
-  "author": {
-    "name": "NonsensicalLab"
-  },
-  "version": "0.9.4",
-  "unity": "2021.3",
-  "license": "MIT",
-  "description": "模拟实训与脚本动画能力包，覆盖交互训练、库存导航、参数化货架，以及 Timeline 脚本动画（路网、叉车、堆垛机、机械臂、开箱、缠膜等）。另含 DaTang Frame（数字孪生 UI/窗口/MQTT 等，见 Frame/；示例与 XCharts/ZCalendar 见 Samples~/FrameSample）。依赖 Core、DigitalTwin、UGUI、Timeline；缠膜 Shader 需 URP。Frame 另需宿主提供 Cinemachine/DOTween/UniTask 等。",
-  "dependencies": {
-    "com.nonsensicallab.nonsensicalkit.core": "1.0.7",
-    "com.nonsensicallab.nonsensicalkit.digitaltwin": "1.2.0",
-    "com.nonsensicallab.nonsensicalkit.ugui": "1.0.3",
-    "com.unity.timeline": "1.6.5"
-  },
-  "samples": [
-    {
-      "displayName": "Sample Training",
-      "description": "示例训练",
-      "path": "Samples~/Sample Training"
-    },
-    {
-      "displayName": "ParametricModelingShelves",
-      "description": "参数化货架",
-      "path": "Samples~/ParametricModelingShelves"
-    },
-    {
-      "displayName": "WarehouseSimulation",
-      "description": "出入库仿真",
-      "path": "Samples~/WarehouseSimulation"
-    },
-    {
-      "displayName": "ScriptAnimation",
-      "description": "Timeline 脚本动画综合演示（含 OpenBox、FilmWrapping 子场景）。导入后可用菜单 Tools/ScriptAnimation 打开。",
-      "path": "Samples~/ScriptAnimation"
-    },
-    {
-      "displayName": "Frame Sample",
-      "description": "DaTang Frame 示例：Window 演示、WmsDemo、Adapters；并含 ThirdParty（XCharts、ZCalendar）与 Optional/XCharts binder。导入后见 Assets/Samples/.../FrameSample。",
-      "path": "Samples~/FrameSample"
-    }
-  ]
+    "name":  "com.nonsensicallab.nonsensicalkit.simulation",
+    "displayName":  "NonsensicalKit.Simulation",
+    "author":  {
+                   "name":  "NonsensicalLab"
+               },
+    "version":  "0.9.4",
+    "unity":  "2021.3",
+    "license":  "MIT",
+    "description":  "模拟实训与脚本动画能力包，覆盖交互训练、库存导航、参数化货架，以及 Timeline 脚本动画（路网、叉车、堆垛机、机械臂、开箱、缠膜等）。另含 DaTang Frame（数字孪生 UI/窗口/MQTT 等，见 Frame/；ZCalendar 在 Frame/ThirdParty/ZCalendar；示例与 XCharts 见 Samples~/FrameSample）。依赖 Core、DigitalTwin、UGUI、Timeline；缠膜 Shader 需 URP。Frame 另需宿主提供 Cinemachine/DOTween/UniTask 等。",
+    "dependencies":  {
+                         "com.nonsensicallab.nonsensicalkit.core":  "1.0.7",
+                         "com.nonsensicallab.nonsensicalkit.digitaltwin":  "1.2.0",
+                         "com.nonsensicallab.nonsensicalkit.ugui":  "1.0.3",
+                         "com.unity.timeline":  "1.6.5"
+                     },
+    "samples":  [
+                    {
+                        "displayName":  "Sample Training",
+                        "description":  "示例训练",
+                        "path":  "Samples~/Sample Training"
+                    },
+                    {
+                        "displayName":  "ParametricModelingShelves",
+                        "description":  "参数化货架",
+                        "path":  "Samples~/ParametricModelingShelves"
+                    },
+                    {
+                        "displayName":  "WarehouseSimulation",
+                        "description":  "出入库仿真",
+                        "path":  "Samples~/WarehouseSimulation"
+                    },
+                    {
+                        "displayName":  "ScriptAnimation",
+                        "description":  "Timeline 脚本动画综合演示（含 OpenBox、FilmWrapping 子场景）。导入后可用菜单 Tools/ScriptAnimation 打开。",
+                        "path":  "Samples~/ScriptAnimation"
+                    },
+                    {
+                        "displayName":  "Frame Sample",
+                        "description":  "DaTang Frame 示例：Window 演示、WmsDemo、Adapters；并含 ThirdParty（XCharts）与 Optional/XCharts binder。ZCalendar 已在包内 Frame/ThirdParty/ZCalendar（非 Sample），Sample 预制体嵌套引用包内 GUID。导入后见 Assets/Samples/.../FrameSample。",
+                        "path":  "Samples~/FrameSample"
+                    },
+                    {
+                        "displayName":  "VectorVisualizer",
+                        "description":  "Scene View 向量可视化工具（Editor + Demo）。从冷链 Tools/VectorVisualizer 迁入。",
+                        "path":  "Samples~/VectorVisualizer"
+                    }
+                ]
 }

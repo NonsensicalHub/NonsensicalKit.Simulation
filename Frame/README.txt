@@ -7,8 +7,8 @@ Frame — 可复用框架（UI + 数字孪生运行时）
 分层一览（由内到外）
 1) Frame/Core/           — 通用框架（新项目应优先只依赖本层）
 2) Frame/BizKit/WMS/     — 仓储/冷链业务件（非仓储不要依赖）
-3) Samples~/FrameSample/ — 示例 + ThirdParty（XCharts、ZCalendar）+ 可选图表 binder
-（Frame/ 下不再包含 ThirdParty。）
+3) Samples~/FrameSample/ — 示例 + ThirdParty（XCharts）+ 可选图表 binder
+   ZCalendar 在 Frame/ThirdParty/ZCalendar（随包加载，不随 Sample 拷贝）
 
 详见 Docs/STRUCTURE.md。
 
@@ -27,12 +27,12 @@ Frame — 可复用框架（UI + 数字孪生运行时）
 
 2) Frame/BizKit/WMS/  — 仓储/冷链业务件（详见 BizKit/WMS/README.md）
    - 主程序集不依赖 ZCalendar / XCharts / 海康
-   - Optional/Hikvision → Frame.BizKit.WMS.Hikvision（需宿主 HikvisionAgv.Runtime）
-   - Optional/ZCalendar → Frame.BizKit.WMS.ZCalendar（SearchTool；需 Sample ThirdParty 的 ZCalendar）
+   - Optional/Hikvision → Frame.BizKit.WMS.Hikvision（autoReferenced=false；需 HikvisionAgv.Runtime）
+   - Optional/ZCalendar → Frame.BizKit.WMS.ZCalendar（SearchTool；日历在 Frame/ThirdParty/ZCalendar）
    - Twin/海康 HTTP 路径见 WmsUrls（不在 Core.URLS）
 
 3) Samples~/FrameSample/
-   - ThirdParty/Xcharts、ThirdParty/ZCalendar（非 Frame API）
+   - ThirdParty/XCharts（非 Frame API）
    - Optional/XCharts（XChartSerieBinder）
    - Adapters、WmsDemo、WindowExamples、Scenes
 
@@ -54,9 +54,9 @@ Frame — 可复用框架（UI + 数字孪生运行时）
 - MQTT 测试客户端不再把密码写入 EditorPrefs。
 
 已知债务
-- 命名空间已统一为 Frame.Core.* / Frame.BizKit.WMS.* / Frame.Sample.*（类名与 SerializeField 未改；回 Unity 验证编译与预制体引用）
 - BindingSliderInputField 仍兼容旧 JSON 键「货架切片数量」；新数据请用 signal/max
 - Adapters 故意不设独立 asmdef（插件多在默认程序集）
+- 宿主 Assets 里若仍留 Frame 迁出前的同名脚本，删掉工程副本，避免 CS0433
 
 命名空间
 - Core：Frame.Core.*（按目录）；可选 Frame.Core.Mqtt / Frame.Core.VLC；Sample 图表 Frame.Core.XCharts

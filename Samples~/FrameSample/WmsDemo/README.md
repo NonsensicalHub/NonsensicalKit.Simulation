@@ -10,3 +10,8 @@
 | `Sprites/` | 演示用图集 |
 
 注视相机请拖到场景中 `FocusPointManager.m_focusCameraPrefab`，不要依赖 `Resources.Load("Services/注视相机")`。
+
+## Scripts
+
+- `Scripts/SearchToolExample.cs`：库存搜索 + DetailLabel 示例（依赖 `Frame.BizKit.WMS.ZCalendar` / Sample `ThirdParty/ZCalendar`）。
+- `Scripts/DetailLabelPanelSample.cs`：旧 Demo 占位，可删。

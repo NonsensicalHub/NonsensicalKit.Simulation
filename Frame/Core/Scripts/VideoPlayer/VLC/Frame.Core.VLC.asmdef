@@ -12,13 +12,13 @@
 
                          ],
     "allowUnsafeCode":  false,
-    "overrideReferences":  false,
+    "overrideReferences":  true,
     "precompiledReferences":  [
                                   "LibVLCSharp.dll"
                               ],
-    "autoReferenced":  true,
+    "autoReferenced":  false,
     "defineConstraints":  [
-
+                              "FRAME_HAS_LIBVLC"
                           ],
     "versionDefines":  [
 

@@ -87,8 +87,11 @@ public class AgvStatusTapePlayer : NonsensicalMono, IRecordPlaybackPlayer
             Play();
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
+        base.OnDestroy();
+        
+        
         RestoreLiveStatus();
     }
 

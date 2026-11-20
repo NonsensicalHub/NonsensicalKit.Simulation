@@ -43,7 +43,7 @@ public class JsonBindingEditorWindow : EditorWindow
     private const string PREF_OUTPUT_DIR = "JsonBindingEditor.OutputDir";
     private const string PREF_OUTPUT_NAME = "JsonBindingEditor.OutputName";
 
-    [MenuItem("Tools/JSON Binding Editor")]
+    [MenuItem("Tools/Frame/JSON Binding Editor")]
     public static void Open()
     {
         var w = GetWindow<JsonBindingEditorWindow>("JSON Binding Editor");

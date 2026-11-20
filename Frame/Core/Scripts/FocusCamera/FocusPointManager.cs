@@ -4,9 +4,9 @@ using NaughtyAttributes;
 using NonsensicalKit.Core;
 using NonsensicalKit.Core.DagLogicNode;
 using NonsensicalKit.Tools;
-#if UNITY_2022_3_OR_NEWER
+#if CINEMACHINE_3
 using Unity.Cinemachine;
-#else
+#elif CINEMACHINE_2
 using Cinemachine;
 #endif
 using UnityEngine;
@@ -35,7 +35,9 @@ public class FocusPointManager : NonsensicalMono
     public Func<GameObject, Action> HighlightHandler { get; set; }
 
     private bool _hasFocus;
+#if CINEMACHINE_2 || CINEMACHINE_3
     private CinemachineVirtualCameraBase _cinemachineCamera;
+#endif
     private FocusPointConfig _focusedPoint;
     private Dictionary<string, FocusPointConfig> _pointLookup;
     private Coroutine _closeCameraRoutine;
@@ -61,7 +63,9 @@ public class FocusPointManager : NonsensicalMono
         if (!EnsureCamera())
             return;
 
+#if CINEMACHINE_2 || CINEMACHINE_3
         _cinemachineCamera = m_camera.GetComponent<CinemachineVirtualCameraBase>();
+#endif
         BuildPointLookup();
     }
 
@@ -194,8 +198,10 @@ public class FocusPointManager : NonsensicalMono
     {
         if (!_hasFocus) return;
 
+#if CINEMACHINE_2 || CINEMACHINE_3
         if (_cinemachineCamera != null)
             _cinemachineCamera.Priority = -5;
+#endif
 
         CancelCloseCameraSchedule();
         if (isActiveAndEnabled)
@@ -210,8 +216,10 @@ public class FocusPointManager : NonsensicalMono
             yield break;
 
         m_camera?.gameObject.SetActive(false);
+#if CINEMACHINE_2 || CINEMACHINE_3
         if (_cinemachineCamera != null)
             _cinemachineCamera.Priority = 10;
+#endif
     }
 
     private void CancelCloseCameraSchedule()

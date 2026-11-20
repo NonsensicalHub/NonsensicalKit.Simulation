@@ -2,35 +2,37 @@
 
 ```
 Frame/
-  Core/                 # 通用框架 → 程序集 Frame.Core（+ Mqtt / VLC 可选）
+  Core/                 # 通用框架 → 程序集 Frame.Core（+ Mqtt / VLC / Cinemachine / WebGL 可选）
     Scripts/
       Abstractions/
-      Binding/          # BindingToken 族 + BindableParam / JsonBinding*
+      Binding/
       Component/
       Config/
       DigitalTwinUI/
-      FocusCamera/      # 含 Solo 相机、CameraControl 配置
+      FocusCamera/
       Network/
       RecordPlayback/
       SubScene/
       Table/
-      UI/
-        Controls/       # DetailLabel*、ButtonDOMove、SliderInputField 等
+      UI/Controls/
       Utils/
-        EditMode/       # EditModeParticleController
       VideoPlayer/
       Window/
-    Editor/
+    Editor/             # 菜单在 Tools/Frame/
   BizKit/
     WMS/                # 仓储业务 → Frame.BizKit.WMS（非仓储勿依赖）
       Scripts/
         Optional/
-          Hikvision/    # Frame.BizKit.WMS.Hikvision
-          ZCalendar/    # Frame.BizKit.WMS.ZCalendar（SearchTool）
+          Hikvision/        # Frame.BizKit.WMS.Hikvision（autoReferenced=false）
+          HikvisionAgv/     # HikvisionAgv.Runtime
+          EquipmentStatus/  # autoReferenced=false
+          ZCalendar/        # Frame.BizKit.WMS.ZCalendar（SearchTool）
+  ThirdParty/
+    ZCalendar/          # 随包加载；Sample 预制体嵌套引用此处 GUID
   Docs/
 
 Samples~/FrameSample/   # Package Manager「Frame Sample」
-  ThirdParty/           # XCharts、ZCalendar（非 Frame API；原 Frame/ThirdParty）
+  ThirdParty/           # XCharts
   Optional/
     XCharts/            # Frame.Core.XCharts（XChartSerieBinder）
   Adapters/
@@ -45,14 +47,13 @@ Samples~/FrameSample/   # Package Manager「Frame Sample」
 ## 禁止
 - `Frame.Core` 引用 `Frame.BizKit.*`
 - 把仓储业务类型上提到 Core
-- 在未 Import Sample 且未自备第三方时，假定 XCharts / ZCalendar 一定存在
+- 在未 Import Sample 且未自备 XCharts 时，假定图表 binder 一定存在
 
 ## 命名空间
-- 目录 Network/（原 NetWork）→ Frame.Core.Network / Frame.BizKit.WMS.Network；MQTT → Frame.Core.Mqtt。
-- 详见各 asmdef 的 
-ootNamespace 与源文件 
-amespace。
-
+- 源文件带 `namespace`（asmdef 的 rootNamespace 只影响编辑器新建脚本）。
+- Core：`Frame.Core.*`；MQTT：`Frame.Core.Mqtt`；VLC：`Frame.Core.VLC`
+- BizKit：`Frame.BizKit.WMS.*`；海康站点：`Frame.BizKit.WMS.Hikvision`；日历检索：`Frame.BizKit.WMS.ZCalendar`
+- 海康运行时：`HikvisionAgv`；设备状态组装：`EquipmentStatus`
 
 ## 可选依赖
-见 [OPTIONAL_DEFINES.md](OPTIONAL_DEFINES.md)。已取消手写 FRAME_* 项目宏；WebGL 仅保留 versionDefines 自动检测。
+见 [OPTIONAL_DEFINES.md](OPTIONAL_DEFINES.md)。已取消手写 FRAME_* 项目宏；WebGL / Cinemachine 用 versionDefines。

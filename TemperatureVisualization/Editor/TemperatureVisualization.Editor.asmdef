@@ -1,0 +1,29 @@
+{
+    "name": "TemperatureVisualization.Editor",
+    "rootNamespace": "TemperatureVisualization",
+    "references": [
+        "TemperatureVisualization",
+        "NonsensicalKit.NaughtyAttributes",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "NonsensicalKit.Core.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.nonsensicallab.nonsensicalkit.core",
+            "expression": "0.0.1",
+            "define": "NONSENSICALKIT_IOCC"
+        }
+    ],
+    "noEngineReferences": false
+}

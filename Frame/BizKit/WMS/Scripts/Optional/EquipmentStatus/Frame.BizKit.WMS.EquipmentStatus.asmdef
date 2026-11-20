@@ -1,0 +1,26 @@
+﻿{
+    "name": "Frame.BizKit.WMS.EquipmentStatus",
+    "rootNamespace": "EquipmentStatus",
+    "references": [
+        "Frame.Core",
+        "Frame.Core.Mqtt",
+        "Frame.BizKit.WMS",
+        "Frame.BizKit.WMS.Hikvision",
+        "HikvisionAgv.Runtime",
+        "UniTask",
+        "NonsensicalKit.Core.Runtime",
+        "NonsensicalKit.NaughtyAttributes",
+        "NonsensicalKit.DigitalTwin.Motion"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -123,8 +123,9 @@ public class RecordDataPlayer : NonsensicalMono, IRecordPlaybackPlayer
         }
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
+        base.OnDestroy();
         RestoreOnlineDataSource();
     }
 

@@ -2,18 +2,18 @@
 
 > 目标定位：**Frame 是一套与具体项目业务解耦的通用框架，核心能力是"模板预制体 + JSON 数据"驱动 UI 与数字孪生功能的快速生成**，最终希望做到——新项目只需准备「UI 模板预制体」与「业务 JSON」，即可低代码/零代码拼出一整套项目 UI 与配套运行时功能（弹窗、世界空间标签、网络接入、设备信息、报警、表格图表、检索等）。
 >
-> 本文基于当前代码库（`Assets/Frame/**` 本体 + `Assets/FrameSample/**` 示例）梳理；Frame 放入宿主已有 package，不单独维护 package.json。覆盖：整体架构、核心引擎（JSON⇄Prefab 绑定系统）、支撑子系统、配套资源，以及朝着"模板+JSON 快速开发新项目"目标的差距分析与建议路线。
+> 本文基于当前代码库（UPM 包内 `Frame/**` 本体 + `Samples~/FrameSample/**` 示例）梳理。覆盖：整体架构、核心引擎（JSON⇄Prefab 绑定系统）、支撑子系统、配套资源，以及朝着「模板+JSON 快速开发新项目」目标的差距分析与建议路线。
 
 ---
 
 ## 1. 目录总览（Frame 本体 + FrameSample 示例）
 
-- **`Assets/Frame`**：框架本体，放入宿主**已有** package / 工程使用（不单独维护 `package.json`）。
-- **`Assets/FrameSample`**：示例（Adapters 可选适配器 + WmsDemo 本项目演示资源）。
+- **`Frame/`**：框架本体，位于 `com.nonsensicallab.nonsensicalkit.simulation`。
+- **`Samples~/FrameSample`**：示例（Adapters 可选适配器 + WmsDemo 演示资源）；Package Manager 导入后出现在 `Assets/Samples/...`。
 - 通用脚本有 asmdef（如 `Frame.Core`、`Frame.BizKit.WMS`）；脚本 `.meta` GUID 随迁移保留。
 
 ```
-Assets/Frame/
+Frame/
 ├─ Core/                          ★通用框架（新项目优先只依赖本层）
 │  ├─ Scripts/
 │  │  ├─ Abstractions/            可选插件接口 + FrameOptionalServices
@@ -25,11 +25,11 @@ Assets/Frame/
 ├─ BizKit/WMS/                    ★仓储/冷链业务件（非仓储可不引用）
 │  ├─ Scripts/ … / Editor/
 │  └─ Frame.BizKit.WMS.asmdef
-├─ （ThirdParty 已迁至 Samples~/FrameSample/ThirdParty）
+├─ ThirdParty/ZCalendar/          日历（随包；不随 Sample 拷贝）
 ├─ Docs/                          本文档
 └─ README.txt
 
-Assets/FrameSample/
+Samples~/FrameSample/
 ├─ Adapters/
 │  ├─ HikvisionAgv/               IAgvStatusTapePlaybackBackend
 │  └─ HighlightPlus/              注入 HighlightHandler Func
@@ -44,13 +44,12 @@ Assets/Resources/Services/        DigitalTwinUIManager、MQTTManager 等（项�
 ```
 ### 1.1 本轮已知债务（刻意未拆）
 
-- VLC/Vuplex 实现在 Core；可选海康/高亮适配器在 `Assets/FrameSample/Adapters/`；外部插件仍放宿主 Assets/Plugins。
+- VLC 在 `Frame.Core.VLC`（Override References + `LibVLCSharp.dll`，无插件时不编译）；海康/高亮适配器在 `Samples~/FrameSample/Adapters/`。
 - **生产密钥勿打进包默认资产**（Authorization / MQTT 密码请本地覆写）。
-
-- `URLS` 内仍含 `GetTwin*` / 海康 RCS 路径方法 → 留在 Core，避免本轮改 Request 调用点。
-- `BindingSliderInputField`（含货架文案）仍在 Core `Binding/`，但已无 BizKit 类型引用。
-- 已有 Frame.Core / Frame.BizKit.WMS 等 asmdef；持续避免 Core 引用 Biz。FocusCamera 注视相机改为 Inspector 配置预制体。
-- **已消除 Core → BizKit 类型依赖**：`BindingSearchTool` 在 BizKit；`URLBaseConfig.SnCodeUpdater` / `TopicPropertyDrawer.ResolveDeviceSnCodes` 由 BizKit Editor 注册。
+- Twin / 海康 HTTP 路径在 `WmsUrls`（BizKit），不在 `URLS`。
+- `BindingSliderInputField` JSON 优先 `signal` / `max`，仍兼容旧键「货架切片数量」。
+- Cinemachine 2/3 用 versionDefines，不要用 Unity 版本号判断。
+- **已消除 Core → BizKit 类型依赖**：`BindingSearchTool` 在 BizKit.ZCalendar；`URLBaseConfig.SnCodeUpdater` / `TopicPropertyDrawer.ResolveDeviceSnCodes` 由 BizKit Editor 注册。
 
 ### 1.2 数据源开关（独立配置）
 
@@ -71,7 +70,7 @@ Assets/Resources/Services/        DigitalTwinUIManager、MQTTManager 等（项�
 
 ### 2.1 基类：`BindingToken`
 
-路径：`Assets/Frame/Core/Scripts/Binding/BindingToken.cs`
+路径：`Frame/Core/Scripts/Binding/BindingToken.cs`
 
 ```csharp
 public abstract class BindingToken : MonoBehaviour
@@ -111,7 +110,7 @@ public abstract class BindingToken : MonoBehaviour
 
 ### 2.3 递归引擎：`JsonBindingHelper`
 
-`Assets/Frame/Core/Scripts/JsonBindingHelper.cs` 是整个绑定体系的算法核心，提供：
+`Frame/Core/Scripts/JsonBindingHelper.cs` 是整个绑定体系的算法核心，提供：
 
 - **`BindFirstLevel(go, dataObj)`**：广度优先查找 `go` 下"每条路径上第一个" `BindingToken`（找到即剪枝，不再往下找同分支），按其 `Key` 从 JSON 取值并调用 `BindToken`。容器组件（`BindingArray`/`BindingPages`）内部自己再调用 `BindFirstLevel` 递归其生成的子节点，从而支持任意深度嵌套。
 - **`BindChildren(go, dataObj)`**：给 `BindingObject` 使用，遍历所有子孙 `BindingToken`（遇到 `BindingPages`/`BindingArray` 收录后剪枝，交给它们自行管理子树）。
@@ -123,7 +122,7 @@ public abstract class BindingToken : MonoBehaviour
 
 ### 2.4 编辑器工具：`JsonBindingEditorWindow`
 
-`Assets/Frame/Core/Editor/JsonBindingEditorWindow.cs`，菜单 `Tools/JSON Binding Editor`，是面向**美术/策划**的可视化生产工具，功能：
+`Frame/Core/Editor/JsonBindingEditorWindow.cs`，菜单 `Tools/Frame/JSON Binding Editor`，是面向**美术/策划**的可视化生产工具，功能：
 
 1. **分析**：列出全部 `BindingToken`，并校验空 Key / 第一层重复 Key。
 2. **由模板生成 JSON 骨架**：按 Binding 类型写入占位值，输出 `*_Skeleton.json`，可直接改成业务数据。
@@ -136,7 +135,7 @@ public abstract class BindingToken : MonoBehaviour
 
 ### 2.5 JSON Schema 约定
 
-实现：`Assets/Frame/Core/Scripts/JsonBindingSchemaHelper.cs`
+实现：`Frame/Core/Scripts/JsonBindingSchemaHelper.cs`
 
 1. JSON **根必须是 Object**；字段名 = Binding 的 `Key`（多级用 `/`）。
 2. 容器占位：
@@ -203,10 +202,11 @@ public abstract class BindingToken : MonoBehaviour
 ## 7. 配套资源、宿主 Services 与示例
 
 - **宿主 `Resources/Services/`**（不在 Frame 包内）：项目自行放置 `DigitalTwinUIManager`、`MQTTManager` 等，与 `[ServicePrefab("Services/...")]` 约定一致；**不要**指望 Frame 目录自带这些预制体。
-- **注视相机**：在场景 `FocusPointManager` 上配置 `m_focusCameraPrefab`（或指定场景内 `m_camera`）。示例资源：`Assets/FrameSample/WmsDemo/Resources/注视相机.prefab`。
-- **`Assets/FrameSample/WmsDemo/`**：演示用 Prefabs / Resources / Sprites（含 `RecordPlaybackControl.prefab`、业务页面模板、`Sprites/ai image` 皮肤等）。录制回放 UI 直接引用该 Prefab，无需 Editor 生成脚本。
-- **`Assets/FrameSample/Adapters/`**：可选 `HikvisionAgv` / `HighlightPlus` 接口实现；VLC / Vuplex 实现已在 Core（仍依赖宿主 `Assets/Plugins`）。
-- **`Samples~/FrameSample/ThirdParty/`**：`XCharts`（图表库）、`ZCalendar`（日历选择控件）；不再放在 `Frame/` 下。图表 binder 见同 Sample 的 `Optional/XCharts`。
+- **注视相机**：在场景 `FocusPointManager` 上配置 `m_focusCameraPrefab`（或指定场景内 `m_camera`）。示例：`Samples~/FrameSample/WmsDemo/Resources/注视相机.prefab`。
+- **`Samples~/FrameSample/WmsDemo/`**：演示用 Prefabs / Resources / Sprites。
+- **`Samples~/FrameSample/Adapters/`**：可选 `HikvisionAgv` / `HighlightPlus` 接口实现。
+- **日历**：`Frame/ThirdParty/ZCalendar`。**图表**：`Samples~/FrameSample/ThirdParty/XCharts`，binder 在 Sample `Optional/XCharts`。
+- JSON Binding 菜单：`Tools/Frame/JSON Binding Editor`。
 
 ---
 
@@ -215,7 +215,7 @@ public abstract class BindingToken : MonoBehaviour
 ```mermaid
 flowchart LR
     A[UI 搭建模板预制体<br/>挂 BindingXxx 组件并填 Key] --> B[策划/后端提供 JSON<br/>字段名对应 Key 路径]
-    B --> C[Tools/JSON Binding Editor<br/>选模板 + 选JSON]
+    B --> C[Tools/Frame/JSON Binding Editor<br/>选模板 + 选JSON]
     C -->|正向: 生成绑定预制体| D[输出成品预制体<br/>已移除 BindingToken]
     C -->|反向: 导出 JSON| E[从已有预制体<br/>反推 JSON 结构]
     D --> F[挂到 WindowContainerManager<br/>作为弹窗内容 IWindowContent]
@@ -234,7 +234,7 @@ flowchart LR
 | ~~绑定组件类型有限~~ | **已补齐** Toggle / Slider / InputField / FillAmount / Color / ButtonText / RawImage | 后续按项目需要再加（如 Scrollbar） |
 | ~~部分组件反向导出未实现~~ | **已补齐** `BindingSliderInputField` / `BindingSearchTool` / `BindingSprite` / `BindingWeb` 的 `CollectJson` | — |
 | ~~没有 JSON Schema / Key 校验工具~~ | **已完成**：骨架生成 + 模板↔JSON Key 校验（见 §2.4 / §2.5） | 后续可再补正式 JSON Schema 文件或 CI 校验 |
-| ~~`EquipmentInfos`、`RealTimeAlarm` 等与 Core 混在同一目录~~ | **已完成物理分层**；Core 不再引用 BizKit 类型 | 下轮：引入 asmdef 强制隔离；将 `URLS` 的 Twin 路径迁出 Core |
+| ~~`EquipmentInfos`、`RealTimeAlarm` 等与 Core 混在同一目录~~ | **已完成物理分层 + asmdef**；Twin 路径在 `WmsUrls` | — |
 | ~~离线模拟与在线切换未统一~~ | **已完成**：`TwinDataSourceConfig` 独立配置 + `MockDataProviderBase`；Mock 仅离线启用 | 新 Mock 继续继承 `MockDataProviderBase` |
 | 编辑器工具已支持"原地更新保留 GUID" | 但缺少批量处理（比如一个目录下多个模板+多个 JSON 批量生成）、缺少命令行/CI 集成 | 若要支撑"新项目快速起量"，可加一个批处理入口（读取一个映射清单，批量跑生成），便于团队规模化复用 |
 | 暂无面向新项目的"脚手架"入口 | 目前更多是"组件库"形态，新项目仍需人工挑选、拼装、接线（服务注册、窗口配置等） | 可考虑做一个项目初始化模板（Package/Template 工程）或一份 Checklist 文档，标准化"新项目接入 Frame"的步骤 |
@@ -249,8 +249,8 @@ flowchart LR
 3. ~~**JSON Schema 化**~~：**已完成**骨架生成、Key 校验与文档约定（§2.4 / §2.5）。
 4. ~~**Mock/在线开关标准化**~~：**已完成**独立 `TwinDataSourceConfig`（不放在 URLBase）+ `MockDataProviderBase`。
 5. **批量生成与脚手架**：编辑器工具增加批处理模式，并沉淀一份"新项目接入 Frame 模块"的操作手册/模板工程，把当前"人工挑组件拼装"的过程标准化、可复制。
-6. **文档与示例常态化**：以本文件为基础，后续每次新增 BindingXxx / 新增通用组件时同步补充到 `Assets/Frame/Docs/`，避免再次出现"只能翻代码找用法"的情况。
+6. **文档与示例常态化**：以本文件为基础，后续每次新增 BindingXxx / 新增通用组件时同步补充到 `Frame/Docs/`，避免再次出现"只能翻代码找用法"的情况。
 
 ---
 
-*本文档基于 `Assets/Frame/**` 现有代码梳理生成，若后续模块有调整，建议同步更新本文件对应章节。*
+*本文档基于 `Frame/**` 现有代码梳理生成，若后续模块有调整，建议同步更新本文件对应章节。*

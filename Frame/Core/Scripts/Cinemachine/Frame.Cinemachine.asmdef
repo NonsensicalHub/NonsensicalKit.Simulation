@@ -1,0 +1,39 @@
+{
+    "name":  "Frame.Cinemachine",
+    "rootNamespace":  "Frame.Core.Cinemachine",
+    "references":  [
+                       "Frame.Core",
+                       "NonsensicalKit.Core.Runtime",
+                       "Unity.Timeline",
+                       "Cinemachine",
+                       "Unity.Cinemachine"
+                   ],
+    "includePlatforms":  [
+
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+                           {
+                               "name":  "com.unity.cinemachine",
+                               "expression":  "[2.0.0,3.0.0)",
+                               "define":  "CINEMACHINE_2"
+                           },
+                           {
+                               "name":  "com.unity.cinemachine",
+                               "expression":  "3.0.0",
+                               "define":  "CINEMACHINE_3"
+                           }
+                       ],
+    "noEngineReferences":  false
+}

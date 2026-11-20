@@ -1,0 +1,19 @@
+{
+    "name": "LoopScrollRect.Samples",
+    "rootNamespace": "",
+    "references": [
+        "LoopScrollRect.Runtime",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "LOOP_SCROLL_RECT_DEMO"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

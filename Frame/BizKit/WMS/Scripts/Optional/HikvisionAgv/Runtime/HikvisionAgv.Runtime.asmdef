@@ -1,0 +1,19 @@
+{
+    "name": "HikvisionAgv.Runtime",
+    "rootNamespace": "HikvisionAgv",
+    "references": [
+        "NonsensicalKit.ScriptAnimation.Runtime",
+        "NonsensicalKit.NaughtyAttributes",
+        "NonsensicalKit.Core.Runtime",
+        "NonsensicalKit.DigitalTwin.Motion"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

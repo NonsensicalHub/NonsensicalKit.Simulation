@@ -45,7 +45,7 @@ public class SearchTool : NonsensicalMono
 
     [SerializeField] private Image m_img_background;
     [SerializeField] private TMP_Dropdown m_drd_searchType;
-    [SerializeField] private ZCalendarHandle m_dateRangeSelector;
+    [SerializeField] private global::ZCalendarHandle m_dateRangeSelector;
 
     [SerializeField] private List<SearchInfo> m_searchInfos;
     private List<string> _results = new();
@@ -158,9 +158,7 @@ public class SearchTool : NonsensicalMono
         }
 
         var info = m_searchInfos[arg0];
-        string libID = string.Empty;
-        //TODO: 获取当前所在库区名称,为了适配检索的子功能能正确查找所属组件
-        //GetLibID();
+        string libID = Execute<string>("getCurrentLibraryName") ?? string.Empty;
 
         if (info.Type == SearchType.DataRange)
         {

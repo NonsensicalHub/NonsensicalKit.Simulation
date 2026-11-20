@@ -10,12 +10,13 @@
 |--------|------|------|
 | `Frame.BizKit.WMS` | `WMS/` | 主业务程序集；依赖 `Frame.Core`，**不**依赖 ZCalendar / XCharts / 海康 |
 | `Frame.BizKit.WMS.Editor` | `Scripts/Editor/` | 编辑器工具 |
-| `Frame.BizKit.WMS.Hikvision` | `Scripts/Optional/Hikvision/` | 可选：海康 AGV 站点配置（需宿主 `HikvisionAgv.Runtime`） |
-| `Frame.BizKit.WMS.ZCalendar` | `Scripts/Optional/ZCalendar/` | 可选：`SearchTool` 日期范围（需 `ZCalendar`，见 Sample ThirdParty） |
+| `Frame.BizKit.WMS.Hikvision` | `Scripts/Optional/Hikvision/` | 可选：海康站点与 HTTP 胶水（`autoReferenced=false`） |
+| `Frame.BizKit.WMS.ZCalendar` | `Scripts/Optional/ZCalendar/` | 可选：`SearchTool`（日历在包内 `Frame/ThirdParty/ZCalendar`） |
 
 ## 可选依赖从哪来
-- **ZCalendar / XCharts**：不再随 `Frame/` 携带。导入 Package Manager 中的 **Frame Sample** 后，位于 `Samples~/FrameSample/ThirdParty/`（拷贝到工程 `Assets/Samples/...`）。也可由宿主自行提供同名程序集。
-- **HikvisionAgv**：宿主插件，不在本包 Sample 内。
+- **ZCalendar**：包本体 `Frame/ThirdParty/ZCalendar`，不必 Import Sample。
+- **XCharts**：Import Package Manager 中的 **Frame Sample** 后，在 `Samples~/FrameSample/ThirdParty/`；图表 binder 在 Sample `Optional/XCharts`。
+- **HikvisionAgv**：包内 `Scripts/Optional/HikvisionAgv`（`HikvisionAgv.Runtime`）。
 
 ## 边界
 - `Frame.Core` **不得**引用 BizKit。
