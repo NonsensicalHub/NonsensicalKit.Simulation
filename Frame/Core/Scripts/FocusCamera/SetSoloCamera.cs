@@ -23,7 +23,7 @@ public class SetSoloCamera : NonsensicalMono
 #if CM_V3_OR_NEWER || CM_2_8_OR_NEWER
     private CinemachineVirtualCameraBase m_soloCamera;
 #else
-    private Component m_soloCamera;
+    private UnityEngine.Component m_soloCamera;
 #endif
 
     [SerializeField, InspectorName("切入时长"), Min(0f)]

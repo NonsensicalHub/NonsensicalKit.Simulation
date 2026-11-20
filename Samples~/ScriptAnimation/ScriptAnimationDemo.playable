@@ -1,4 +1,4 @@
-﻿%YAML 1.1
+%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &-8622277937263407964
 MonoBehaviour:
@@ -280,7 +280,11 @@ MonoBehaviour:
     ForkTravelOffset: 0
     ForkPlaceOffset: 0.65
     ForkLiftOffset: 0.9
+    SecondaryForkTravelOffset: 0
+    SecondaryForkPlaceOffset: 0.8
+    SecondaryForkLiftOffset: 1
     ForkSpeed: 0.8
+    SecondaryForkSpeed: 0.8
     AutoSyncDuration: 1
 --- !u!114 &-8174164351256485909
 MonoBehaviour:
@@ -643,7 +647,11 @@ MonoBehaviour:
     ForkTravelOffset: 0
     ForkPlaceOffset: 0.65
     ForkLiftOffset: 0.9
+    SecondaryForkTravelOffset: 0
+    SecondaryForkPlaceOffset: 0.8
+    SecondaryForkLiftOffset: 1
     ForkSpeed: 0.8
+    SecondaryForkSpeed: 0.8
     AutoSyncDuration: 1
 --- !u!114 &-3064617261552321188
 MonoBehaviour:
@@ -1008,6 +1016,7 @@ MonoBehaviour:
   m_Name: RotateClip
   m_EditorClassIdentifier: 
   Data:
+    PositionMode: 0
     StartYawDegrees: 90
     AngleDegrees: 90
     Direction: 0
@@ -2611,14 +2620,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9069635afd1222e49b8bbfa60dbe9bb3, type: 3}
   m_Name: LatentAgvClip
   m_EditorClassIdentifier: 
+  MovePoint:
+    exposedName: 
+    defaultValue: {fileID: 0}
   Data:
     Mode: 0
-    PlatformStartTravelHeight: 0
-    PlatformEndTravelHeight: 0
+    PlatformEmptyHeight: 0
+    PlatformLoadedTravelHeight: 0
     PlatformPlaceHeight: 0
     PlatformLiftHeight: 0.45
     CargoSwapHoldFrames: 5
+    MoveSpeed: 1.5
     PlatformSpeed: 0.8
+    RotateSpeed: 90
     AutoSyncDuration: 1
 --- !u!114 &6491920140461994891
 MonoBehaviour:
@@ -2881,14 +2895,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9069635afd1222e49b8bbfa60dbe9bb3, type: 3}
   m_Name: LatentAgvClip
   m_EditorClassIdentifier: 
+  MovePoint:
+    exposedName: 
+    defaultValue: {fileID: 0}
   Data:
     Mode: 1
-    PlatformStartTravelHeight: 0
-    PlatformEndTravelHeight: 0
+    PlatformEmptyHeight: 0
+    PlatformLoadedTravelHeight: 0
     PlatformPlaceHeight: 0
     PlatformLiftHeight: 0.45
     CargoSwapHoldFrames: 5
+    MoveSpeed: 1.5
     PlatformSpeed: 0.8
+    RotateSpeed: 90
     AutoSyncDuration: 1
 --- !u!114 &8778004664048638496
 MonoBehaviour:

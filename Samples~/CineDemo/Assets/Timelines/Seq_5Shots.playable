@@ -1,0 +1,1103 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-7950038036306728995
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12b49fe6c3ae451418b43b3564b90eaa, type: 3}
+  m_Name: CineShot Track
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: 467623863618519910}
+    m_Duration: 5
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -7950038036306728995}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u8DDF\u968F"
+  - m_Version: 1
+    m_Start: 5
+    m_ClipIn: 0
+    m_Asset: {fileID: -2052248105811984050}
+    m_Duration: 5.9833333333333325
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -7950038036306728995}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: 2.8499999999999996
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u73AF\u7ED5"
+  - m_Version: 1
+    m_Start: 8.133333333333333
+    m_ClipIn: 0
+    m_Asset: {fileID: 461450523054435034}
+    m_Duration: 5.9
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -7950038036306728995}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 2.8499999999999996
+    m_BlendOutDuration: 1.0666666666666664
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u63A8\u62C9"
+  - m_Version: 1
+    m_Start: 12.966666666666667
+    m_ClipIn: 0
+    m_Asset: {fileID: 5432703186829056646}
+    m_Duration: 2.116666666666667
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -7950038036306728995}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: 1.0666666666666664
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u8FC7\u80A9"
+  - m_Version: 1
+    m_Start: 15.083333333333334
+    m_ClipIn: 0
+    m_Asset: {fileID: 6487828202426538568}
+    m_Duration: 4.466666666666667
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -7950038036306728995}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u6447\u81C2"
+  - m_Version: 1
+    m_Start: 20
+    m_ClipIn: 0
+    m_Asset: {fileID: 3884849136694997444}
+    m_Duration: 7.166666666666668
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -7950038036306728995}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: CineShotClip
+  - m_Version: 1
+    m_Start: 27.166666666666668
+    m_ClipIn: 0
+    m_Asset: {fileID: -7008975922281865777}
+    m_Duration: 5
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -7950038036306728995}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u8DDF\u968F"
+  - m_Version: 1
+    m_Start: 34.43333333333333
+    m_ClipIn: 0
+    m_Asset: {fileID: 5747511365547553096}
+    m_Duration: 4
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -7950038036306728995}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: CineShotClip
+  m_Markers:
+    m_Objects: []
+--- !u!114 &-7008975922281865777
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f449fe7153b9824489ab91d6d274e834, type: 3}
+  m_Name: CineShotClip(Clone)
+  m_EditorClassIdentifier: 
+  shot: {fileID: 11400000, guid: 0bec7bd4095ecd24da962c6fa5514a55, type: 2}
+  overrides:
+    mask: 1
+    rigParams:
+      A: {x: -3.2299967, y: 1.6, z: -2.9637573}
+      B: {x: -8.770485, y: 1.6, z: 6.127489}
+      C: {x: 0, y: 0, z: 0}
+      P0: 0
+      P1: -0.01
+      P2: 0
+      P3: 0
+      I0: 0
+      I1: 0
+    compositionOffset: {x: 0, y: 0, z: 0}
+    fov: 0
+    nearClip: 0
+    farClip: 0
+    focusMode: 0
+    focusDistance: 0
+    easeIn: {fileID: 0}
+    easeOut: {fileID: 0}
+    priority: 0
+    tags: []
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    followOffset: {x: 0, y: 0, z: 0}
+  lookAt:
+    exposedName: 2ffde1142904ea442bc04b17e277a6e4
+    defaultValue: {fileID: 0}
+  follow:
+    exposedName: 60289a84df7d49f4c843d87ecd79c234
+    defaultValue: {fileID: 0}
+  blendMode: 0
+  blendDuration: 0.5
+  easeIn: {fileID: 11400000, guid: 83a3f162d547171418bc5bb308537124, type: 2}
+  easeOut: {fileID: 0}
+  spline: {fileID: 0}
+  cameraSpline: {fileID: 0}
+  panSpeed: {fileID: 0}
+  matchKey: b625d5c3b63d43aeac2bd56c015e36b0#0
+  sourceHash: 
+  lastAppliedDuration: 5
+--- !u!114 &-6531247126157757313
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 030f85c3f73729f4f976f66ffb23b875, type: 3}
+  m_Name: Hero_WalkPath
+  m_EditorClassIdentifier: 
+  m_Clip: {fileID: 7400000, guid: f4d338b90f55f2a4a9cc483c14695396, type: 2}
+  m_Position: {x: 0, y: 0, z: 0}
+  m_EulerAngles: {x: 0, y: 0, z: 0}
+  m_UseTrackMatchFields: 1
+  m_MatchTargetFields: 63
+  m_RemoveStartOffset: 1
+  m_ApplyFootIK: 1
+  m_Loop: 0
+  m_Version: 1
+  m_Rotation: {x: 0, y: 0, z: 0, w: 1}
+--- !u!114 &-6043021345277062715
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90fb794a295e73545af71bcdb7375791, type: 3}
+  m_Name: CinemachineShot
+  m_EditorClassIdentifier: 
+  DisplayName: 
+  VirtualCamera:
+    exposedName: 0f09051159ddf674f9d9197f8eb735b9
+    defaultValue: {fileID: 0}
+--- !u!114 &-2052248105811984050
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f449fe7153b9824489ab91d6d274e834, type: 3}
+  m_Name: CineShotClip
+  m_EditorClassIdentifier: 
+  shot: {fileID: 11400000, guid: 468ec2d4b58d50b4aba19625e32b58e3, type: 2}
+  overrides:
+    mask: 1
+    rigParams:
+      A: {x: 40, y: 0, z: 0}
+      B: {x: 0, y: 0, z: 0}
+      C: {x: 0, y: 0, z: 0}
+      P0: 44.999996
+      P1: 24
+      P2: 2.41
+      P3: 2.6995625
+      I0: 0
+      I1: 0
+    compositionOffset: {x: 0, y: 0, z: 0}
+    fov: 0
+    nearClip: 0
+    farClip: 0
+    focusMode: 0
+    focusDistance: 0
+    easeIn: {fileID: 0}
+    easeOut: {fileID: 0}
+    priority: 0
+    tags: []
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    followOffset: {x: 0, y: 0, z: 0}
+  lookAt:
+    exposedName: e06007940fd8489cb17dc3be1cd03cd4
+    defaultValue: {fileID: 0}
+  follow:
+    exposedName: 1eaaf99f0aee48eea975381002b37e22
+    defaultValue: {fileID: 0}
+  blendMode: 1
+  blendDuration: 2
+  easeIn: {fileID: 0}
+  easeOut: {fileID: 11400000, guid: 0e4a8398922e3fa4fb35e225439e008f, type: 2}
+  spline: {fileID: 0}
+  cameraSpline: {fileID: 0}
+  panSpeed: {fileID: 0}
+  matchKey: e2a1c595c3c740d0a9d5d9eb0be61211#1
+  sourceHash: 
+  lastAppliedDuration: 5
+--- !u!114 &-239554024617756466
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05acc715f855ced458d76ee6f8ac6c61, type: 3}
+  m_Name: Cinemachine Track
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: -6043021345277062715}
+    m_Duration: 32.85
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: -239554024617756466}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 0
+    m_PreExtrapolationMode: 0
+    m_PostExtrapolationTime: 0
+    m_PreExtrapolationTime: 0
+    m_DisplayName: "\u8FD0\u955C\u8F93\u51FA\u76F8\u673A"
+  m_Markers:
+    m_Objects: []
+  TrackPriority: 0
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bfda56da833e2384a9677cd3c976a436, type: 3}
+  m_Name: Seq_5Shots
+  m_EditorClassIdentifier: 
+  m_Version: 0
+  m_Tracks:
+  - {fileID: -7950038036306728995}
+  - {fileID: 3618139107781184432}
+  - {fileID: -239554024617756466}
+  m_FixedDuration: 0
+  m_EditorSettings:
+    m_Framerate: 60
+    m_ScenePreview: 1
+  m_DurationMode: 0
+  m_MarkerTrack: {fileID: 0}
+--- !u!114 &461450523054435034
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f449fe7153b9824489ab91d6d274e834, type: 3}
+  m_Name: CineShotClip
+  m_EditorClassIdentifier: 
+  shot: {fileID: 11400000, guid: 797a274d84d514f42933428df140f15f, type: 2}
+  overrides:
+    mask: 65
+    rigParams:
+      A: {x: 34, y: 0, z: 0}
+      B: {x: 0, y: 0, z: 0}
+      C: {x: 0, y: 0, z: 0}
+      P0: 6
+      P1: 1.7213745
+      P2: 1.6
+      P3: 1
+      I0: 0
+      I1: 0
+    compositionOffset: {x: 0, y: 0, z: 0}
+    fov: 0
+    nearClip: 0
+    farClip: 0
+    focusMode: 0
+    focusDistance: 0
+    easeIn: {fileID: 0}
+    easeOut: {fileID: 0}
+    priority: 0
+    tags: []
+    lookAtOffset: {x: 0.37158203, y: 0.21164548, z: 0.0035705566}
+    followOffset: {x: 0, y: 0, z: 0}
+  lookAt:
+    exposedName: d705256ae5444010810c97a4206b7a0c
+    defaultValue: {fileID: 0}
+  follow:
+    exposedName: 681f3b8025484fc6be5d14a11ba754f3
+    defaultValue: {fileID: 0}
+  blendMode: 1
+  blendDuration: 2
+  easeIn: {fileID: 0}
+  easeOut: {fileID: 0}
+  spline: {fileID: 0}
+  cameraSpline: {fileID: 0}
+  panSpeed: {fileID: 0}
+  matchKey: 8c11b784ce764306bf8777ae8e07f814#2
+  sourceHash: 
+  lastAppliedDuration: 3
+--- !u!114 &467623863618519910
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f449fe7153b9824489ab91d6d274e834, type: 3}
+  m_Name: CineShotClip
+  m_EditorClassIdentifier: 
+  shot: {fileID: 11400000, guid: 0bec7bd4095ecd24da962c6fa5514a55, type: 2}
+  overrides:
+    mask: 1
+    rigParams:
+      A: {x: -3.3620298, y: 1.6, z: -1.7898023}
+      B: {x: 8.922783, y: 1.6, z: 0.081857204}
+      C: {x: 0, y: 0, z: 0}
+      P0: 0
+      P1: 0
+      P2: 0
+      P3: 0
+      I0: 0
+      I1: 0
+    compositionOffset: {x: 0, y: 0, z: 0}
+    fov: 0
+    nearClip: 0
+    farClip: 0
+    focusMode: 0
+    focusDistance: 0
+    easeIn: {fileID: 0}
+    easeOut: {fileID: 0}
+    priority: 0
+    tags: []
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    followOffset: {x: 0, y: 0, z: 0}
+  lookAt:
+    exposedName: 167d5e463eefb594ab2c61f5aff34665
+    defaultValue: {fileID: 0}
+  follow:
+    exposedName: 3f680af9da774759895c19ff774eb944
+    defaultValue: {fileID: 0}
+  blendMode: 1
+  blendDuration: 15
+  easeIn: {fileID: 11400000, guid: 83a3f162d547171418bc5bb308537124, type: 2}
+  easeOut: {fileID: 0}
+  spline: {fileID: 0}
+  cameraSpline: {fileID: 0}
+  panSpeed: {fileID: 0}
+  matchKey: b625d5c3b63d43aeac2bd56c015e36b0#0
+  sourceHash: 
+  lastAppliedDuration: 5
+--- !u!114 &3618139107781184432
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d21dcc2386d650c4597f3633c75a1f98, type: 3}
+  m_Name: Hero Anim
+  m_EditorClassIdentifier: 
+  m_Version: 3
+  m_AnimClip: {fileID: 0}
+  m_Locked: 0
+  m_Muted: 0
+  m_CustomPlayableFullTypename: 
+  m_Curves: {fileID: 0}
+  m_Parent: {fileID: 11400000}
+  m_Children: []
+  m_Clips:
+  - m_Version: 1
+    m_Start: 0
+    m_ClipIn: 0
+    m_Asset: {fileID: -6531247126157757313}
+    m_Duration: 19.55
+    m_TimeScale: 1
+    m_ParentTrack: {fileID: 3618139107781184432}
+    m_EaseInDuration: 0
+    m_EaseOutDuration: 0
+    m_BlendInDuration: -1
+    m_BlendOutDuration: -1
+    m_MixInCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_MixOutCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_BlendInCurveMode: 0
+    m_BlendOutCurveMode: 0
+    m_ExposedParameterNames: []
+    m_AnimationCurves: {fileID: 0}
+    m_Recordable: 0
+    m_PostExtrapolationMode: 1
+    m_PreExtrapolationMode: 1
+    m_PostExtrapolationTime: Infinity
+    m_PreExtrapolationTime: 0
+    m_DisplayName: Hero_WalkPath
+  m_Markers:
+    m_Objects: []
+  m_InfiniteClipPreExtrapolation: 0
+  m_InfiniteClipPostExtrapolation: 0
+  m_InfiniteClipOffsetPosition: {x: 0, y: 0, z: 0}
+  m_InfiniteClipOffsetEulerAngles: {x: 0, y: 0, z: 0}
+  m_InfiniteClipTimeOffset: 0
+  m_InfiniteClipRemoveOffset: 0
+  m_InfiniteClipApplyFootIK: 1
+  mInfiniteClipLoop: 0
+  m_MatchTargetFields: 63
+  m_Position: {x: 0, y: 0, z: 0}
+  m_EulerAngles: {x: 0, y: 0, z: 0}
+  m_AvatarMask: {fileID: 0}
+  m_ApplyAvatarMask: 1
+  m_TrackOffset: 0
+  m_InfiniteClip: {fileID: 0}
+  m_OpenClipOffsetRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_Rotation: {x: 0, y: 0, z: 0, w: 1}
+  m_ApplyOffsets: 0
+--- !u!114 &3884849136694997444
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f449fe7153b9824489ab91d6d274e834, type: 3}
+  m_Name: CineShotClip
+  m_EditorClassIdentifier: 
+  shot: {fileID: 11400000, guid: d65d199c528f8f744b91364f7856c68d, type: 2}
+  overrides:
+    mask: 65
+    rigParams:
+      A: {x: 0.51626825, y: 1.6, z: 2.1296425}
+      B: {x: 0, y: 0, z: 0}
+      C: {x: 0, y: 0, z: 0}
+      P0: 0
+      P1: 90
+      P2: 1.55
+      P3: 1.51
+      I0: 0
+      I1: 0
+    compositionOffset: {x: 0, y: 0, z: 0}
+    fov: 0
+    nearClip: 0
+    farClip: 0
+    focusMode: 0
+    focusDistance: 0
+    easeIn: {fileID: 0}
+    easeOut: {fileID: 0}
+    priority: 0
+    tags: []
+    lookAtOffset: {x: -0.23583984, y: 0.13767087, z: -0.099609375}
+    followOffset: {x: 0, y: 0, z: 0}
+  lookAt:
+    exposedName: d2eec379df9e42c48becfe07a493cceb
+    defaultValue: {fileID: 0}
+  follow:
+    exposedName: e97112084a35cc042bdb8be2407cad14
+    defaultValue: {fileID: 0}
+  blendMode: 2
+  blendDuration: 0.5
+  easeIn: {fileID: 0}
+  easeOut: {fileID: 0}
+  spline: {fileID: 11400000, guid: 3996f74c20c22e449bba6ac7e1c23d1a, type: 2}
+  cameraSpline: {fileID: 0}
+  panSpeed: {fileID: 0}
+  matchKey: 
+  sourceHash: 
+  lastAppliedDuration: 0
+--- !u!114 &5432703186829056646
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f449fe7153b9824489ab91d6d274e834, type: 3}
+  m_Name: CineShotClip
+  m_EditorClassIdentifier: 
+  shot: {fileID: 11400000, guid: ab73c779b390abb428e823e044e9f9cd, type: 2}
+  overrides:
+    mask: 65
+    rigParams:
+      A: {x: 0, y: 0, z: 0}
+      B: {x: 0, y: 0, z: 0}
+      C: {x: 0, y: 0, z: 0}
+      P0: 0.31
+      P1: 1.836
+      P2: 0
+      P3: 0
+      I0: 1
+      I1: 0
+    compositionOffset: {x: 0, y: 0, z: 0}
+    fov: 0
+    nearClip: 0
+    farClip: 0
+    focusMode: 0
+    focusDistance: 0
+    easeIn: {fileID: 0}
+    easeOut: {fileID: 0}
+    priority: 0
+    tags: []
+    lookAtOffset: {x: 0.04785149, y: -0.11342776, z: 0.7943115}
+    followOffset: {x: 0, y: 0, z: 0}
+  lookAt:
+    exposedName: 6ecd4373433da8f45b71c8738c7b3fbc
+    defaultValue: {fileID: 0}
+  follow:
+    exposedName: b1d542175d083d84bba17b302d263463
+    defaultValue: {fileID: 0}
+  blendMode: 1
+  blendDuration: 0.5
+  easeIn: {fileID: 0}
+  easeOut: {fileID: 0}
+  spline: {fileID: 0}
+  cameraSpline: {fileID: 0}
+  panSpeed: {fileID: 0}
+  matchKey: 501e65aa3e434760926f1059131cfa3e#3
+  sourceHash: 
+  lastAppliedDuration: 4.5
+--- !u!114 &5747511365547553096
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f449fe7153b9824489ab91d6d274e834, type: 3}
+  m_Name: CineShotClip
+  m_EditorClassIdentifier: 
+  shot: {fileID: 11400000, guid: d65d199c528f8f744b91364f7856c68d, type: 2}
+  overrides:
+    mask: 1
+    rigParams:
+      A: {x: 0.83119774, y: 1.6, z: 24.783623}
+      B: {x: 8.750795, y: 1.6, z: 3.3567753}
+      C: {x: -14.09376, y: 1.790597, z: -14.346958}
+      P0: 1.0113459
+      P1: 0.8
+      P2: 7.9476833
+      P3: 0
+      I0: 0
+      I1: 0
+    compositionOffset: {x: 0, y: 0, z: 0}
+    fov: 0
+    nearClip: 0
+    farClip: 0
+    focusMode: 0
+    focusDistance: 0
+    easeIn: {fileID: 0}
+    easeOut: {fileID: 0}
+    priority: 0
+    tags: []
+    lookAtOffset: {x: 0, y: 0, z: 0}
+    followOffset: {x: 0, y: 0, z: 0}
+  lookAt:
+    exposedName: f998977ddf1afb64cbc9147fddff1b4b
+    defaultValue: {fileID: 0}
+  follow:
+    exposedName: c3795c63cf59c2b409e2f0463336338b
+    defaultValue: {fileID: 0}
+  blendMode: 1
+  blendDuration: 0.5
+  easeIn: {fileID: 0}
+  easeOut: {fileID: 0}
+  spline: {fileID: 0}
+  cameraSpline: {fileID: 0}
+  panSpeed: {fileID: 0}
+  matchKey: 
+  sourceHash: 
+  lastAppliedDuration: 0
+--- !u!114 &6487828202426538568
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f449fe7153b9824489ab91d6d274e834, type: 3}
+  m_Name: CineShotClip
+  m_EditorClassIdentifier: 
+  shot: {fileID: 11400000, guid: 827ba8dbc43d2564db7455e2b7a56b20, type: 2}
+  overrides:
+    mask: 65
+    rigParams:
+      A: {x: -1.0081, y: -0.8844496, z: 1.1800766}
+      B: {x: -0.08798432, y: 4.3877435, z: -0.22843933}
+      C: {x: 0, y: 0, z: 0}
+      P0: -0.090332985
+      P1: 0
+      P2: -1.02351
+      P3: 0
+      I0: 1
+      I1: 0
+    compositionOffset: {x: 0, y: 0, z: 0}
+    fov: 0
+    nearClip: 0
+    farClip: 0
+    focusMode: 0
+    focusDistance: 0
+    easeIn: {fileID: 0}
+    easeOut: {fileID: 0}
+    priority: 0
+    tags: []
+    lookAtOffset: {x: -0.023071289, y: 0.16562498, z: -0.025497437}
+    followOffset: {x: 0, y: 0, z: 0}
+  lookAt:
+    exposedName: 4ffb89fed956445bb0e224180334b61b
+    defaultValue: {fileID: 0}
+  follow:
+    exposedName: 10cfb977647043bf873b6b90e01ed669
+    defaultValue: {fileID: 0}
+  blendMode: 1
+  blendDuration: 0.5
+  easeIn: {fileID: 0}
+  easeOut: {fileID: 0}
+  spline: {fileID: 0}
+  cameraSpline: {fileID: 0}
+  panSpeed: {fileID: 0}
+  matchKey: 02e1a7bbd3ab418c88258aa6e4da419c#4
+  sourceHash: 
+  lastAppliedDuration: 3

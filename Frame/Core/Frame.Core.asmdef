@@ -46,6 +46,16 @@
                                "name":  "com.unity.cinemachine",
                                "expression":  "3.0.0",
                                "define":  "CINEMACHINE_3"
+                           },
+                           {
+                               "name":  "com.unity.cinemachine",
+                               "expression":  "2.8.0",
+                               "define":  "CM_2_8_OR_NEWER"
+                           },
+                           {
+                               "name":  "com.unity.cinemachine",
+                               "expression":  "3.0.0",
+                               "define":  "CM_V3_OR_NEWER"
                            }
                        ],
     "noEngineReferences":  false

@@ -1,0 +1,26 @@
+{
+    "name": "CineShot.Samples",
+    "rootNamespace": "CineShot.Samples",
+    "references": [
+        "NonsensicalKit.CineShot.Core",
+        "NonsensicalKit.CineShot.Compat",
+        "NonsensicalKit.CineShot.Output",
+        "Unity.Timeline",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "ENABLE_INPUT_SYSTEM"
+        }
+    ],
+    "noEngineReferences": false
+}

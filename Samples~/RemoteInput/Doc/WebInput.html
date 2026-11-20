@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RemoteInput 使用示例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            gap: 15px;
+        }
+        
+        h1 {
+            color: #4CAF50;
+            font-size: 24px;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        
+        /* 顶部控制区 */
+        .control-section {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        
+        button.active {
+            background: #4CAF50;
+            color: white;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        button.inactive {
+            background: #555;
+            color: #aaa;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        /* 主内容区 - 左右分栏 */
+        .main-content {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        /* 左侧面板 */
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 0;
+        }
+        
+        /* 右侧日志面板 */
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        
+        /* 配置区域 */
+        .config-section {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+        }
+        
+        .config-section h3 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .config-item {
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        label {
+            color: #aaa;
+            font-size: 14px;
+            min-width: 120px;
+        }
+        
+        input[type="text"], input[type="number"] {
+            padding: 6px 10px;
+            border: 1px solid #555;
+            border-radius: 3px;
+            background: #1a1a1a;
+            color: #fff;
+            width: 150px;
+            font-size: 13px;
+        }
+        
+        .checkbox-group {
+            margin-top: 15px;
+            display: flex;
+            gap: 20px;
+        }
+        
+        .checkbox-group label {
+            width: auto;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        /* 状态显示 */
+        .status {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .status h3 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #3d3d3d;
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            color: #aaa;
+            font-size: 13px;
+        }
+        
+        .value {
+            color: #4CAF50;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        
+        /* 日志区域 */
+        .log-container {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        
+        .log-container h3 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        
+        .log {
+            flex: 1;
+            background: #1a1a1a;
+            border-radius: 5px;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 8px;
+            border-left: 3px solid #4CAF50;
+            padding-left: 10px;
+            background: rgba(76, 175, 80, 0.05);
+            border-radius: 3px;
+        }
+        
+        .log-entry pre {
+            margin: 5px 0 0 0;
+            color: #ccc;
+            font-size: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 RemoteInput 使用示例</h1>
+        
+        <!-- 顶部控制按钮 -->
+        <div class="control-section">
+            <button id="btn-listen" class="inactive" onclick="toggleListening()">▶️ 开始监听</button>
+            <button id="btn-ws" class="inactive" onclick="toggleWebSocket()">🔌 连接 WebSocket</button>
+            <button id="btn-send" class="inactive" onclick="toggleSending()">📤 启用发送</button>
+            <button class="inactive" onclick="showStatus()">📊 查看状态</button>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 左侧：配置和状态 -->
+            <div class="left-panel">
+                <div class="config-section">
+                    <h3>⚙️ 配置参数</h3>
+                    <div class="config-item">
+                        <label>WebSocket 地址:</label>
+                        <input type="text" id="ws-address" value="127.0.0.1">
+                    </div>
+                    <div class="config-item">
+                        <label>WebSocket 端口:</label>
+                        <input type="number" id="ws-port" value="9099">
+                    </div>
+                    <div class="config-item">
+                        <label>节流间隔 (ms):</label>
+                        <input type="number" id="throttle-ms" value="16">
+                    </div>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="enable-webgl" checked> 启用 Unity WebGL</label>
+                        <label><input type="checkbox" id="enable-ws" checked> 启用 WebSocket</label>
+                    </div>
+                </div>
+
+                <div class="status">
+                    <h3>📊 当前状态</h3>
+                    <div class="status-item">
+                        <span class="label">监听状态:</span>
+                        <span class="value" id="status-listening">未启动</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">数据发送:</span>
+                        <span class="value" id="status-sending">禁用</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">WebSocket:</span>
+                        <span class="value" id="status-ws">未连接</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">性能优化:</span>
+                        <span class="value" id="status-opt">启用</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：事件日志 -->
+            <div class="right-panel">
+                <div class="log-container">
+                    <h3>📝 事件日志</h3>
+                    <div class="log" id="event-log">
+                        <div style="color: #666; text-align: center; padding: 20px;">等待事件...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入核心库 -->
+    <script src="remoteInput.js"></script>
+    
+    <script>
+        // 初始化日志容器
+        const logContainer = document.getElementById('event-log');
+        let eventCount = 0;
+        let isListening = false;
+        let isSending = false;
+        let wsConnected = false;
+
+        // 设置事件回调 - 在UI上显示事件
+        RemoteInput.onEvent((event, jsonData) => {
+            eventCount++;
+            
+            // 解析JSON以便显示
+            let eventData;
+            try {
+                eventData = JSON.parse(jsonData);
+            } catch(e) {
+                eventData = { raw: jsonData };
+            }
+
+            // 创建日志条目
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <strong>#${eventCount}</strong> 
+                <span style="color: #4CAF50">${event.type}</span> | 
+                <span style="color: #aaa">${new Date().toLocaleTimeString()}</span>
+                <pre>${JSON.stringify(eventData, null, 2)}</pre>
+            `;
+            
+            // 移除提示文本
+            if (logContainer.children.length === 1 && logContainer.children[0].style.color === 'rgb(102, 102, 102)') {
+                logContainer.innerHTML = '';
+            }
+            
+            // 添加新条目并滚动到底部
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // 限制日志数量
+            if (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        });
+
+        // 设置连接状态回调
+        RemoteInput.onConnectionChange((status) => {
+            const wsStatus = document.getElementById('status-ws');
+            switch(status) {
+                case 'connected':
+                    wsStatus.textContent = '✅ 已连接';
+                    wsStatus.style.color = '#4CAF50';
+                    wsConnected = true;
+                    updateWebSocketButton();
+                    break;
+                case 'disconnected':
+                    wsStatus.textContent = '❌ 已断开';
+                    wsStatus.style.color = '#f44336';
+                    wsConnected = false;
+                    updateWebSocketButton();
+                    break;
+                case 'error':
+                    wsStatus.textContent = '⚠️ 错误';
+                    wsStatus.style.color = '#ff9800';
+                    wsConnected = false;
+                    updateWebSocketButton();
+                    break;
+            }
+        });
+
+        // 切换 WebSocket 连接状态
+        function toggleWebSocket() {
+            if (wsConnected) {
+                // 已连接，断开连接
+                RemoteInput.enableWebSocket(false);
+                addLogEntry('系统', 'WebSocket 已断开', '#f44336');
+            } else {
+                // 未连接，重新连接
+                const config = {
+                    wsAddress: document.getElementById('ws-address').value,
+                    wsPort: parseInt(document.getElementById('ws-port').value),
+                    throttleMs: parseInt(document.getElementById('throttle-ms').value)
+                };
+                
+                RemoteInput.configure(config);
+                RemoteInput.enableWebSocket(true);
+                
+                if (!isListening) {
+                    RemoteInput.start();
+                    isListening = true;
+                    
+                    const btn = document.getElementById('btn-listen');
+                    btn.textContent = '⏹️ 停止监听';
+                    btn.classList.remove('inactive');
+                    btn.classList.add('active');
+                    
+                    addLogEntry('系统', '自动启动监听以建立 WebSocket 连接', '#2196F3');
+                }
+                
+                addLogEntry('系统', '正在连接 WebSocket...', '#ff9800');
+            }
+            
+            updateStatusDisplay();
+        }
+
+        // 更新 WebSocket 按钮状态
+        function updateWebSocketButton() {
+            const btn = document.getElementById('btn-ws');
+            if (wsConnected) {
+                btn.textContent = '🔌 断开连接';
+                btn.classList.remove('inactive');
+                btn.classList.add('active');
+            } else {
+                btn.textContent = '🔌 重连 WebSocket';
+                btn.classList.remove('active');
+                btn.classList.add('inactive');
+            }
+        }
+
+        // 切换监听状态
+        function toggleListening() {
+            const btn = document.getElementById('btn-listen');
+            
+            if (!isListening) {
+                // 开始监听
+                const config = {
+                    wsAddress: document.getElementById('ws-address').value,
+                    wsPort: parseInt(document.getElementById('ws-port').value),
+                    throttleMs: parseInt(document.getElementById('throttle-ms').value)
+                };
+
+                RemoteInput.configure(config);
+                RemoteInput.enableWebGL(document.getElementById('enable-webgl').checked);
+                RemoteInput.enableWebSocket(document.getElementById('enable-ws').checked);
+                RemoteInput.start();
+                RemoteInput.enableSending(true);
+                
+                isListening = true;
+                isSending = true;
+                
+                btn.textContent = '⏹️ 停止监听';
+                btn.classList.remove('inactive');
+                btn.classList.add('active');
+                
+                updateSendButton();
+                addLogEntry('系统', '开始监听输入事件', '#4CAF50');
+            } else {
+                // 停止监听
+                RemoteInput.stop();
+                
+                isListening = false;
+                isSending = false;
+                
+                btn.textContent = '▶️ 开始监听';
+                btn.classList.remove('active');
+                btn.classList.add('inactive');
+                
+                updateSendButton();
+                addLogEntry('系统', '停止监听输入事件', '#f44336');
+            }
+            
+            updateStatusDisplay();
+        }
+
+        // 切换发送状态
+        function toggleSending() {
+            if (!isListening) {
+                addLogEntry('系统', '请先开始监听', '#ff9800');
+                return;
+            }
+            
+            RemoteInput.enableSending(!isSending);
+            isSending = !isSending;
+            
+            updateSendButton();
+            updateStatusDisplay();
+            addLogEntry('系统', `数据发送: ${isSending ? '启用' : '禁用'}`, '#2196F3');
+        }
+
+        // 更新发送按钮状态
+        function updateSendButton() {
+            const btn = document.getElementById('btn-send');
+            if (isSending && isListening) {
+                btn.textContent = '📤 禁用发送';
+                btn.classList.remove('inactive');
+                btn.classList.add('active');
+            } else {
+                btn.textContent = '📤 启用发送';
+                btn.classList.remove('active');
+                btn.classList.add('inactive');
+            }
+        }
+
+        // 显示状态
+        function showStatus() {
+            const status = RemoteInput.getStatus();
+            console.log('当前状态:', status);
+            alert('状态信息已输出到控制台\n\n' + JSON.stringify(status, null, 2));
+        }
+
+        // 更新状态显示
+        function updateStatusDisplay() {
+            const status = RemoteInput.getStatus();
+            
+            document.getElementById('status-listening').textContent = status.isListening ? '✅ 监听中' : '❌ 未启动';
+            document.getElementById('status-listening').style.color = status.isListening ? '#4CAF50' : '#f44336';
+            
+            document.getElementById('status-sending').textContent = status.isSending ? '✅ 启用' : '❌ 禁用';
+            document.getElementById('status-sending').style.color = status.isSending ? '#4CAF50' : '#f44336';
+            
+            document.getElementById('status-opt').textContent = status.isOptimizationEnabled ? '✅ 启用' : '❌ 禁用';
+            document.getElementById('status-opt').style.color = status.isOptimizationEnabled ? '#4CAF50' : '#f44336';
+        }
+
+        // 添加日志条目
+        function addLogEntry(source, message, color) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <strong>[${source}]</strong> 
+                <span style="color: ${color}">${message}</span> | 
+                <span style="color: #aaa">${new Date().toLocaleTimeString()}</span>
+            `;
+            
+            if (logContainer.children.length === 1 && logContainer.children[0].style.color === 'rgb(102, 102, 102)') {
+                logContainer.innerHTML = '';
+            }
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // 页面加载完成后的提示
+        window.addEventListener('load', () => {
+            addLogEntry('系统', 'RemoteInput 库已加载，点击"开始监听"按钮启动', '#2196F3');
+            updateWebSocketButton();
+        });
+    </script>
+</body>
+</html>

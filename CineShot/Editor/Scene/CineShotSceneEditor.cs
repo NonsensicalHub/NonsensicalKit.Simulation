@@ -795,7 +795,11 @@ namespace CineShot.Editor
                 float size = HandleUtility.GetHandleSize(world) * 0.12f;
                 Handles.color = new Color(1f, 0.75f, 0.15f, 1f);
                 EditorGUI.BeginChangeCheck();
-                var fmh_401_63_639300729143862597 = Quaternion.identity; Vector3 moved = Handles.FreeMoveHandle(world, size, Vector3.one * 0.05f, Handles.SphereHandleCap);
+#if UNITY_2022_1_OR_NEWER
+                Vector3 moved = Handles.FreeMoveHandle(world, size, Vector3.one * 0.05f, Handles.SphereHandleCap);
+#else
+                Vector3 moved = Handles.FreeMoveHandle(world, Quaternion.identity, size, Vector3.one * 0.05f, Handles.SphereHandleCap);
+#endif
                 if (EditorGUI.EndChangeCheck())
                     WriteLookOffset(ctx, ctx.Look.InverseTransformPoint(moved));
             }

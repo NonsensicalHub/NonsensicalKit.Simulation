@@ -14,4 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   StackerPlacementStrategy: 0
   InfeedPortSelectionStrategy: 1
-  ConveyorRoutingStrategy: 0
+  ConveyorRoutingStrategy: 1
+  RouteDistanceWeight: 1
+  RouteCongestedCargoWeight: 8
+  RouteTotalCargoWeight: 2

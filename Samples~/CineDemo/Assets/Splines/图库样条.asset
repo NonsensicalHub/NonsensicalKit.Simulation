@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4ad50970f6a69a45826894c8fae560e, type: 3}
+  m_Name: "\u56FE\u5E93\u6837\u6761"
+  m_EditorClassIdentifier: 
+  knots:
+  - {x: -6.015125, y: 1.6, z: -3.9531198}
+  - {x: -3, y: 2, z: -5}
+  - {x: -0.002267599, y: 2.2, z: -5.231948}
+  - {x: 3, y: 2, z: -5}
+  - {x: 6, y: 1.6, z: -4}
+  - {x: 12.473293, y: 3.0995111, z: -2}
+  tension: 0.5
